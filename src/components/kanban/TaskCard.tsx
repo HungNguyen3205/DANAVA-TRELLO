@@ -1,116 +1,113 @@
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import type { Task } from '../../types';
-import { CheckSquare, MessageSquare, Paperclip, Clock } from 'lucide-react';
-import { format, isPast, isToday } from 'date-fns';
-import { vi } from 'date-fns/locale';
-
-interface Props {
-  task: Task;
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  CalendarDays,
+  GripVertical,
+  ListChecks,
+  MessageSquare,
+} from "lucide-react";
+import type { Board, Task } from "../../types";
+import { overdue } from "../../lib/board";
+export function CardContent({ task, board }: { task: Task; board: Board }) {
+  const assignee = board.users.find((u) => u.id === task.assigneeId),
+    done = task.checklist.filter((i) => i.done).length;
+  return (
+    <>
+      <div className="card-tags">
+        {task.labels.slice(0, 2).map((l) => (
+          <span key={l} className="tag">
+            {l}
+          </span>
+        ))}
+        <span
+          className={`priority priority-${task.priority === "Khẩn cấp" ? "urgent" : task.priority === "Cao" ? "high" : task.priority === "Thấp" ? "low" : "normal"}`}
+        >
+          {task.priority}
+        </span>
+      </div>
+      <h4>{task.title}</h4>
+      {task.description && (
+        <p className="card-description">{task.description}</p>
+      )}
+      <div className="card-footer">
+        <div className="card-metadata">
+          {task.dueDate && (
+            <span className={overdue(task, board) ? "overdue" : ""}>
+              <CalendarDays size={14} />
+              {task.dueDate.split("-").slice(1).reverse().join("/")}
+              {overdue(task, board) ? " · Quá hạn" : ""}
+            </span>
+          )}
+          {task.checklist.length > 0 && (
+            <span>
+              <ListChecks size={14} />
+              {done}/{task.checklist.length}
+            </span>
+          )}
+          {task.comments.length > 0 && (
+            <span>
+              <MessageSquare size={14} />
+              {task.comments.length}
+            </span>
+          )}
+        </div>
+        {assignee && (
+          <span className="avatar" title={assignee.name}>
+            {assignee.initials}
+          </span>
+        )}
+      </div>
+    </>
+  );
 }
-
-export function TaskCard({ task }: Props) {
+export function TaskCard({
+  task,
+  board,
+  onOpen,
+  disabled = false,
+}: {
+  task: Task;
+  board: Board;
+  onOpen: (t: Task) => void;
+  disabled?: boolean;
+}) {
   const {
     setNodeRef,
+    setActivatorNodeRef,
     attributes,
     listeners,
     transform,
     transition,
     isDragging,
-  } = useSortable({
-    id: task.id,
-    data: {
-      type: 'Task',
-      task,
-    },
-  });
-
-  const style = {
-    transition,
-    transform: CSS.Transform.toString(transform),
-  };
-
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="bg-kanban-card/50 opacity-50 border-2 border-primary rounded-lg h-[120px] shadow-sm mb-3"
-      />
-    );
-  }
-
-  const getPriorityStyles = (priority: string) => {
-    switch (priority) {
-      case 'Khẩn cấp': return 'text-destructive bg-destructive/10 border-destructive/20';
-      case 'Cao': return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
-      case 'Bình thường': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
-      default: return 'text-muted-foreground bg-muted border-border';
-    }
-  };
-
-  const isOverdue = task.dueDate && isPast(task.dueDate) && !isToday(task.dueDate) && task.columnId !== 'done';
-
+  } = useSortable({ id: task.id, data: { type: "Task", task }, disabled });
   return (
-    <div
+    <article
       ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="bg-kanban-card p-4 rounded-lg shadow-sm border border-border cursor-grab hover:border-primary/50 transition-all hover:shadow-md group mb-3 relative touch-none"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+      }}
+      className="task-card"
     >
-      <div className="flex flex-wrap gap-2 mb-3">
-        {task.labels.map(l => (
-          <span key={l} className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-sm bg-accent text-accent-foreground">
-            {l}
-          </span>
-        ))}
-        <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded-sm border ${getPriorityStyles(task.priority)}`}>
-          {task.priority}
-        </span>
-      </div>
-      
-      <p className="font-medium text-sm mb-4 leading-snug group-hover:text-primary transition-colors">
-        {task.title}
-      </p>
-      
-      <div className="flex items-center justify-between text-muted-foreground text-xs mt-auto">
-        <div className="flex items-center gap-3">
-          {task.totalChecklistItems > 0 && (
-            <div className="flex items-center gap-1" title="Checklist">
-              <CheckSquare size={14} className={task.completedChecklistItems === task.totalChecklistItems ? 'text-green-500' : ''} />
-              <span>{task.completedChecklistItems}/{task.totalChecklistItems}</span>
-            </div>
-          )}
-          
-          {task.commentCount > 0 && (
-            <div className="flex items-center gap-1" title="Bình luận">
-              <MessageSquare size={14} />
-              <span>{task.commentCount}</span>
-            </div>
-          )}
-
-          {task.attachmentCount > 0 && (
-            <div className="flex items-center gap-1" title="Đính kèm">
-              <Paperclip size={14} />
-              <span>{task.attachmentCount}</span>
-            </div>
-          )}
-
-          {task.dueDate && (
-            <div className={`flex items-center gap-1 ${isOverdue ? 'text-destructive font-medium bg-destructive/10 px-1.5 py-0.5 rounded-sm' : ''}`} title="Hạn hoàn thành">
-              <Clock size={14} />
-              <span>{format(task.dueDate, 'dd MMM', { locale: vi })}</span>
-            </div>
-          )}
-        </div>
-
-        {task.assignee && (
-          <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold border border-background shadow-sm ml-2 shrink-0">
-            {task.assignee.initials}
-          </div>
-        )}
-      </div>
-    </div>
+      <button
+        className="card-open"
+        onClick={() => onOpen(task)}
+        aria-label={`Mở công việc: ${task.title}`}
+      >
+        <CardContent task={task} board={board} />
+      </button>
+      {!disabled && (
+        <button
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          className="drag-handle"
+          aria-label={`Kéo công việc: ${task.title}`}
+        >
+          <GripVertical size={16} />
+        </button>
+      )}
+    </article>
   );
 }

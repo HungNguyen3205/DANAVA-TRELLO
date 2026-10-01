@@ -1,82 +1,180 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 24.6 95% 53.1%; /* Orange primary */
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 24.6 95% 53.1%; /* Orange ring */
-
-    --radius: 0.75rem;
-
-    --kanban-column: 210 40% 96.1%;
-    --kanban-card: 0 0% 100%;
-  }
-
-  .dark {
-    --background: 222.2 47.4% 11.2%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 47.4% 11.2%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 47.4% 11.2%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 24.6 95% 53.1%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 24.6 95% 53.1%;
-
-    --kanban-column: 217.2 32.6% 17.5%;
-    --kanban-card: 222.2 47.4% 11.2%;
-  }
+:root {
+  color-scheme: light;
+  --background: 220 25% 97%;
+  --foreground: 222 26% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 26% 16%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 26% 16%;
+  --primary: 24 95% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 18% 93%;
+  --secondary-foreground: 222 26% 16%;
+  --muted: 220 18% 93%;
+  --muted-foreground: 220 9% 43%;
+  --accent: 220 18% 93%;
+  --accent-foreground: 222 26% 16%;
+  --destructive: 0 70% 43%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 18% 89%;
+  --input: 220 18% 89%;
+  --ring: 24 95% 53%;
+  --radius: 1rem;
+  --kanban-column: 220 22% 95%;
+  --kanban-card: 0 0% 100%;
+  --surface: #fff;
+  --panel: #eef1f6;
+  --text: #1e283c;
+  --subtle: #657084;
+  --line: #e1e6ee;
+  --orange: #f47624;
+  --soft-orange: #fff0e5;
+  --shadow: 0 8px 24px #1d284008;
+  --danger: #be3434;
+  --success: #177c66;
 }
-
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-  body {
-    @apply bg-background text-foreground font-sans;
-  }
+.dark {
+  color-scheme: dark;
+  --background: 224 19% 10%;
+  --foreground: 220 16% 94%;
+  --card: 224 16% 14%;
+  --card-foreground: 220 16% 94%;
+  --popover: 224 16% 14%;
+  --popover-foreground: 220 16% 94%;
+  --primary: 24 95% 58%;
+  --primary-foreground: 224 19% 10%;
+  --secondary: 224 14% 19%;
+  --secondary-foreground: 220 16% 94%;
+  --muted: 224 14% 19%;
+  --muted-foreground: 220 10% 65%;
+  --accent: 224 14% 19%;
+  --accent-foreground: 220 16% 94%;
+  --destructive: 0 82% 72%;
+  --destructive-foreground: 224 19% 10%;
+  --border: 224 12% 23%;
+  --input: 224 12% 23%;
+  --ring: 24 95% 58%;
+  --kanban-column: 224 16% 13%;
+  --kanban-card: 224 14% 18%;
+  --surface: #232631;
+  --panel: #1b1e27;
+  --text: #f0f1f5;
+  --subtle: #a1a8b8;
+  --line: #323643;
+  --orange: #ff944f;
+  --soft-orange: #3b2a21;
+  --shadow: 0 10px 26px #00000020;
+  --danger: #ff9393;
+  --success: #79d6b5;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: var(--text);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+button,
+input,
+select,
+textarea {
+  outline-offset: 3px;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--orange);
+}
+button {
+  transition:
+    background 0.18s,
+    border-color 0.18s;
+}
+a {
+  color: inherit;
+}
+input,
+select,
+textarea {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 11px;
+  min-width: 0;
+  font-size: 14px;
+}
+input[type="checkbox"] {
+  accent-color: var(--orange);
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+textarea {
+  resize: vertical;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+h1 {
+  font-size: 28px;
+  letter-spacing: -0.7px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+small {
+  font-size: 12px;
+}
+button svg {
+  flex-shrink: 0;
+}
+::selection {
+  background: #f4762440;
 }

@@ -1,21 +1,32 @@
-import { SortableContext, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import type { Column, Task } from '../../types';
-import { TaskCard } from './TaskCard';
-import { useMemo } from 'react';
-import { Menu, Plus } from 'lucide-react';
-
-interface Props {
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, MoreHorizontal, Plus } from "lucide-react";
+import type { Board, Column, Task } from "../../types";
+import { TaskCard } from "./TaskCard";
+export function BoardColumn({
+  column,
+  tasks,
+  board,
+  onOpen,
+  onAdd,
+  onEdit,
+  disabled,
+}: {
   column: Column;
   tasks: Task[];
-  createTask: (columnId: string) => void;
-}
-
-export function BoardColumn({ column, tasks, createTask }: Props) {
-  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
-
+  board: Board;
+  onOpen: (t: Task) => void;
+  onAdd: (id: string) => void;
+  onEdit: (c: Column) => void;
+  disabled: boolean;
+}) {
   const {
     setNodeRef,
+    setActivatorNodeRef,
     attributes,
     listeners,
     transform,
@@ -23,67 +34,70 @@ export function BoardColumn({ column, tasks, createTask }: Props) {
     isDragging,
   } = useSortable({
     id: column.id,
-    data: {
-      type: 'Column',
-      column,
-    },
+    data: { type: "Column", column },
+    disabled,
   });
-
-  const style = {
-    transition,
-    transform: CSS.Transform.toString(transform),
-  };
-
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="w-[320px] shrink-0 h-[500px] rounded-xl border-2 border-primary bg-kanban-column/50 opacity-50"
-      ></div>
-    );
-  }
-
   return (
-    <div
+    <section
       ref={setNodeRef}
-      style={style}
-      className="w-[320px] shrink-0 flex flex-col h-full max-h-full rounded-xl bg-kanban-column border border-border shadow-sm overflow-hidden"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+      className={`board-column ${column.completed ? "column-done" : ""}`}
+      aria-label={column.title}
     >
-      {/* Column Header */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="p-4 flex items-center justify-between border-b border-border/50 bg-kanban-column/80 backdrop-blur-sm sticky top-0 z-10 cursor-grab touch-none"
-      >
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm">{column.title}</h3>
-          <span className="bg-background text-muted-foreground text-xs py-0.5 px-2 rounded-full border border-border">
-            {tasks.length}
-          </span>
+      <header className="column-heading">
+        <div>
+          <span className="column-dot" />
+          <h3>{column.title}</h3>
+          <span className="column-count">{tasks.length}</span>
         </div>
-        <button className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-accent cursor-pointer" onClick={(e) => e.stopPropagation()}>
-          <Menu size={16} />
-        </button>
-      </div>
-
-      {/* Column Content */}
-      <div className="p-3 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-0">
-        <SortableContext items={taskIds}>
+        <div className="column-actions">
+          {!disabled && (
+            <button
+              ref={setActivatorNodeRef}
+              {...attributes}
+              {...listeners}
+              className="icon-button column-grip"
+              aria-label={`Kéo cột: ${column.title}`}
+            >
+              <GripVertical size={16} />
+            </button>
+          )}
+          <button
+            className="icon-button"
+            onClick={() => onEdit(column)}
+            aria-label={`Cài đặt cột: ${column.title}`}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+        </div>
+      </header>
+      <div className="column-body">
+        <SortableContext
+          items={tasks.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              board={board}
+              onOpen={onOpen}
+              disabled={disabled}
+            />
           ))}
         </SortableContext>
-        
-        {/* Add task button */}
-        <button
-          onClick={() => createTask(column.id as string)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-accent/50 p-2 rounded-lg text-sm font-medium transition-colors mt-2"
-        >
+        {tasks.length === 0 && (
+          <div className="column-empty">Chưa có công việc</div>
+        )}
+        <button className="add-card" onClick={() => onAdd(column.id)}>
           <Plus size={16} />
-          Thêm thẻ
+          Thêm công việc
         </button>
       </div>
-    </div>
+    </section>
   );
 }

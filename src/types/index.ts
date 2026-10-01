@@ -1,30 +1,49 @@
-export type Id = string | number;
-
-export type Priority = 'Thấp' | 'Bình thường' | 'Cao' | 'Khẩn cấp';
-
+export type Id = string;
+export type Priority = "Thấp" | "Bình thường" | "Cao" | "Khẩn cấp";
 export interface User {
-  id: Id;
+  id: string;
   name: string;
-  avatarUrl?: string;
   initials: string;
 }
-
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+export interface Comment {
+  id: string;
+  author: string;
+  body: string;
+  createdAt: string;
+}
+export interface Activity {
+  id: string;
+  text: string;
+  author: string;
+  createdAt: string;
+}
 export interface Task {
-  id: Id;
-  columnId: Id;
+  id: string;
+  columnId: string;
   title: string;
-  description?: string;
+  description: string;
   priority: Priority;
   labels: string[];
-  assignee?: User;
-  dueDate?: Date;
-  completedChecklistItems: number;
-  totalChecklistItems: number;
-  commentCount: number;
-  attachmentCount: number;
+  assigneeId: string;
+  collaborators: string[];
+  dueDate: string;
+  checklist: ChecklistItem[];
+  comments: Comment[];
 }
-
 export interface Column {
-  id: Id;
+  id: string;
   title: string;
+  completed?: boolean;
+}
+export interface Board {
+  title: string;
+  columns: Column[];
+  tasks: Task[];
+  users: User[];
+  activity: Activity[];
 }
