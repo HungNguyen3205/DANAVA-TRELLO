@@ -1,0 +1,103 @@
+import type { Column, Task, User } from '../types';
+
+export const mockUsers: User[] = [
+  { id: 'u1', name: 'Nam Hùng', initials: 'NH' },
+  { id: 'u2', name: 'Minh Tuấn', initials: 'MT' },
+  { id: 'u3', name: 'Hải Yến', initials: 'HY' },
+];
+
+export const defaultCols: Column[] = [
+  { id: 'todo', title: 'Chưa bắt đầu' },
+  { id: 'in-progress', title: 'Đang thực hiện' },
+  { id: 'review', title: 'Chờ duyệt' },
+  { id: 'done', title: 'Hoàn thành' },
+];
+
+export const defaultTasks: Task[] = [
+  {
+    id: 't1',
+    columnId: 'todo',
+    title: 'Nghiên cứu đối thủ cạnh tranh',
+    priority: 'Bình thường',
+    labels: ['Marketing'],
+    completedChecklistItems: 0,
+    totalChecklistItems: 3,
+    commentCount: 2,
+    attachmentCount: 0,
+    assignee: mockUsers[0],
+    dueDate: new Date(new Date().setDate(new Date().getDate() + 2)), // +2 days
+  },
+  {
+    id: 't2',
+    columnId: 'todo',
+    title: 'Chuẩn bị tài nguyên hình ảnh',
+    priority: 'Bình thường',
+    labels: ['Thiết kế'],
+    completedChecklistItems: 1,
+    totalChecklistItems: 5,
+    commentCount: 0,
+    attachmentCount: 3,
+    assignee: mockUsers[1],
+  },
+  {
+    id: 't3',
+    columnId: 'todo',
+    title: 'Viết copy cho trang chủ',
+    priority: 'Cao',
+    labels: ['Nội dung'],
+    completedChecklistItems: 2,
+    totalChecklistItems: 2,
+    commentCount: 5,
+    attachmentCount: 1,
+    assignee: mockUsers[2],
+  },
+  {
+    id: 't4',
+    columnId: 'in-progress',
+    title: 'Thiết kế wireframe UI',
+    priority: 'Cao',
+    labels: ['Thiết kế'],
+    completedChecklistItems: 3,
+    totalChecklistItems: 4,
+    commentCount: 1,
+    attachmentCount: 2,
+    assignee: mockUsers[1],
+    dueDate: new Date(new Date().setDate(new Date().getDate() - 1)), // Overdue
+  },
+  {
+    id: 't5',
+    columnId: 'in-progress',
+    title: 'Phân tích luồng người dùng (UX)',
+    priority: 'Khẩn cấp',
+    labels: ['Sản phẩm'],
+    completedChecklistItems: 0,
+    totalChecklistItems: 0,
+    commentCount: 0,
+    attachmentCount: 0,
+    assignee: mockUsers[0],
+  },
+  {
+    id: 't6',
+    columnId: 'review',
+    title: 'Cập nhật logo mới',
+    priority: 'Bình thường',
+    labels: ['Thiết kế'],
+    completedChecklistItems: 1,
+    totalChecklistItems: 1,
+    commentCount: 2,
+    attachmentCount: 1,
+    assignee: mockUsers[1],
+  },
+  {
+    id: 't7',
+    columnId: 'done',
+    title: 'Kickoff dự án',
+    priority: 'Thấp',
+    labels: ['Quản lý'],
+    completedChecklistItems: 10,
+    totalChecklistItems: 10,
+    commentCount: 0,
+    attachmentCount: 5,
+    assignee: mockUsers[0],
+  },
+];
