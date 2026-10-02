@@ -13,9 +13,15 @@ class TaskDetailController extends Controller
         $request->validate([
             'title' => 'sometimes|string',
             'description' => 'nullable|string',
+            'column_id' => 'sometimes|exists:kanban_columns,id',
+            'priority' => 'sometimes|in:Khẩn cấp,Cao,Bình thường,Thấp',
+            'assignee_id' => 'nullable|exists:users,id',
+            'due_date' => 'nullable|date',
         ]);
 
-        $task->update($request->only(['title', 'description']));
+        $task->update($request->only([
+            'title', 'description', 'column_id', 'priority', 'assignee_id', 'due_date'
+        ]));
         return response()->json($task);
     }
 
@@ -30,6 +36,8 @@ class TaskDetailController extends Controller
         ]);
         
         return response()->json($comment->load('user'), 201);
+    }
+
     // Xoá (Lưu trữ) thẻ
     public function destroy(Task $task)
     {

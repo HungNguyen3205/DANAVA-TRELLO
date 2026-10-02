@@ -71,33 +71,8 @@ export function AppLayout() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        <aside className="w-64 border-r border-border bg-card/30 hidden md:flex flex-col transition-all duration-300">
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-            <SidebarItem icon={<LayoutDashboard size={18} />} label="Bảng" active />
-            <SidebarItem icon={<Grid size={18} />} label="Mẫu" />
-            <SidebarItem icon={<Clock size={18} />} label="Trang chủ" />
-            
-            <div className="mt-6 mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Các Không gian làm việc
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent/50 cursor-pointer group transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                    K
-                  </div>
-                  <span className="text-sm font-medium group-hover:text-primary transition-colors">KG của Nam Hùng</span>
-                </div>
-                <ChevronDown size={16} className="text-muted-foreground" />
-              </div>
-            </div>
-          </nav>
-        </aside>
-
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-background/50 relative">
+        <main className="flex-1 overflow-hidden bg-background relative flex flex-col">
           <Outlet />
         </main>
       </div>
@@ -111,21 +86,5 @@ function NavButton({ label, hasDropdown }: { label: string, hasDropdown?: boolea
       {label}
       {hasDropdown && <ChevronDown size={14} className="opacity-50" />}
     </button>
-  );
-}
-
-function SidebarItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
-  return (
-    <Link 
-      to="/"
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
-        active 
-          ? 'bg-primary/10 text-primary font-medium' 
-          : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </Link>
   );
 }

@@ -25,9 +25,9 @@ export function PromptModal({
 
   useEffect(() => {
     if (isOpen) {
-      setValue(defaultValue || (type === 'select' && options.length > 0 ? options[0] : ''));
+      setValue(defaultValue || (type === 'select' && options?.length > 0 ? options[0] : ''));
     }
-  }, [isOpen, defaultValue, type, options]);
+  }, [isOpen]); // Only reset when modal opens
 
   if (!isOpen) return null;
 
@@ -39,10 +39,19 @@ export function PromptModal({
         {type === 'text' && (
           <input 
             type="text" 
-            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6"
+            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6 text-foreground"
             placeholder={placeholder}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              console.log('Input changed:', e.target.value);
+              setValue(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onConfirm(value);
+              }
+            }}
             autoFocus
           />
         )}

@@ -10,6 +10,11 @@ export interface ChecklistItem {
   text: string;
   done: boolean;
 }
+export interface Checklist {
+  id: string;
+  title: string;
+  items: ChecklistItem[];
+}
 export interface Comment {
   id: string;
   author: string;
@@ -22,28 +27,55 @@ export interface Activity {
   author: string;
   createdAt: string;
 }
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+}
+export interface Attachment {
+  id: string;
+  fileName: string;
+  filePath: string;
+  mimeType: string;
+  size: number;
+  userId: string;
+  createdAt: string;
+}
 export interface Task {
   id: string;
   columnId: string;
   title: string;
   description: string;
   priority: Priority;
-  labels: string[];
+  labels: Label[];
   assigneeId: string;
   collaborators: string[];
+  startDate?: string;
   dueDate: string;
-  checklist: ChecklistItem[];
+  checklists: Checklist[];
   comments: Comment[];
+  attachments: Attachment[];
 }
 export interface Column {
   id: string;
   title: string;
+  color?: string;
   completed?: boolean;
 }
+export interface Sprint {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  status: 'pending' | 'active' | 'completed';
+}
 export interface Board {
+  id: string;
   title: string;
   columns: Column[];
   tasks: Task[];
   users: User[];
   activity: Activity[];
+  sprints?: Sprint[];
+  labels?: Label[];
 }

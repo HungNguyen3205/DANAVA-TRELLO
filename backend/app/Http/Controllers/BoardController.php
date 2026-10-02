@@ -50,7 +50,7 @@ class BoardController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        return response()->json($board->load(['sprints', 'columns.tasks']));
+        return response()->json($board->load(['sprints', 'labels', 'columns.tasks', 'workspace.members']));
     }
 
     // Xóa bảng

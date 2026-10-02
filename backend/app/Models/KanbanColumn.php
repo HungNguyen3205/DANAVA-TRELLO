@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class KanbanColumn extends Model
 {
-    protected $fillable = ['board_id', 'title', 'order'];
+    protected $fillable = ['board_id', 'title', 'color', 'order'];
 
     public function board()
     {

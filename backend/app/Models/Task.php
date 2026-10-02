@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'column_id', 
         'sprint_id', 
@@ -14,7 +17,10 @@ class Task extends Model
         'description', 
         'priority', 
         'order', 
-        'due_date'
+        'start_date',
+        'due_date',
+        'completed_at',
+        'completed_by'
     ];
 
     public function column()
@@ -34,6 +40,26 @@ class Task extends Model
 
     public function comments()
     {
-        return $this->hasMany(TaskComment::class);
+        return $this->hasMany(TaskComment::class)->orderBy('created_at', 'desc');
+    }
+
+    public function checklists()
+    {
+        return $this->hasMany(Checklist::class);
+    }
+
+    public function labels()
+    {
+        return $this->belongsToMany(Label::class, 'task_labels');
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(TaskAttachment::class)->orderBy('created_at', 'desc');
+    }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class)->orderBy('created_at', 'desc');
     }
 }

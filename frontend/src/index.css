@@ -3,72 +3,168 @@
 @tailwind utilities;
 :root {
   color-scheme: light;
-  --background: 220 25% 97%;
-  --foreground: 222 26% 16%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 26% 16%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 26% 16%;
-  --primary: 24 95% 53%;
+  
+  /* Backgrounds */
+  --background: 216 33% 97%; /* #F4F7FB App background */
+  --foreground: 221 38% 15%; /* #172033 Primary text */
+  --card: 0 0% 100%; /* #FFFFFF Card/Board background */
+  --card-foreground: 221 38% 15%;
+  --popover: 0 0% 100%; /* #FFFFFF Modal/Popover */
+  --popover-foreground: 221 38% 15%;
+  
+  /* Primary Action (Violet) */
+  --primary: 250 71% 64%; /* #6C5CE7 Primary Violet */
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 18% 93%;
-  --secondary-foreground: 222 26% 16%;
-  --muted: 220 18% 93%;
-  --muted-foreground: 220 9% 43%;
-  --accent: 220 18% 93%;
-  --accent-foreground: 222 26% 16%;
-  --destructive: 0 70% 43%;
+  
+  /* Secondary/Hover elements */
+  --secondary: 216 33% 97%; /* #F4F7FB Secondary */
+  --secondary-foreground: 215 14% 47%; /* #667085 Secondary text */
+  
+  --muted: 214 20% 96%; /* #F2F4F7 */
+  --muted-foreground: 215 20% 65%; /* #98A2B3 Muted text */
+  
+  --accent: 250 100% 97%; /* #F0EDFF Light Violet hover */
+  --accent-foreground: 250 71% 64%;
+  
+  /* Alerts/Danger */
+  --destructive: 0 84% 60%; /* #EF4444 */
   --destructive-foreground: 0 0% 100%;
-  --border: 220 18% 89%;
-  --input: 220 18% 89%;
-  --ring: 24 95% 53%;
+  
+  /* Borders */
+  --border: 216 26% 92%; /* #E6EAF0 */
+  --input: 216 26% 92%;
+  --ring: 250 71% 64%; /* #6C5CE7 */
+  
   --radius: 1rem;
-  --kanban-column: 220 22% 95%;
-  --kanban-card: 0 0% 100%;
-  --surface: #fff;
-  --panel: #eef1f6;
-  --text: #1e283c;
-  --subtle: #657084;
-  --line: #e1e6ee;
-  --orange: #f47624;
-  --soft-orange: #fff0e5;
-  --shadow: 0 8px 24px #1d284008;
-  --danger: #be3434;
-  --success: #177c66;
+  
+  /* Custom Kanban Variables */
+  --surface: #FFFFFF;
+  --panel: #FFFFFF;
+  --text: #172033;
+  --subtle: #98A2B3;
+  --line: #E6EAF0;
+  
+  /* Pastel Columns Base */
+  --col-todo-bg: #F6F3FF;
+  --col-todo-color: #7C5CFC;
+  --col-progress-bg: #F1F6FF;
+  --col-progress-color: #4F7DF3;
+  --col-review-bg: #FFF9EA;
+  --col-review-color: #E6A92D;
+  --col-done-bg: #EFFAF6;
+  --col-done-color: #2FAF83;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-size: 14px; /* Slightly smaller for premium look */
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.25);
+  border-color: hsl(var(--primary));
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea {
+  color: hsl(var(--foreground));
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 0;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+input[type="checkbox"] {
+  accent-color: hsl(var(--primary));
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: hsl(var(--foreground));
+}
+
+h1, h2, h3, h4, p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: 24px;
+  letter-spacing: -0.5px;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+::selection {
+  background: rgba(108, 92, 231, 0.2);
+}
+
 .dark {
-  color-scheme: dark;
-  --background: 224 19% 10%;
-  --foreground: 220 16% 94%;
-  --card: 224 16% 14%;
-  --card-foreground: 220 16% 94%;
-  --popover: 224 16% 14%;
-  --popover-foreground: 220 16% 94%;
-  --primary: 24 95% 58%;
-  --primary-foreground: 224 19% 10%;
-  --secondary: 224 14% 19%;
-  --secondary-foreground: 220 16% 94%;
-  --muted: 224 14% 19%;
-  --muted-foreground: 220 10% 65%;
-  --accent: 224 14% 19%;
-  --accent-foreground: 220 16% 94%;
-  --destructive: 0 82% 72%;
-  --destructive-foreground: 224 19% 10%;
-  --border: 224 12% 23%;
-  --input: 224 12% 23%;
-  --ring: 24 95% 58%;
-  --kanban-column: 224 16% 13%;
-  --kanban-card: 224 14% 18%;
-  --surface: #232631;
-  --panel: #1b1e27;
-  --text: #f0f1f5;
-  --subtle: #a1a8b8;
-  --line: #323643;
-  --orange: #ff944f;
-  --soft-orange: #3b2a21;
-  --shadow: 0 10px 26px #00000020;
-  --danger: #ff9393;
-  --success: #79d6b5;
+  /* Keep empty or same as root to allow toggling if needed later, but root is dark by default */
 }
 * {
   box-sizing: border-box;

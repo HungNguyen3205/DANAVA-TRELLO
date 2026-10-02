@@ -6,5 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Checklist extends Model
 {
-    //
+    protected $fillable = ['task_id', 'title'];
+
+    public function items()
+    {
+        return $this->hasMany(ChecklistItem::class);
+    }
 }

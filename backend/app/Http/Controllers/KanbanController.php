@@ -18,7 +18,7 @@ class KanbanController extends Controller
         }
 
         $columns = $board->columns()->with(['tasks' => function ($query) {
-            $query->orderBy('order');
+            $query->with(['checklists.items', 'labels', 'attachments', 'comments.user'])->orderBy('order');
         }])->orderBy('order')->get();
 
         return response()->json($columns);
@@ -88,5 +88,17 @@ class KanbanController extends Controller
         }
 
         return response()->json(['message' => 'Cập nhật vị trí thẻ thành công']);
+    }
+
+    public function updateColumn(Request $request, KanbanColumn $column)
+    {
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'color' => 'sometimes|nullable|string|max:7',
+        ]);
+
+        $column->update($validated);
+
+        return response()->json($column);
     }
 }

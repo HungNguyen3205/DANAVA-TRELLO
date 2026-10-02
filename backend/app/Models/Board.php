@@ -22,4 +22,9 @@ class Board extends Model
     {
         return $this->hasMany(KanbanColumn::class);
     }
+
+    public function labels()
+    {
+        return $this->hasMany(Label::class);
+    }
 }

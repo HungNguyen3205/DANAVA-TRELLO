@@ -68,6 +68,7 @@ export function KanbanBoard({
       if (next !== board) void onSave(next, `Di chuyển: ${data.task.title}`);
     }
   }
+
   return (
     <DndContext
       sensors={sensors}
@@ -80,8 +81,8 @@ export function KanbanBoard({
       onDragCancel={() => setActive(null)}
       onDragEnd={finish}
     >
-      <div className="kanban-scroll">
-        <div className="kanban-columns">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar">
+        <div className="flex h-full gap-4 min-w-max items-start px-1">
           <SortableContext
             items={board.columns.map((c) => c.id)}
             strategy={horizontalListSortingStrategy}
@@ -99,20 +100,50 @@ export function KanbanBoard({
               />
             ))}
           </SortableContext>
-          <button className="add-column" onClick={() => onColumn(null)}>
+          <button 
+            className="flex items-center justify-center gap-2 w-[280px] shrink-0 border-2 border-dashed border-border/50 text-muted-foreground bg-card/10 hover:bg-card/40 hover:border-border hover:text-foreground rounded-xl py-4 transition-colors font-medium text-sm"
+            onClick={() => onColumn(null)}
+          >
             <Plus size={18} />
-            Thêm cột
+            Thêm cột mới
           </button>
         </div>
       </div>
       <DragOverlay>
         {active &&
-          ("columnId" in active ? (
-            <article className="task-card overlay-card">
-              <CardContent task={active} board={board} />
-            </article>
-          ) : (
-            <div className="overlay-column">{active.title}</div>
+          ("columnId" in active ? (() => {
+            const col = board.columns.find(c => c.id === active.columnId);
+            
+            const PREDEFINED_THEMES: Record<string, any> = {
+              violet: { dot: "bg-[#7C5CFC]" },
+              blue: { dot: "bg-[#4F7DF3]" },
+              orange: { dot: "bg-[#E6A92D]" },
+              green: { dot: "bg-[#2FAF83]" },
+              gray: { dot: "bg-muted-foreground" }
+            };
+
+            let theme = PREDEFINED_THEMES.gray;
+            if (col?.color && PREDEFINED_THEMES[col.color]) {
+              theme = PREDEFINED_THEMES[col.color];
+            } else {
+              const tStr = (col?.title || "").toLowerCase();
+              if (tStr.includes("to do") || tStr.includes("cần làm") || tStr.includes("mới") || tStr.includes("bắt đầu")) theme = PREDEFINED_THEMES.violet;
+              else if (tStr.includes("progress") || tStr.includes("đang làm") || tStr.includes("thực hiện")) theme = PREDEFINED_THEMES.blue;
+              else if (tStr.includes("review") || tStr.includes("đánh giá") || tStr.includes("kiểm tra") || tStr.includes("duyệt")) theme = PREDEFINED_THEMES.orange;
+              else if (tStr.includes("done") || tStr.includes("hoàn thành") || col?.completed) theme = PREDEFINED_THEMES.green;
+            }
+
+            return (
+              <article className="w-[300px] rotate-2 shadow-2xl opacity-90 bg-white rounded-[12px] border border-primary/30 scale-[1.02] overflow-hidden">
+                <div className="p-3.5">
+                  <CardContent task={active} board={board} theme={theme} />
+                </div>
+              </article>
+            );
+          })() : (
+            <div className="w-[300px] p-4 bg-white border-2 border-primary/40 rounded-[16px] rotate-1 shadow-2xl opacity-90 font-bold text-foreground">
+              {active.title}
+            </div>
           ))}
       </DragOverlay>
     </DndContext>

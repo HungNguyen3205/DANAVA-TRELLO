@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class Label extends Model
 {
-    //
+    protected $fillable = ['board_id', 'name', 'color'];
 }

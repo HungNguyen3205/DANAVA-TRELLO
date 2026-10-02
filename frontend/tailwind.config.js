@@ -52,8 +52,22 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         kanban: {
-          column: "hsl(var(--kanban-column))",
-          card: "hsl(var(--kanban-card))",
+          todo: {
+            bg: "var(--col-todo-bg)",
+            color: "var(--col-todo-color)"
+          },
+          progress: {
+            bg: "var(--col-progress-bg)",
+            color: "var(--col-progress-color)"
+          },
+          review: {
+            bg: "var(--col-review-bg)",
+            color: "var(--col-review-color)"
+          },
+          done: {
+            bg: "var(--col-done-bg)",
+            color: "var(--col-done-color)"
+          }
         }
       },
       borderRadius: {
