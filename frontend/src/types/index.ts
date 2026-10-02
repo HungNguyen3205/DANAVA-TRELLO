@@ -3,7 +3,11 @@ export type Priority = "Thấp" | "Bình thường" | "Cao" | "Khẩn cấp";
 export interface User {
   id: string;
   name: string;
+  email?: string;
+  username?: string;
   initials: string;
+  avatar?: string;
+  notification_preferences?: any;
 }
 export interface ChecklistItem {
   id: string;
@@ -72,6 +76,10 @@ export interface Sprint {
 export interface Board {
   id: string;
   title: string;
+  name?: string;
+  description?: string;
+  color?: string;
+  workspace?: any;
   columns: Column[];
   tasks: Task[];
   users: User[];

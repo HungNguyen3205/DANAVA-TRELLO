@@ -11,11 +11,11 @@ import { TaskCard } from "./TaskCard";
 import api from "../../lib/axios";
 
 const PREDEFINED_THEMES: Record<string, any> = {
-  violet: { bg: "bg-[#F6F3FF]", header: "text-[#7C5CFC]", iconBg: "bg-[#E8E1FF]", iconColor: "text-[#7C5CFC]", dot: "bg-[#7C5CFC]", border: "border-[#7C5CFC]/20", hoverBg: "hover:bg-white" },
-  blue: { bg: "bg-[#F1F6FF]", header: "text-[#4F7DF3]", iconBg: "bg-[#DFE9FF]", iconColor: "text-[#4F7DF3]", dot: "bg-[#4F7DF3]", border: "border-[#4F7DF3]/20", hoverBg: "hover:bg-white" },
-  orange: { bg: "bg-[#FFF9EA]", header: "text-[#E6A92D]", iconBg: "bg-[#FFF0C2]", iconColor: "text-[#E6A92D]", dot: "bg-[#E6A92D]", border: "border-[#E6A92D]/20", hoverBg: "hover:bg-white" },
-  green: { bg: "bg-[#EFFAF6]", header: "text-[#2FAF83]", iconBg: "bg-[#D9F5EA]", iconColor: "text-[#2FAF83]", dot: "bg-[#2FAF83]", border: "border-[#2FAF83]/20", hoverBg: "hover:bg-white" },
-  gray: { bg: "bg-muted/30", header: "text-foreground", iconBg: "bg-muted", iconColor: "text-muted-foreground", dot: "bg-muted-foreground", border: "border-border/50", hoverBg: "hover:bg-white" }
+  violet: { bg: "bg-[#F6F3FF] dark:bg-[#7C5CFC]/15", header: "text-[#7C5CFC] dark:text-[#a78bfa]", iconBg: "bg-[#E8E1FF] dark:bg-[#7C5CFC]/20", iconColor: "text-[#7C5CFC] dark:text-[#a78bfa]", dot: "bg-[#7C5CFC] dark:bg-[#a78bfa]", border: "border-[#7C5CFC]/20 dark:border-[#7C5CFC]/30", hoverBg: "hover:bg-card" },
+  blue: { bg: "bg-[#F1F6FF] dark:bg-[#4F7DF3]/15", header: "text-[#4F7DF3] dark:text-[#60a5fa]", iconBg: "bg-[#DFE9FF] dark:bg-[#4F7DF3]/20", iconColor: "text-[#4F7DF3] dark:text-[#60a5fa]", dot: "bg-[#4F7DF3] dark:bg-[#60a5fa]", border: "border-[#4F7DF3]/20 dark:border-[#4F7DF3]/30", hoverBg: "hover:bg-card" },
+  orange: { bg: "bg-[#FFF9EA] dark:bg-[#E6A92D]/15", header: "text-[#E6A92D] dark:text-[#fbbf24]", iconBg: "bg-[#FFF0C2] dark:bg-[#E6A92D]/20", iconColor: "text-[#E6A92D] dark:text-[#fbbf24]", dot: "bg-[#E6A92D] dark:bg-[#fbbf24]", border: "border-[#E6A92D]/20 dark:border-[#E6A92D]/30", hoverBg: "hover:bg-card" },
+  green: { bg: "bg-[#EFFAF6] dark:bg-[#2FAF83]/15", header: "text-[#2FAF83] dark:text-[#34d399]", iconBg: "bg-[#D9F5EA] dark:bg-[#2FAF83]/20", iconColor: "text-[#2FAF83] dark:text-[#34d399]", dot: "bg-[#2FAF83] dark:bg-[#34d399]", border: "border-[#2FAF83]/20 dark:border-[#2FAF83]/30", hoverBg: "hover:bg-card" },
+  gray: { bg: "bg-muted/30 dark:bg-muted/10", header: "text-foreground", iconBg: "bg-muted dark:bg-muted/20", iconColor: "text-muted-foreground", dot: "bg-muted-foreground", border: "border-border/50", hoverBg: "hover:bg-card" }
 };
 
 export function BoardColumn({
@@ -83,7 +83,7 @@ export function BoardColumn({
         transition,
         opacity: isDragging ? 0.4 : 1,
       }}
-      className={`flex flex-col w-[300px] shrink-0 ${theme.bg} rounded-[16px] max-h-full ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
+      className={`flex flex-col w-[300px] shrink-0 ${theme.bg} rounded-[16px] max-h-[calc(100vh-170px)] ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
       aria-label={column.title}
     >
       <header className="px-4 pt-4 pb-3 flex items-center justify-between group sticky top-0 z-10">
@@ -92,7 +92,7 @@ export function BoardColumn({
             <span className={`w-2 h-2 rounded-full ${theme.dot}`} />
           </div>
           <h3 className={`font-bold text-[14px] tracking-tight ${theme.header}`}>{column.title}</h3>
-          <span className="text-[12px] font-semibold text-muted-foreground bg-white/60 px-2 py-0.5 rounded-full shadow-sm ml-1">
+          <span className="text-[12px] font-semibold text-muted-foreground bg-card/60 px-2 py-0.5 rounded-full shadow-sm ml-1">
             {tasks.length}
           </span>
         </div>
@@ -125,7 +125,7 @@ export function BoardColumn({
           </button>
 
           {showColorPicker && (
-            <div className="absolute top-full right-0 mt-2 bg-white border border-border shadow-xl rounded-xl p-2 z-50 flex gap-2 w-[160px] flex-wrap">
+            <div className="absolute top-full right-0 mt-2 bg-card border border-border shadow-xl rounded-xl p-2 z-50 flex gap-2 w-[160px] flex-wrap">
               {Object.keys(PREDEFINED_THEMES).map(k => (
                 <button
                   key={k}
@@ -157,7 +157,7 @@ export function BoardColumn({
         </SortableContext>
         
         {tasks.length === 0 && (
-          <div className={`text-center py-8 border border-dashed ${theme.border} rounded-xl text-[13px] text-muted-foreground bg-white/30`}>
+          <div className={`text-center py-8 border border-dashed ${theme.border} rounded-xl text-[13px] text-muted-foreground bg-card/30`}>
             Chưa có công việc
           </div>
         )}

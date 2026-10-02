@@ -127,8 +127,8 @@ export function WorkspaceDashboard() {
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-500">
           <CircleAlert size={30} />
         </div>
-        <h2 className="text-xl font-bold text-slate-900">Dashboard chưa thể hiển thị</h2>
-        <p className="mt-2 text-sm text-slate-500">{error}</p>
+        <h2 className="text-xl font-bold text-foreground">Dashboard chưa thể hiển thị</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{error}</p>
         <button
           type="button"
           onClick={() => setReloadVersion((value) => value + 1)}
@@ -142,24 +142,24 @@ export function WorkspaceDashboard() {
 
   return (
     <div className="workspace-dashboard mx-auto w-full max-w-[1480px] space-y-6 pb-10">
-      <section className="relative overflow-hidden rounded-[28px] border border-violet-100 bg-white px-6 py-7 shadow-[0_20px_60px_rgba(76,65,145,0.10)] md:px-8">
-        <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-violet-100/70 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-120px] left-[38%] h-60 w-60 rounded-full bg-sky-100/70 blur-3xl" />
+      <section className="relative overflow-hidden rounded-[28px] border border-border bg-card px-6 py-7 shadow-[0_20px_60px_rgba(76,65,145,0.10)] md:px-8">
+        <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-violet-100/70 dark:bg-violet-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-120px] left-[38%] h-60 w-60 rounded-full bg-sky-100/70 dark:bg-sky-500/20 blur-3xl" />
         <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-violet-600">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-violet-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-violet-600 dark:text-violet-400">
               <Sparkles size={14} /> Workspace Intelligence
             </div>
-            <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-950 md:text-4xl">
+            <h1 className="text-3xl font-black tracking-[-0.04em] text-foreground md:text-4xl">
               Tổng quan {data.workspace.name}
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 md:text-base">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
               Theo dõi sức khỏe dự án, năng suất đội ngũ và các công việc cần ưu tiên trong một màn hình duy nhất.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+            <div className="inline-flex rounded-xl border border-border bg-accent p-1">
               {RANGE_OPTIONS.map((days) => (
                 <button
                   key={days}
@@ -167,8 +167,8 @@ export function WorkspaceDashboard() {
                   onClick={() => setRange(days)}
                   className={`rounded-lg px-3.5 py-2 text-xs font-bold transition-all ${
                     range === days
-                      ? 'bg-white text-violet-700 shadow-sm ring-1 ring-slate-200'
-                      : 'text-slate-500 hover:text-slate-900'
+                      ? 'bg-card text-violet-700 shadow-sm ring-1 ring-slate-200'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {days} ngày
@@ -276,8 +276,8 @@ export function WorkspaceDashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 text-center">
-                <div className="text-3xl font-black text-slate-950">{data.summary.total_tasks}</div>
-                <div className="text-xs font-semibold text-slate-400">Công việc</div>
+                <div className="text-3xl font-black text-foreground">{data.summary.total_tasks}</div>
+                <div className="text-xs font-semibold text-muted-foreground">Công việc</div>
               </div>
             </div>
           ) : <EmptyChart label="Chưa có dữ liệu trạng thái" />}
@@ -352,16 +352,16 @@ export function WorkspaceDashboard() {
         <ChartCard title="Deadline sắp tới" description={`${data.summary.due_soon_tasks} công việc cần lưu ý trong 7 ngày`} icon={<Clock3 size={18} />}>
           <div className="space-y-3">
             {data.upcoming_deadlines.length ? data.upcoming_deadlines.map((task) => (
-              <div key={task.id} className="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3 transition hover:border-violet-100 hover:bg-violet-50/40">
+              <div key={task.id} className="group flex items-center gap-3 rounded-2xl border border-border bg-accent/70 p-3 transition hover:border-border hover:bg-violet-50/40">
                 <div className={`flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl ${deadlineTone(task.days_left)}`}>
                   <span className="text-[10px] font-bold uppercase">Còn</span>
                   <span className="text-sm font-black">{task.days_left}n</span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-slate-800">{task.title}</p>
-                  <p className="mt-0.5 truncate text-xs text-slate-400">{task.board} · {task.assignee}</p>
+                  <p className="truncate text-sm font-bold text-foreground">{task.title}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{task.board} · {task.assignee}</p>
                 </div>
-                <span className="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-slate-500 shadow-sm">{formatDate(task.due_date)}</span>
+                <span className="rounded-full bg-card px-2 py-1 text-[10px] font-bold text-muted-foreground shadow-sm">{formatDate(task.due_date)}</span>
               </div>
             )) : <EmptyList label="Chưa có deadline sắp tới" />}
           </div>
@@ -371,16 +371,16 @@ export function WorkspaceDashboard() {
           <div className="space-y-1">
             {data.recent_activity.length ? data.recent_activity.map((item, index) => (
               <div key={item.id} className="relative flex gap-3 py-2.5">
-                {index < data.recent_activity.length - 1 && <span className="absolute left-[17px] top-10 h-[calc(100%-18px)] w-px bg-slate-100" />}
-                <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-xs font-black text-violet-600 ring-4 ring-white">
+                {index < data.recent_activity.length - 1 && <span className="absolute left-[17px] top-10 h-[calc(100%-18px)] w-px bg-muted" />}
+                <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-xs font-black text-violet-600 dark:text-violet-400 ring-4 ring-background">
                   {(item.user_name || 'Hệ thống').charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs leading-5 text-slate-600">
-                    <strong className="text-slate-800">{item.user_name || 'Hệ thống'}</strong> {activityLabel(item.action)}
-                    {' '}<strong className="text-slate-800">{item.task_title}</strong>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    <strong className="text-foreground">{item.user_name || 'Hệ thống'}</strong> {activityLabel(item.action)}
+                    {' '}<strong className="text-foreground">{item.task_title}</strong>
                   </p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">{item.board_name} · {formatRelativeTime(item.created_at)}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{item.board_name} · {formatRelativeTime(item.created_at)}</p>
                 </div>
               </div>
             )) : <EmptyList label="Chưa có hoạt động nào" />}
@@ -406,25 +406,25 @@ function MetricCard({ label, value, detail, suffix, icon, tone }: {
   tone: 'violet' | 'emerald' | 'amber' | 'rose';
 }) {
   const toneClasses = {
-    violet: 'bg-violet-50 text-violet-600 ring-violet-100',
-    emerald: 'bg-emerald-50 text-emerald-600 ring-emerald-100',
-    amber: 'bg-amber-50 text-amber-600 ring-amber-100',
-    rose: 'bg-rose-50 text-rose-600 ring-rose-100',
+    violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-violet-500/20',
+    emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20',
+    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20',
+    rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20',
   };
 
   return (
-    <article className="group rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_12px_35px_rgba(44,51,73,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(76,65,145,0.12)]">
+    <article className="group rounded-3xl border border-border bg-card p-5 shadow-[0_12px_35px_rgba(44,51,73,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(76,65,145,0.12)]">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
           <div className="mt-3 flex items-end gap-2">
-            <span className="text-4xl font-black tracking-[-0.05em] text-slate-950">{value}</span>
-            {suffix && <span className="mb-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-600">{suffix}</span>}
+            <span className="text-4xl font-black tracking-[-0.05em] text-foreground">{value}</span>
+            {suffix && <span className="mb-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">{suffix}</span>}
           </div>
         </div>
         <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${toneClasses[tone]}`}>{icon}</div>
       </div>
-      <p className="mt-3 text-xs text-slate-400">{detail}</p>
+      <p className="mt-3 text-xs text-muted-foreground">{detail}</p>
     </article>
   );
 }
@@ -437,12 +437,12 @@ function ChartCard({ title, description, icon, children, className = '' }: {
   className?: string;
 }) {
   return (
-    <article className={`rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_12px_35px_rgba(44,51,73,0.065)] md:p-6 ${className}`}>
+    <article className={`rounded-3xl border border-border bg-card p-5 shadow-[0_12px_35px_rgba(44,51,73,0.065)] md:p-6 ${className}`}>
       <header className="mb-4 flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">{icon}</div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-600 dark:text-violet-400">{icon}</div>
         <div>
-          <h2 className="text-base font-black tracking-[-0.02em] text-slate-900">{title}</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p>
+          <h2 className="text-base font-black tracking-[-0.02em] text-foreground">{title}</h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
         </div>
       </header>
       {children}
@@ -452,22 +452,22 @@ function ChartCard({ title, description, icon, children, className = '' }: {
 
 function SprintCard({ label, value, total, color }: { label: string; value: number; total: number; color: 'amber' | 'violet' | 'emerald' }) {
   const colors = {
-    amber: ['bg-amber-500', 'bg-amber-50 text-amber-700'],
-    violet: ['bg-violet-600', 'bg-violet-50 text-violet-700'],
-    emerald: ['bg-emerald-500', 'bg-emerald-50 text-emerald-700'],
+    amber: ['bg-amber-500', 'bg-amber-500/10 text-amber-600 dark:text-amber-400'],
+    violet: ['bg-violet-600', 'bg-violet-500/10 text-violet-600 dark:text-violet-400'],
+    emerald: ['bg-emerald-500', 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'],
   };
   const percent = total ? Math.round((value / total) * 100) : 0;
 
   return (
-    <article className="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_10px_30px_rgba(44,51,73,0.06)]">
+    <article className="rounded-3xl border border-border bg-card p-5 shadow-[0_10px_30px_rgba(44,51,73,0.06)]">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
-          <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="mt-2 text-3xl font-black text-foreground">{value}</p>
         </div>
         <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${colors[color][1]}`}>{percent}%</span>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
         <div className={`h-full rounded-full transition-all duration-500 ${colors[color][0]}`} style={{ width: `${percent}%` }} />
       </div>
     </article>
@@ -477,15 +477,15 @@ function SprintCard({ label, value, total, color }: { label: string; value: numb
 function PremiumTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name?: string; value?: number; color?: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="min-w-36 rounded-2xl border border-slate-100 bg-white/95 p-3 shadow-xl backdrop-blur">
-      {label && <p className="mb-2 text-xs font-bold text-slate-500">{label}</p>}
+    <div className="min-w-36 rounded-2xl border border-border bg-card/95 p-3 shadow-xl backdrop-blur">
+      {label && <p className="mb-2 text-xs font-bold text-muted-foreground">{label}</p>}
       <div className="space-y-1.5">
         {payload.map((item) => (
           <div key={item.name} className="flex items-center justify-between gap-5 text-xs">
-            <span className="flex items-center gap-2 text-slate-500">
+            <span className="flex items-center gap-2 text-muted-foreground">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name}
             </span>
-            <strong className="text-slate-900">{item.value}</strong>
+            <strong className="text-foreground">{item.value}</strong>
           </div>
         ))}
       </div>
@@ -495,18 +495,18 @@ function PremiumTooltip({ active, payload, label }: { active?: boolean; payload?
 
 function EmptyChart({ label }: { label: string }) {
   return (
-    <div className="flex h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 text-center">
+    <div className="flex h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-accent/60 text-center">
       <BarChart3 className="mb-3 text-slate-300" size={30} />
-      <p className="text-sm font-semibold text-slate-400">{label}</p>
+      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
     </div>
   );
 }
 
 function EmptyList({ label }: { label: string }) {
   return (
-    <div className="flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 text-center">
+    <div className="flex min-h-44 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-accent/60 text-center">
       <CheckCircle2 className="mb-3 text-emerald-400" size={28} />
-      <p className="text-sm font-semibold text-slate-400">{label}</p>
+      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -514,24 +514,28 @@ function EmptyList({ label }: { label: string }) {
 function DashboardSkeleton() {
   return (
     <div className="mx-auto w-full max-w-[1480px] animate-pulse space-y-6">
-      <div className="h-44 rounded-[28px] bg-white" />
+      <div className="h-44 rounded-[28px] bg-card" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[0, 1, 2, 3].map((item) => <div key={item} className="h-36 rounded-3xl bg-white" />)}
+        {[0, 1, 2, 3].map((item) => <div key={item} className="h-36 rounded-3xl bg-card" />)}
       </div>
       <div className="grid gap-5 xl:grid-cols-12">
-        <div className="h-[390px] rounded-3xl bg-white xl:col-span-8" />
-        <div className="h-[390px] rounded-3xl bg-white xl:col-span-4" />
+        <div className="h-[390px] rounded-3xl bg-card xl:col-span-8" />
+        <div className="h-[390px] rounded-3xl bg-card xl:col-span-4" />
       </div>
     </div>
   );
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(new Date(`${value}T00:00:00`));
+  if (!value) return '';
+  const cleanValue = value.includes(' ') ? value.split(' ')[0] : value;
+  return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(new Date(`${cleanValue}T00:00:00`));
 }
 
 function formatRelativeTime(value: string) {
-  const diffMinutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  if (!value) return '';
+  const safeValue = value.replace(' ', 'T');
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - new Date(safeValue).getTime()) / 60000));
   if (diffMinutes < 1) return 'Vừa xong';
   if (diffMinutes < 60) return `${diffMinutes} phút trước`;
   const hours = Math.floor(diffMinutes / 60);
@@ -552,7 +556,7 @@ function activityLabel(action: string) {
 }
 
 function deadlineTone(days: number) {
-  if (days <= 1) return 'bg-rose-50 text-rose-600';
-  if (days <= 3) return 'bg-amber-50 text-amber-600';
-  return 'bg-violet-50 text-violet-600';
+  if (days <= 1) return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+  if (days <= 3) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+  return 'bg-violet-500/10 text-violet-600 dark:text-violet-400';
 }

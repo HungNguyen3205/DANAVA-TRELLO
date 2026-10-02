@@ -69,7 +69,11 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
           </div>
         )}
         
-        <div className="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-border/40 w-full">
+        <div className={`flex items-center justify-between gap-2 mt-auto pt-3 border-t w-full min-h-[36px] ${
+          (task.dueDate || task.comments.length > 0 || (task.attachments && task.attachments.length > 0) || task.assigneeId) 
+          ? 'border-border/40' 
+          : 'border-transparent'
+        }`}>
           <div className="flex flex-wrap gap-2.5 text-[11px] text-muted-foreground font-medium">
             {task.dueDate && (
               <span className={`flex items-center gap-1 ${overdue(task, board) ? "text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-semibold" : ""}`}>
@@ -83,18 +87,24 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
                 <span className="tracking-tight">{task.comments.length}</span>
               </span>
             )}
-            <span className="flex items-center gap-1">
-              <Paperclip size={13} className="opacity-70" />
-              <span className="tracking-tight">{task.attachments?.length || 0}</span>
-            </span>
+            {task.attachments && task.attachments.length > 0 && (
+              <span className="flex items-center gap-1">
+                <Paperclip size={13} className="opacity-70" />
+                <span className="tracking-tight">{task.attachments.length}</span>
+              </span>
+            )}
           </div>
           
           {task.assigneeId && (
             <span 
-              className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-2 ring-white z-10" 
+              className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-2 ring-white z-10 overflow-hidden" 
               title={`User: ${assignee?.name || task.assigneeId}`}
             >
-              {assignee?.initials || task.assigneeId.charAt(0).toUpperCase()}
+              {assignee?.avatar ? (
+                <img src={assignee.avatar.startsWith('http') ? assignee.avatar : `http://localhost:8000${assignee.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                assignee?.initials || task.assigneeId.charAt(0).toUpperCase()
+              )}
             </span>
           )}
         </div>
@@ -134,7 +144,7 @@ export function TaskCard({
         transition,
         opacity: isDragging ? 0 : 1,
       }}
-      className={`relative group bg-white border border-border/60 rounded-[12px] shadow-sm hover:shadow hover:border-primary/30 hover:-translate-y-px transition-all duration-200 overflow-hidden ${isDragging ? "opacity-0" : ""}`}
+      className={`relative group shrink-0 bg-card border border-border/60 rounded-[12px] shadow-sm hover:shadow hover:border-primary/30 hover:-translate-y-px transition-all duration-200 overflow-hidden ${isDragging ? "opacity-0" : ""}`}
     >
       <button
         className="w-full text-left p-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"

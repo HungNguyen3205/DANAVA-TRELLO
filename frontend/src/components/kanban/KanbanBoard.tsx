@@ -70,7 +70,16 @@ export function KanbanBoard({
         target,
         over.data.current?.type === "Task" ? overId : undefined,
       );
-      if (next !== board) void onSave(next, `Di chuyển: ${data.task.title}`);
+      if (next !== board) {
+        // Calculate previous and next siblings in the new column
+        const newTasksInCol = next.tasks.filter((t) => t.columnId === target);
+        const newIdx = newTasksInCol.findIndex((t) => t.id === draggedId);
+        const prevId = newIdx > 0 ? newTasksInCol[newIdx - 1].id : undefined;
+        const nextId = newIdx < newTasksInCol.length - 1 ? newTasksInCol[newIdx + 1].id : undefined;
+        
+        // Use any to pass extra arguments safely
+        void (onSave as any)(next, `Di chuyển: ${data.task.title}`, { taskId: draggedId, columnId: target, prevId, nextId });
+      }
     }
   }
 
@@ -139,7 +148,7 @@ export function KanbanBoard({
             }
 
             return (
-              <article className="w-[268px] rotate-2 shadow-2xl opacity-90 bg-white rounded-[12px] border border-primary/30 scale-[1.02] overflow-hidden">
+              <article className="w-[268px] rotate-2 shadow-2xl opacity-90 bg-card rounded-[12px] border border-primary/30 scale-[1.02] overflow-hidden">
                 <div className="p-3.5">
                   <CardContent task={active} board={board} theme={theme} />
                 </div>
@@ -174,7 +183,7 @@ export function KanbanBoard({
                 </div>
                 <div className="flex-1 overflow-hidden space-y-3">
                   {columnTasks.map(t => (
-                    <article key={t.id} className="relative bg-white border border-border/60 shadow-sm rounded-[12px] overflow-hidden">
+                    <article key={t.id} className="relative bg-card border border-border/60 shadow-sm rounded-[12px] overflow-hidden">
                       <div className="p-3.5">
                         <CardContent task={t} board={board} theme={theme} />
                       </div>

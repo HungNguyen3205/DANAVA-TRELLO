@@ -19,9 +19,33 @@ class TaskDetailController extends Controller
             'due_date' => 'nullable|date',
         ]);
 
+        $oldAssignee = $task->assignee_id;
+
         $task->update($request->only([
             'title', 'description', 'column_id', 'priority', 'assignee_id', 'due_date'
         ]));
+
+        if ($request->has('assignee_id') && $request->assignee_id != $oldAssignee && $request->assignee_id != null) {
+            $newAssignee = \App\Models\User::find($request->assignee_id);
+            if ($newAssignee && $newAssignee->id !== $request->user()->id) {
+                // Check preferences
+                $prefs = $newAssignee->notification_preferences ?? [];
+                if (!isset($prefs['assigned']) || $prefs['assigned'] !== false) {
+                    // Get board via column
+                    $task->load('column.board');
+                    $board = $task->column->board;
+                    if ($board) {
+                        $newAssignee->notify(new \App\Notifications\TaskAssignedNotification(
+                            $task,
+                            $request->user(),
+                            $board->id,
+                            $board->title
+                        ));
+                    }
+                }
+            }
+        }
+
         return response()->json($task);
     }
 

@@ -62,4 +62,33 @@ class Task extends Model
     {
         return $this->hasMany(ActivityLog::class)->orderBy('created_at', 'desc');
     }
+
+    // Scopes for Task completion status
+    public function scopeCompleted($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNotNull('tasks.completed_at')
+              ->orWhereHas('column', function ($sub) {
+                  $sub->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), ['done', 'hoàn thành', 'completed']);
+              });
+        });
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('tasks.completed_at')
+              ->whereDoesntHave('column', function ($sub) {
+                  $sub->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), ['done', 'hoàn thành', 'completed']);
+              });
+        });
+    }
+
+    // Scope to filter tasks in workspaces the user is a member of
+    public function scopeInUserWorkspaces($query, $userId)
+    {
+        return $query->whereHas('column.board.workspace.members', function ($q) use ($userId) {
+            $q->where('user_id', $userId);
+        });
+    }
 }

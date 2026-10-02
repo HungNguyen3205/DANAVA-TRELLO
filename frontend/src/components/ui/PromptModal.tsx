@@ -32,7 +32,7 @@ export function PromptModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
       <div className="w-full max-w-sm bg-card rounded-xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-border">
         <h3 className="text-lg font-bold mb-4 text-foreground">{title}</h3>
         

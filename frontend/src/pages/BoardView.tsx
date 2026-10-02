@@ -1,93 +1,41 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
 import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus } from 'lucide-react';
 import api from '../lib/axios';
-import { toast } from 'sonner';
-import type { Board, Task, Column } from '../types';
+import { useBoardStore } from '../store/boardStore';
 
 export function BoardView() {
-  const { boardId } = useParams();
-  const [board, setBoard] = useState<Board | null>(null);
+  const { workspaceId, boardId } = useParams();
+  const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const fetchBoard = useCallback(() => {
-    const id = boardId?.replace('board-', '') || '1';
-    
-    api.get(`/boards/${id}`).then(res => {
-      const bData = res.data;
-      api.get(`/boards/${id}/kanban`).then(kanbanRes => {
-        const columnsData = kanbanRes.data;
-        
-        const formattedColumns: Column[] = columnsData.map((c: any) => ({
-          id: String(c.id),
-          title: c.title,
-          color: c.color,
-        }));
-
-        const formattedTasks: Task[] = columnsData.flatMap((c: any) => 
-          c.tasks.map((t: any) => ({
-            id: String(t.id),
-            columnId: String(t.column_id),
-            title: t.title,
-            description: t.description || '',
-            priority: t.priority,
-            labels: t.labels ? t.labels.map((l: any) => ({ id: String(l.id), name: l.name, color: l.color })) : [],
-            assigneeId: t.assignee_id ? String(t.assignee_id) : '',
-            collaborators: [],
-            startDate: t.start_date || '',
-            dueDate: t.due_date || '',
-            checklists: (t.checklists || []).map((cl: any) => ({
-              id: String(cl.id),
-              title: cl.title,
-              items: (cl.items || []).map((i: any) => ({
-                id: String(i.id),
-                text: i.content,
-                done: !!i.is_completed
-              }))
-            })),
-            attachments: (t.attachments || []).map((a: any) => ({
-              id: String(a.id),
-              fileName: a.file_name,
-              filePath: a.file_path,
-              mimeType: a.mime_type,
-              size: a.size,
-              userId: String(a.user_id),
-              createdAt: a.created_at
-            })),
-            comments: t.comments || []
-          }))
-        );
-
-        setBoard({
-          id: bData.id,
-          title: bData.name,
-          columns: formattedColumns,
-          tasks: formattedTasks,
-          users: bData.workspace?.members?.map((m: any) => ({
-            id: String(m.id),
-            name: m.name,
-            initials: m.name.charAt(0).toUpperCase()
-          })) || [],
-          activity: [],
-          sprints: bData.sprints || [],
-          labels: bData.labels ? bData.labels.map((l: any) => ({ id: String(l.id), name: l.name, color: l.color })) : []
-        });
-      }).catch(e => {
-        toast.error('Lỗi khi tải bảng Kanban');
-      });
-    }).catch(e => {
-      toast.error('Không thể kết nối đến máy chủ');
-    });
-  }, [boardId]);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
-    fetchBoard();
-  }, [fetchBoard]);
+    if (boardId) {
+      fetchBoard(boardId).catch(e => toast.error('Không thể tải dữ liệu bảng'));
+    }
+  }, [boardId, fetchBoard]);
+
+  useEffect(() => {
+    if (board && !loading) {
+      const taskId = searchParams.get('task');
+      if (taskId) {
+        const t = board.tasks.find((t: any) => t.id.toString() === taskId);
+        if (t) {
+          setActiveTask(t);
+          // Remove param to not reopen on refresh if intended
+          // searchParams.delete('task');
+          // setSearchParams(searchParams, { replace: true });
+        }
+      }
+    }
+  }, [board, loading, searchParams]);
 
   const handleOpen = (t: Task) => setActiveTask(t);
   
@@ -100,7 +48,7 @@ export function BoardView() {
           try {
             await api.post(`/columns/${columnId}/tasks`, { title });
             toast.success('Đã thêm thẻ mới');
-            fetchBoard();
+            fetchBoard(boardId || '1', true);
           } catch (e) {
             toast.error('Lỗi khi thêm thẻ');
           }
@@ -121,7 +69,7 @@ export function BoardView() {
               const id = boardId?.replace('board-', '') || '1';
               await api.post(`/boards/${id}/columns`, { title });
               toast.success('Đã tạo cột mới');
-              fetchBoard();
+              fetchBoard(boardId || '1', true);
             } catch (e) {
               toast.error('Lỗi khi tạo cột');
             }
@@ -139,7 +87,7 @@ export function BoardView() {
             try {
               await api.put(`/columns/${c.id}`, { title });
               toast.success('Đã cập nhật cột');
-              fetchBoard();
+              fetchBoard(boardId || '1', true);
             } catch (e) {
               toast.error('Lỗi khi cập nhật cột');
             }
@@ -150,16 +98,28 @@ export function BoardView() {
     }
   };
   
-  const handleSave = async (b: Board, _text: string) => { 
+  const handleSave = async (b: Board, _text: string, taskMoveData?: { taskId: string, columnId: string, prevId?: string, nextId?: string }) => { 
     setBoard(b);
     try {
       const id = boardId?.replace('board-', '') || '1';
-      const payload = b.tasks.map((t, idx) => ({
-        id: Number(t.id),
-        column_id: Number(t.columnId),
-        order: idx * 1000
-      }));
-      await api.put(`/boards/${id}/tasks/reorder`, { tasks: payload });
+      
+      if (taskMoveData) {
+        // Trello-style single task move (Fractional Indexing)
+        const payload = {
+          column_id: Number(taskMoveData.columnId),
+          prev_id: taskMoveData.prevId ? Number(taskMoveData.prevId) : null,
+          next_id: taskMoveData.nextId ? Number(taskMoveData.nextId) : null,
+        };
+        await api.put(`/tasks/${taskMoveData.taskId}/move`, payload);
+      } else {
+        // Legacy column/board sorting
+        const payload = b.tasks.map((t, idx) => ({
+          id: Number(t.id),
+          column_id: Number(t.columnId),
+          order: idx * 1000
+        }));
+        await api.put(`/boards/${id}/tasks/reorder`, { tasks: payload });
+      }
     } catch (e) {
       toast.error('Lỗi khi lưu vị trí kéo thả');
     }
@@ -170,32 +130,55 @@ export function BoardView() {
 
   return (
     <div className="flex-1 overflow-hidden h-full flex flex-col relative bg-background">
-      {/* Top Header / Toolbar (Application Level) */}
-      <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10">
+      <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50">
         <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium">
-          <Link to="/" className="hover:text-primary transition-colors flex items-center gap-1.5"><LayoutDashboard size={14} /> Không gian làm việc</Link>
+          <Link to={`/w/${workspaceId}/boards`} className="hover:text-primary transition-colors flex items-center gap-1.5">
+            <LayoutDashboard size={14} /> Không gian làm việc
+          </Link>
           <ChevronRight size={14} className="opacity-50" />
           <span className="text-foreground font-semibold">{board.title}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex -space-x-2 mr-2">
-            {board.users?.slice(0, 3).map((u: any, i: number) => (
-              <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-background flex items-center justify-center text-[10px] font-bold z-10 relative shadow-sm text-white">
-                {u.initials}
-              </div>
-            ))}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            <Link 
+              to={`/w/${workspaceId}/b/${boardId}/kanban`}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-background shadow-sm text-foreground"
+            >
+              <LayoutDashboard size={16} /> Kanban
+            </Link>
+            <Link 
+              to={`/w/${workspaceId}/b/${boardId}/list`}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <LayoutDashboard size={16} /> Danh sách
+            </Link>
+            <Link 
+              to={`/w/${workspaceId}/b/${boardId}/calendar`}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <LayoutDashboard size={16} /> Lịch
+            </Link>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-white hover:bg-muted rounded-lg transition-colors border border-border shadow-sm">
-            <Filter size={14} className="text-muted-foreground" />
-            Bộ lọc
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-white hover:bg-muted rounded-lg transition-colors border border-border shadow-sm">
-            <Share2 size={14} className="text-muted-foreground" />
-            Chia sẻ
-          </button>
-          <button className="p-1.5 text-muted-foreground hover:bg-white hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border hover:shadow-sm">
-            <MoreHorizontal size={18} />
-          </button>
+          
+          <div className="flex items-center gap-3 border-l border-border pl-4">
+            <div className="flex -space-x-2 mr-2">
+              {board.users?.slice(0, 3).map((u: any, i: number) => (
+                <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-background flex items-center justify-center text-[10px] font-bold z-10 relative shadow-sm text-white overflow-hidden" title={u.name}>
+                  {u.avatar ? (
+                    <img src={u.avatar.startsWith('http') ? u.avatar : `http://localhost:8000${u.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    u.initials
+                  )}
+                </div>
+              ))}
+            </div>
+            <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent">
+              <Share2 size={18} />
+            </button>
+            <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border hover:shadow-sm">
+              <MoreHorizontal size={18} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -217,14 +200,14 @@ export function BoardView() {
                     Yêu thích
                   </button>
                 </h2>
-                <div className="text-[13px] text-muted-foreground mt-0.5 flex items-center gap-2">
+                {/* <div className="text-[13px] text-muted-foreground mt-0.5 flex items-center gap-2">
                   <Play size={12} className="text-primary" />
                   <span className="font-medium text-primary/80">
                     {board.sprints && board.sprints.length > 0 
                       ? board.sprints.find((s: any) => s.status === 'active')?.name || board.sprints[0].name 
                       : "Chưa có Sprint"}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -289,7 +272,7 @@ export function BoardView() {
           board={board}
           onClose={() => {
             setActiveTask(null);
-            fetchBoard();
+            fetchBoard(boardId || '1', true);
           }} 
         />
       )}

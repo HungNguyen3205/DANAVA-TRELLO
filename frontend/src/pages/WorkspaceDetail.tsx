@@ -3,10 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Star, Columns, Users, Settings, Plus, LayoutDashboard, Activity } from 'lucide-react';
 import { CreateBoardModal } from '../components/workspace/CreateBoardModal';
 import api from '../lib/axios';
+import { useAuthStore } from '../store/authStore';
 
 export function WorkspaceDetail() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   
   const [workspace, setWorkspace] = useState<any>(null);
   const [boards, setBoards] = useState<any[]>([]);
@@ -43,8 +45,21 @@ export function WorkspaceDetail() {
     }
   };
 
+  const toggleStar = async (boardId: number, currentStatus: boolean) => {
+    try {
+      setBoards(boards.map(b => b.id === boardId ? { ...b, is_starred: !currentStatus } : b));
+      await api.post(`/boards/${boardId}/toggle-star`);
+    } catch (e) {
+      console.error(e);
+      setBoards(boards.map(b => b.id === boardId ? { ...b, is_starred: currentStatus } : b));
+    }
+  };
+
   if (loading) return <div className="animate-pulse text-primary font-medium">Đang tải Không gian...</div>;
   if (!workspace) return <div className="text-destructive font-medium">Không tìm thấy Không gian làm việc.</div>;
+
+  const workspaceMember = workspace.members?.find((m: any) => m.id === user?.id);
+  const isAdmin = workspaceMember?.pivot?.role === 'admin';
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -63,8 +78,12 @@ export function WorkspaceDetail() {
               <div className="flex items-center gap-3 mt-3">
                 <div className="flex -space-x-2">
                   {workspace.members?.slice(0, 5).map((m: any) => (
-                    <div key={m.id} className="w-7 h-7 rounded-full bg-secondary border border-card flex items-center justify-center text-[10px] font-bold z-10 relative">
-                      {m.name?.charAt(0).toUpperCase()}
+                    <div key={m.id} className="w-7 h-7 rounded-full bg-secondary border border-card flex items-center justify-center text-[10px] font-bold z-10 relative overflow-hidden">
+                      {m.avatar ? (
+                        <img src={m.avatar.startsWith('http') ? m.avatar : `http://localhost:8000${m.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        m.name?.charAt(0).toUpperCase()
+                      )}
                     </div>
                   ))}
                   {workspace.members?.length > 5 && (
@@ -73,21 +92,15 @@ export function WorkspaceDetail() {
                     </div>
                   )}
                 </div>
-                <button className="px-3 py-1 bg-secondary text-secondary-foreground text-xs font-medium rounded hover:bg-secondary/80 transition-colors">
-                  Mời thành viên
-                </button>
+                {isAdmin && (
+                  <button className="px-3 py-1 bg-secondary text-secondary-foreground text-xs font-medium rounded hover:bg-secondary/80 transition-colors">
+                    Mời thành viên
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* Tabs */}
-      <div className="border-b border-border/50 mb-6 flex gap-6">
-        <TabButton icon={<LayoutDashboard size={16} />} label="Bảng" active={activeTab === 'boards'} onClick={() => setActiveTab('boards')} />
-        <TabButton icon={<Activity size={16} />} label="Dashboard" active={false} onClick={() => navigate(`/w/${workspaceId}/dashboard`)} />
-        <TabButton icon={<Users size={16} />} label="Thành viên" active={activeTab === 'members'} onClick={() => setActiveTab('members')} />
-        <TabButton icon={<Settings size={16} />} label="Cài đặt" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
       </div>
       
       {/* Tab Content: Boards */}
@@ -108,16 +121,20 @@ export function WorkspaceDetail() {
                 key={board.id}
                 title={board.name} 
                 bgClass={board.color || 'bg-gradient-to-br from-blue-500 to-cyan-400'} 
+                isStarred={board.is_starred}
+                onToggleStar={(e) => { e.stopPropagation(); toggleStar(board.id, board.is_starred); }}
                 onClick={() => navigate(`/b/${board.id}`)}
               />
             ))}
-            <button 
-              onClick={() => setIsCreateBoardOpen(true)}
-              className="h-28 rounded-xl bg-card/50 border border-border border-dashed flex flex-col items-center justify-center text-sm font-medium text-muted-foreground hover:bg-accent hover:border-primary/50 hover:text-foreground transition-all group shadow-sm hover:shadow-md gap-2"
-            >
-              <Plus size={20} className="group-hover:scale-110 transition-transform group-hover:text-primary" />
-              <span>Tạo bảng mới</span>
-            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setIsCreateBoardOpen(true)}
+                className="h-28 rounded-xl bg-card/50 border border-border border-dashed flex flex-col items-center justify-center text-sm font-medium text-muted-foreground hover:bg-accent hover:border-primary/50 hover:text-foreground transition-all group shadow-sm hover:shadow-md gap-2"
+              >
+                <Plus size={20} className="group-hover:scale-110 transition-transform group-hover:text-primary" />
+                <span>Tạo bảng mới</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -194,20 +211,30 @@ function TabButton({ icon, label, active, onClick }: { icon: React.ReactNode, la
   );
 }
 
-function BoardThumbnail({ title, bgClass, isStarred, onClick }: { title: string, bgClass: string, isStarred?: boolean, onClick?: () => void }) {
+function BoardThumbnail({ title, bgClass, isStarred, onClick, onToggleStar }: { title: string, bgClass: string, isStarred?: boolean, onClick?: () => void, onToggleStar?: (e: React.MouseEvent) => void }) {
   return (
     <div 
       onClick={onClick}
       className={`relative h-28 rounded-xl overflow-hidden cursor-pointer group shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${bgClass}`}
     >
-      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
-      <div className="absolute inset-0 p-4 flex flex-col justify-between">
+      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
+      <div className="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none">
         <h4 className="text-white font-bold text-sm leading-tight drop-shadow-md line-clamp-2">{title}</h4>
-        <div className="self-end">
-          <Star 
-            size={16} 
-            className={`transition-all ${isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-white/50 opacity-0 group-hover:opacity-100 hover:scale-110'}`} 
-          />
+        <div className="self-end pointer-events-auto">
+          <button 
+            type="button"
+            className="p-2 -m-2 rounded-full hover:bg-black/30 transition-colors relative z-50 flex items-center justify-center" 
+            onClick={(e) => { 
+              e.preventDefault(); 
+              e.stopPropagation(); 
+              if (onToggleStar) onToggleStar(e); 
+            }}
+          >
+            <Star 
+              size={18} 
+              className={`transition-all ${isStarred ? 'text-yellow-400 fill-yellow-400 opacity-100' : 'text-white/70 opacity-0 group-hover:opacity-100 hover:scale-125'}`} 
+            />
+          </button>
         </div>
       </div>
     </div>

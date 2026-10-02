@@ -164,7 +164,55 @@ h3 {
 }
 
 .dark {
-  /* Keep empty or same as root to allow toggling if needed later, but root is dark by default */
+  color-scheme: dark;
+  
+  /* Backgrounds */
+  --background: 222 47% 11%; /* #0f172a - Slate 900 */
+  --foreground: 210 40% 98%; /* #f8fafc - Slate 50 */
+  --card: 222 47% 15%; /* #111827 - slightly lighter for cards */
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 15%;
+  --popover-foreground: 210 40% 98%;
+  
+  /* Primary Action (Violet) */
+  --primary: 250 71% 64%; /* Keep primary violet same, or slightly brighter */
+  --primary-foreground: 0 0% 100%;
+  
+  /* Secondary/Hover elements */
+  --secondary: 217 33% 17%; /* #1e293b - Slate 800 */
+  --secondary-foreground: 215 20% 65%; /* #94a3b8 */
+  
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  
+  --accent: 217 33% 17%;
+  --accent-foreground: 210 40% 98%;
+  
+  /* Alerts/Danger */
+  --destructive: 0 62.8% 30.6%; /* darker red for background */
+  --destructive-foreground: 0 0% 100%;
+  
+  /* Borders */
+  --border: 217 33% 20%; /* #334155 */
+  --input: 217 33% 20%;
+  --ring: 250 71% 64%;
+  
+  /* Custom Kanban Variables */
+  --surface: #0f172a; /* Slate 900 */
+  --panel: #1e293b; /* Slate 800 */
+  --text: #f8fafc;
+  --subtle: #94a3b8;
+  --line: #334155;
+  
+  /* Pastel Columns Base (Dark adapted) */
+  --col-todo-bg: rgba(124, 92, 252, 0.15);
+  --col-todo-color: #a78bfa;
+  --col-progress-bg: rgba(79, 125, 243, 0.15);
+  --col-progress-color: #60a5fa;
+  --col-review-bg: rgba(230, 169, 45, 0.15);
+  --col-review-color: #fbbf24;
+  --col-done-bg: rgba(47, 175, 131, 0.15);
+  --col-done-color: #34d399;
 }
 * {
   box-sizing: border-box;
@@ -273,4 +321,63 @@ button svg {
 }
 ::selection {
   background: #f4762440;
+}
+
+/* React Big Calendar Dark Mode Overrides */
+.dark .rbc-calendar {
+  color: hsl(var(--foreground));
+}
+.dark .rbc-month-view,
+.dark .rbc-time-view,
+.dark .rbc-header,
+.dark .rbc-day-bg,
+.dark .rbc-month-row,
+.dark .rbc-time-header.rbc-overflowing {
+  border-color: hsl(var(--border)) !important;
+}
+.dark .rbc-day-bg + .rbc-day-bg,
+.dark .rbc-month-row + .rbc-month-row,
+.dark .rbc-header + .rbc-header {
+  border-color: hsl(var(--border)) !important;
+}
+.dark .rbc-off-range-bg {
+  background-color: hsl(var(--muted)) !important;
+}
+.dark .rbc-today {
+  background-color: hsl(var(--accent) / 0.5) !important;
+}
+.dark .rbc-button-link {
+  color: hsl(var(--foreground));
+}
+.dark .rbc-show-more {
+  color: hsl(var(--primary));
+  background-color: transparent;
+}
+.dark .rbc-calendar {
+  background-color: hsl(var(--card)) !important;
+}
+.dark .rbc-month-view,
+.dark .rbc-time-view,
+.dark .rbc-agenda-view,
+.dark .rbc-header {
+  background-color: hsl(var(--card)) !important;
+}
+.dark .rbc-day-bg {
+  background-color: transparent !important;
+}
+.dark .rbc-off-range-bg {
+  background-color: hsl(var(--background)) !important;
+}
+
+/* Cursor & Selection - Premium App-like Feel */
+body {
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  cursor: text;
+  user-select: auto;
+  -webkit-user-select: auto;
 }

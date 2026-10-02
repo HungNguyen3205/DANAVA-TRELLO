@@ -15,6 +15,19 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'username',
+        'system_role',
+        'account_status',
+        'must_change_password',
+        'created_by',
+        'phone',
+        'gender',
+        'avatar',
+        'dob',
+        'address',
+        'join_date',
+        'contact_email',
+        'notification_preferences'
     ];
 
     protected $hidden = [
@@ -27,6 +40,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'notification_preferences' => 'array',
         ];
     }
 

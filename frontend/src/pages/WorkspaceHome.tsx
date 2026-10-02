@@ -25,8 +25,10 @@ export function WorkspaceHome() {
       setWorkspaces(data);
       if (data.length > 0) {
         setSelectedWorkspace(data[0]);
-        const bRes = await api.get(`/workspaces/${data[0].id}/boards`);
-        setBoards(bRes.data);
+        // Fire request but don't wait sequentially for workspaces if we can optimize
+        api.get(`/workspaces/${data[0].id}/boards`).then(bRes => {
+            setBoards(bRes.data);
+        }).catch(console.error);
       }
     } catch (e) {
       console.error(e);
@@ -56,66 +58,33 @@ export function WorkspaceHome() {
     }
   };
 
+  const toggleStar = async (boardId: number, currentStatus: boolean) => {
+    try {
+      setBoards(boards.map(b => b.id === boardId ? { ...b, is_starred: !currentStatus } : b));
+      await api.post(`/boards/${boardId}/toggle-star`);
+    } catch (e) {
+      console.error(e);
+      // Revert on error
+      setBoards(boards.map(b => b.id === boardId ? { ...b, is_starred: currentStatus } : b));
+    }
+  };
+
   if (loading) {
     return <div className="flex-1 flex items-center justify-center"><div className="animate-pulse text-primary font-medium">Đang tải dữ liệu...</div></div>;
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden">
-      {/* Left Sidebar */}
-      <aside className="w-64 border-r border-border bg-card/30 hidden md:flex flex-col transition-all duration-300">
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-          <SidebarItem icon={<LayoutDashboard size={18} />} label="Bảng" active />
-          <SidebarItem icon={<Grid size={18} />} label="Mẫu" />
-          <SidebarItem icon={<Clock size={18} />} label="Trang chủ" />
-          
-          <div className="mt-6 mb-2 flex items-center justify-between px-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Các Không gian làm việc
-            </span>
-            <button 
-              onClick={() => setPromptData({ isOpen: true, title: 'Tên không gian mới:', onConfirm: (v) => { createWorkspace(v); setPromptData(null); }})}
-              className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground transition-colors"
-              title="Tạo không gian làm việc"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-          
-          <div className="space-y-1">
-            {workspaces.map(ws => (
-              <div 
-                key={ws.id} 
-                onClick={() => {
-                  setSelectedWorkspace(ws);
-                  api.get(`/workspaces/${ws.id}/boards`).then(res => setBoards(res.data));
-                }}
-                className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer group transition-colors ${selectedWorkspace?.id === ws.id ? 'bg-accent/80' : 'hover:bg-accent/50'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                    {ws.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className={`text-sm font-medium transition-colors ${selectedWorkspace?.id === ws.id ? 'text-primary' : 'group-hover:text-foreground text-muted-foreground'}`}>
-                    {ws.name}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </nav>
-      </aside>
-
+    <div className="flex flex-1 overflow-hidden relative">
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto bg-background relative p-8">
-        <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="flex-1 overflow-y-auto bg-background relative p-4 md:p-8">
+        <div className="max-w-5xl mx-auto space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           {workspaces.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[60vh] space-y-4 text-center">
-              <div className="w-20 h-20 bg-card rounded-full flex items-center justify-center mb-2 shadow-lg border border-border">
-                <Briefcase size={32} className="text-muted-foreground" />
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-card rounded-full flex items-center justify-center mb-2 shadow-lg border border-border">
+                <Briefcase size={32} className="text-muted-foreground w-6 h-6 md:w-8 md:h-8" />
               </div>
-              <h2 className="text-2xl font-bold">Chào mừng đến với DANAVA WORK</h2>
+              <h2 className="text-xl md:text-2xl font-bold">Chào mừng đến với DANAVA WORK</h2>
               <p className="text-muted-foreground max-w-md">Bạn chưa tham gia không gian làm việc nào. Hãy tạo một không gian mới để bắt đầu quản lý dự án.</p>
               <button 
                 onClick={() => setPromptData({ isOpen: true, title: 'Nhập tên Không gian làm việc:', onConfirm: (v) => { createWorkspace(v); setPromptData(null); }})}
@@ -158,6 +127,8 @@ export function WorkspaceHome() {
                       key={board.id}
                       title={board.name} 
                       bgClass={board.color || 'bg-gradient-to-br from-blue-500 to-cyan-400'} 
+                      isStarred={board.is_starred}
+                      onToggleStar={(e) => { e.stopPropagation(); toggleStar(board.id, board.is_starred); }}
                       onClick={() => navigate(`/b/${board.id}`)}
                     />
                   ))}
@@ -201,39 +172,33 @@ function WorkspaceAction({ icon, label, highlight }: { icon: React.ReactNode, la
   );
 }
 
-function BoardThumbnail({ title, bgClass, isStarred, onClick }: { title: string, bgClass: string, isStarred?: boolean, onClick?: () => void }) {
+function BoardThumbnail({ title, bgClass, isStarred, onClick, onToggleStar }: { title: string, bgClass: string, isStarred?: boolean, onClick?: () => void, onToggleStar?: (e: React.MouseEvent) => void }) {
   return (
     <div 
       onClick={onClick}
       className={`relative h-28 rounded-xl overflow-hidden cursor-pointer group shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${bgClass}`}
     >
-      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
-      <div className="absolute inset-0 p-4 flex flex-col justify-between">
+      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
+      <div className="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none">
         <h4 className="text-white font-bold text-sm leading-tight drop-shadow-md line-clamp-2">{title}</h4>
-        <div className="self-end">
-          <Star 
-            size={16} 
-            className={`transition-all ${isStarred ? 'text-yellow-400 fill-yellow-400' : 'text-white/50 opacity-0 group-hover:opacity-100 hover:scale-110'}`} 
-          />
+        <div className="self-end pointer-events-auto">
+          <button 
+            type="button"
+            className="p-2 -m-2 rounded-full hover:bg-black/30 transition-colors relative z-50 flex items-center justify-center" 
+            onClick={(e) => { 
+              e.preventDefault(); 
+              e.stopPropagation(); 
+              if (onToggleStar) onToggleStar(e); 
+            }}
+          >
+            <Star 
+              size={18} 
+              className={`transition-all ${isStarred ? 'text-yellow-400 fill-yellow-400 opacity-100' : 'text-white/70 opacity-0 group-hover:opacity-100 hover:scale-125'}`} 
+            />
+          </button>
         </div>
       </div>
     </div>
-  );
-}
-
-function SidebarItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
-  return (
-    <Link 
-      to="/"
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
-        active 
-          ? 'bg-primary/10 text-primary font-medium' 
-          : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </Link>
   );
 }
 

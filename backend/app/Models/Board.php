@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Board extends Model
 {
-    protected $fillable = ['workspace_id', 'name', 'color'];
+    protected $fillable = ['workspace_id', 'name', 'description', 'color'];
 
     public function workspace()
     {
@@ -26,5 +26,12 @@ class Board extends Model
     public function labels()
     {
         return $this->hasMany(Label::class);
+    }
+
+    public function members()
+    {
+        return $this->belongsToMany(User::class, 'board_members', 'board_id', 'user_id')
+                    ->withPivot('role', 'is_starred')
+                    ->withTimestamps();
     }
 }

@@ -26,6 +26,13 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const [isLabelsVisible, setIsLabelsVisible] = useState(false);
   const [isMembersVisible, setIsMembersVisible] = useState(false);
   const [isDatesVisible, setIsDatesVisible] = useState(false);
+  
+  // Label states
+  const [labelSearch, setLabelSearch] = useState("");
+  const [editingLabel, setEditingLabel] = useState<any>(null);
+  const [isCreatingLabel, setIsCreatingLabel] = useState(false);
+  const [labelDraftName, setLabelDraftName] = useState("");
+  const [labelDraftColor, setLabelDraftColor] = useState("");
 
   const update = (value: Partial<Task>) => {
     setDraft(d => ({ ...d, ...value }));
@@ -82,15 +89,16 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   };
 
   const currentColumn = board.columns.find(c => c.id === draft.columnId);
+  const assignedUser = board.users?.find(u => u.id === draft.assigneeId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 backdrop-blur-[2px] animate-in fade-in duration-200 overflow-y-auto py-10" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 backdrop-blur-[2px] animate-in fade-in duration-200 overflow-y-auto py-6 px-3 md:py-10 md:px-4" onClick={onClose}>
       <div 
-        className="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200 border border-border flex flex-col relative my-auto"
+        className="w-full max-w-5xl bg-card rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200 border border-border flex flex-col relative my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Section */}
-        <header className="px-6 lg:px-8 pt-8 pb-5 flex items-start justify-between bg-white shrink-0 border-b border-border/50">
+        <header className="px-6 lg:px-8 pt-8 pb-5 flex items-start justify-between bg-card shrink-0 border-b border-border/50">
           <div className="flex gap-4 items-start w-full pr-14">
             <CreditCard className="text-muted-foreground mt-1.5 shrink-0" size={24} />
             <div className="w-full">
@@ -118,7 +126,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
           </button>
         </header>
 
-        <div className="flex flex-col md:flex-row bg-white">
+        <div className="flex flex-col md:flex-row bg-card">
           {/* Main Content Area (Left) */}
           <div className="flex-1 p-6 lg:p-8 border-r border-border min-h-[500px]">
             
@@ -129,8 +137,12 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                   <div>
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Thành viên</h3>
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                        {draft.assigneeId.charAt(0).toUpperCase()}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
+                        {assignedUser?.avatar ? (
+                          <img src={assignedUser.avatar.startsWith('http') ? assignedUser.avatar : `http://localhost:8000${assignedUser.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          assignedUser?.initials || draft.assigneeId.charAt(0).toUpperCase()
+                        )}
                       </div>
                     </div>
                   </div>
@@ -477,12 +489,12 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
           </div>
 
           {/* Sidebar Area (Right) */}
-          <aside className="w-full md:w-[32%] lg:w-[30%] p-6 lg:p-8 bg-[#F8FAFC] shrink-0 flex flex-col gap-8 border-l border-border/50">
+          <aside className="w-full md:w-[32%] lg:w-[30%] p-6 lg:p-8 bg-muted/20 shrink-0 flex flex-col gap-8 border-l border-border/50">
             
             <div>
               <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Trạng thái</h4>
               <select 
-                className="w-full p-2.5 rounded-xl bg-white border border-border/80 focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px] text-foreground font-semibold shadow-sm transition-all outline-none cursor-pointer" 
+                className="w-full p-2.5 rounded-xl bg-card border border-border/80 focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px] text-foreground font-semibold shadow-sm transition-all outline-none cursor-pointer" 
                 value={draft.columnId} 
                 onChange={e => { 
                   update({ columnId: e.target.value }); 
@@ -529,7 +541,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                       }
                     }}
                   />
-                  <div className="w-full flex items-center gap-3 px-3 py-2 bg-white hover:bg-slate-50 text-foreground/90 rounded-xl font-semibold text-[13px] transition-all text-left border border-border/80 shadow-sm hover:shadow hover:-translate-y-px cursor-pointer">
+                  <div className="w-full flex items-center gap-3 px-3 py-2 bg-card hover:bg-accent text-foreground/90 rounded-xl font-semibold text-[13px] transition-all text-left border border-border/80 shadow-sm hover:shadow hover:-translate-y-px cursor-pointer">
                     <span className="text-muted-foreground"><Paperclip size={16} /></span>
                     <span>Đính kèm</span>
                   </div>
@@ -594,8 +606,12 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                           className="w-full text-left px-2 py-1.5 rounded text-[13px] font-medium text-foreground hover:bg-accent flex items-center justify-between transition-colors"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold">
-                              {user.initials}
+                            <span className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden">
+                              {user.avatar ? (
+                                <img src={user.avatar.startsWith('http') ? user.avatar : `http://localhost:8000${user.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                              ) : (
+                                user.initials
+                              )}
                             </span>
                             <span className="truncate">{user.name}</span>
                           </div>
@@ -612,41 +628,189 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
 
               {isLabelsVisible && (
                 <div className="mt-2 p-3 bg-card border border-border/50 rounded shadow-lg animate-in slide-in-from-top-2 duration-200">
-                  <h4 className="text-xs font-bold text-foreground mb-2 flex justify-between items-center">
+                  <h4 className="text-xs font-bold text-foreground mb-3 flex justify-between items-center">
                     Nhãn
-                    <button onClick={() => setIsLabelsVisible(false)} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={() => {
+                      setIsLabelsVisible(false);
+                      setIsCreatingLabel(false);
+                      setEditingLabel(null);
+                    }} className="text-muted-foreground hover:text-foreground">
                       <X size={14} />
                     </button>
                   </h4>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                    {board?.labels?.map(label => {
-                      const isSelected = draft.labels.some(l => l.id === label.id);
-                      return (
+
+                  {isCreatingLabel || editingLabel ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                          {editingLabel ? 'Chỉnh sửa nhãn' : 'Tạo nhãn mới'}
+                        </label>
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Tên nhãn..."
+                          value={labelDraftName}
+                          onChange={e => setLabelDraftName(e.target.value)}
+                          className="w-full bg-background border border-input rounded py-1.5 px-2 text-sm text-foreground focus:border-primary/50 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Màu sắc</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ec4899', '#64748b'].map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setLabelDraftColor(color)}
+                              className={`w-7 h-7 rounded flex items-center justify-center transition-transform hover:scale-110 ${labelDraftColor === color ? 'ring-2 ring-primary ring-offset-1 ring-offset-card' : ''}`}
+                              style={{ backgroundColor: color }}
+                            >
+                              {labelDraftColor === color && <Check size={14} className="text-white" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
                         <button
-                          key={label.id}
                           onClick={async () => {
-                            const newLabels = isSelected 
-                              ? draft.labels.filter(l => l.id !== label.id) 
-                              : [...draft.labels, label];
-                            update({ labels: newLabels });
+                            if (!labelDraftName.trim() || !labelDraftColor) return;
+                            setBusy(true);
                             try {
-                              await api.post(`/tasks/${task.id}/labels`, { label_ids: newLabels.map(l => l.id) });
-                            } catch(e) {
-                              update({ labels: draft.labels }); // revert
+                              if (editingLabel) {
+                                const res = await api.put(`/labels/${editingLabel.id}`, { name: labelDraftName, color: labelDraftColor });
+                                // Update board labels locally (not fully persistent across refresh unless boardStore is updated, but good enough for this view)
+                                const updatedLabels = board.labels?.map(l => l.id === editingLabel.id ? res.data : l) || [];
+                                board.labels = updatedLabels;
+                                // Update draft tasks
+                                update({ labels: draft.labels.map(l => l.id === editingLabel.id ? res.data : l) });
+                                setEditingLabel(null);
+                                toast.success('Đã cập nhật nhãn');
+                              } else {
+                                const res = await api.post(`/boards/${board.id}/labels`, { name: labelDraftName, color: labelDraftColor });
+                                board.labels = [...(board.labels || []), res.data];
+                                setIsCreatingLabel(false);
+                                toast.success('Đã tạo nhãn');
+                              }
+                            } catch (e: any) {
+                              toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
+                            } finally {
+                              setBusy(false);
                             }
                           }}
-                          className="w-full text-left px-2 py-1.5 rounded text-[13px] font-semibold text-white flex items-center justify-between transition-opacity hover:opacity-80"
-                          style={{ backgroundColor: label.color }}
+                          disabled={busy}
+                          className="flex-1 bg-primary text-white text-xs font-semibold py-2 rounded hover:bg-orange-600 transition-colors"
                         >
-                          <span className="truncate pr-2">{label.name}</span>
-                          {isSelected && <CheckSquare size={14} className="shrink-0" />}
+                          Lưu
                         </button>
-                      );
-                    })}
-                    {(!board?.labels || board.labels.length === 0) && (
-                      <p className="text-xs text-muted-foreground">Bảng này chưa có nhãn nào.</p>
-                    )}
-                  </div>
+                        <button
+                          onClick={() => {
+                            setIsCreatingLabel(false);
+                            setEditingLabel(null);
+                          }}
+                          className="px-3 py-2 bg-accent hover:bg-border text-foreground text-xs font-semibold rounded transition-colors"
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                      {editingLabel && (
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Bạn có chắc chắn muốn xóa nhãn "${editingLabel.name}"? Nhãn sẽ bị gỡ khỏi tất cả nhiệm vụ đang dùng.`)) return;
+                            setBusy(true);
+                            try {
+                              await api.delete(`/labels/${editingLabel.id}`);
+                              board.labels = board.labels?.filter(l => l.id !== editingLabel.id);
+                              update({ labels: draft.labels.filter(l => l.id !== editingLabel.id) });
+                              setEditingLabel(null);
+                              toast.success('Đã xóa nhãn');
+                            } catch (e: any) {
+                              toast.error('Lỗi khi xóa nhãn');
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                          disabled={busy}
+                          className="w-full mt-2 bg-red-500/10 text-red-500 text-xs font-semibold py-2 rounded hover:bg-red-500 hover:text-white transition-colors"
+                        >
+                          Xóa nhãn
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <input 
+                        type="text" 
+                        placeholder="Tìm nhãn..." 
+                        className="w-full mb-3 bg-background border border-input rounded py-1.5 px-2 text-sm text-foreground focus:border-primary/50 outline-none"
+                        value={labelSearch}
+                        onChange={e => setLabelSearch(e.target.value)}
+                      />
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                        {board?.labels?.filter(l => l.name.toLowerCase().includes(labelSearch.toLowerCase())).map(label => {
+                          const isSelected = draft.labels.some(l => String(l.id) === String(label.id));
+                          return (
+                            <div key={label.id} className="flex items-center gap-1">
+                              <button
+                                onClick={async () => {
+                                  const newLabels = isSelected 
+                                    ? draft.labels.filter(l => String(l.id) !== String(label.id)) 
+                                    : [...draft.labels, label];
+                                  update({ labels: newLabels });
+                                  try {
+                                    await api.post(`/tasks/${task.id}/labels`, { label_ids: newLabels.map(l => l.id) });
+                                  } catch(e) {
+                                    update({ labels: draft.labels }); // revert
+                                    toast.error('Lỗi khi gắn nhãn');
+                                  }
+                                }}
+                                className="flex-1 text-left px-2 py-1.5 rounded text-[13px] font-semibold text-white flex items-center justify-between transition-opacity hover:opacity-80"
+                                style={{ backgroundColor: label.color }}
+                              >
+                                <span className="truncate pr-2">{label.name}</span>
+                                {isSelected && <CheckSquare size={14} className="shrink-0 text-white" />}
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setEditingLabel(label);
+                                  setLabelDraftName(label.name);
+                                  setLabelDraftColor(label.color);
+                                }}
+                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {(!board?.labels || board.labels.length === 0) && (
+                          <div className="text-center py-4">
+                            <p className="text-xs text-muted-foreground mb-2">Bảng này chưa có nhãn nào.</p>
+                            <button
+                              onClick={() => {
+                                setIsCreatingLabel(true);
+                                setLabelDraftName("");
+                                setLabelDraftColor("#3b82f6");
+                              }}
+                              className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded hover:bg-primary/20 transition-colors"
+                            >
+                              Tạo nhãn đầu tiên
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {board?.labels && board.labels.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setIsCreatingLabel(true);
+                            setLabelDraftName("");
+                            setLabelDraftColor("#3b82f6");
+                          }}
+                          className="w-full mt-3 py-1.5 bg-accent text-foreground text-xs font-semibold rounded hover:bg-border transition-colors"
+                        >
+                          Tạo nhãn mới
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -704,7 +868,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
       </div>
 
       {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F172A]/70 backdrop-blur-[2px] animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F172A]/70 backdrop-blur-[2px] animate-in fade-in duration-200 p-4">
           <div className="w-full max-w-sm bg-popover rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-border">
             <h3 className="text-lg font-bold mb-2 text-foreground">Xóa công việc?</h3>
             <p className="text-[13px] text-muted-foreground mb-6 leading-relaxed">Công việc này sẽ bị xóa vĩnh viễn khỏi bảng và không thể khôi phục.</p>
@@ -723,7 +887,7 @@ function SidebarButton({ icon, label, onClick }: { icon: React.ReactNode, label:
   return (
     <button 
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 bg-white hover:bg-slate-50 text-foreground/90 rounded-xl font-semibold text-[13px] transition-all text-left border border-border/80 shadow-sm hover:shadow hover:-translate-y-px"
+      className="w-full flex items-center gap-3 px-3 py-2 bg-card hover:bg-accent text-foreground/90 rounded-xl font-semibold text-[13px] transition-all text-left border border-border/80 shadow-sm hover:shadow hover:-translate-y-px"
     >
       <span className="text-muted-foreground">{icon}</span>
       <span>{label}</span>
