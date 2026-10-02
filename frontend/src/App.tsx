@@ -1,29 +1,54 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AppLayout } from './components/layout/AppLayout';
-import { WorkspaceHome } from './pages/WorkspaceHome';
-import { BoardView } from './pages/BoardView';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { useAuthStore } from './store/authStore';
-
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
-}
-
-function App() {
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Toaster } from "sonner";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import { LoginPage } from "./pages/LoginPage";
+import { WorkspacePage } from "./pages/WorkspacePage";
+import { BoardPage } from "./pages/BoardPage";
+import "./App.css";
+import "./Workspace.css";
+function ApplicationRoutes() {
+  const { user, loading } = useAuth();
+  const { dark } = useTheme();
+  if (loading)
+    return (
+      <div className="auth-screen">
+        <p>Đang mở không gian làm việc…</p>
+      </div>
+    );
   return (
-    <BrowserRouter>
+    <>
+      <Toaster richColors theme={dark ? "dark" : "light"} />
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-          <Route index element={<WorkspaceHome />} />
-          <Route path="b/:boardId" element={<BoardView />} />
-        </Route>
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/" replace /> : <LoginPage />}
+        />
+        <Route
+          path="/"
+          element={user ? <WorkspacePage /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/workspaces/:workspaceId"
+          element={user ? <WorkspacePage /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/boards/:boardId"
+          element={user ? <BoardPage /> : <Navigate to="/login" replace />}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
-
-export default App;
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <ApplicationRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}

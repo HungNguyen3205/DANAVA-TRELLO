@@ -26,3 +26,8 @@ dist-ssr
 # Local credentials
 .env*
 !.env.example
+
+.vite/
+/vendor/
+/backend/vendor/
+/backend/.phpunit.result.cache

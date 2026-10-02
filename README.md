@@ -1,59 +1,82 @@
 # DANAVA WORK
 
-React + TypeScript + Vite workspace for a Vietnamese team. Includes Kanban and list views, task forms, assignees/collaborators, due dates, priority filters, editable checklists and comments, column management, activity history, responsive navigation, and light/dark/system themes.
+Ứng dụng phân bổ công việc theo luồng **Đăng nhập → Không gian làm việc → Bảng Kanban → Công việc**.
 
-## Run on Windows
+Dự án được tách thành hai phần độc lập:
 
-Use Node.js **22.12+ or 24 LTS**. From PowerShell:
+| Thư mục | Công nghệ | Trách nhiệm |
+| --- | --- | --- |
+| `frontend/` | React 19, TypeScript, Vite, React Router | Đăng nhập, danh sách không gian/bảng, Kanban, biểu mẫu |
+| `backend/` | PHP 8.3+, Laravel 13, Sanctum | Session đăng nhập, phân quyền, API, transaction, MySQL |
+| `docs/` | Tài liệu dự án | Cài đặt, kiến trúc, API và kế hoạch sprint |
+
+**MySQL lưu dữ liệu. Navicat là công cụ kết nối và quản lý MySQL**, không phải dịch vụ lưu trữ riêng. Frontend không chứa thông tin đăng nhập database.
+
+## Chạy dự án trên Windows
+
+Cài PHP 8.3+ (có `pdo_mysql`, `mbstring`, `openssl`, `fileinfo`, `curl`, `xml`, `dom`), Composer 2, Node.js 22.12+ và MySQL 8. Xem [hướng dẫn Windows + Navicat](docs/SETUP.md) nếu cần cấu hình từng bước.
+
+Trong Navicat, kết nối MySQL và chạy:
+
+```sql
+CREATE DATABASE danava_work CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Terminal thứ nhất, tại thư mục dự án:
 
 ```powershell
-cd D:\NamHung\Projects\Code\Trello
-npm ci
+cd backend
+Copy-Item .env.example .env
+composer install
+php artisan key:generate
+```
+
+Sửa `backend/.env`: `DB_HOST`, `DB_PORT`, `DB_DATABASE=danava_work`, `DB_USERNAME`, `DB_PASSWORD` theo MySQL của bạn. Sau đó:
+
+```powershell
+php artisan migrate
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+Terminal thứ hai, tại thư mục dự án:
+
+```powershell
+npm run setup:frontend
 npm run dev
 ```
 
-Open the URL printed by Vite. Production build: `npm run build`; preview: `npm run preview`.
+Mở **http://localhost:5173**, chọn **Đăng ký**, tạo tài khoản rồi tạo không gian đầu tiên. Không có tài khoản mặc định hoặc dữ liệu giả tự lưu. Giữ cả hai terminal đang chạy. Linux/macOS dùng `cp .env.example .env` thay cho `Copy-Item`.
 
-## Two explicit modes
+## Có trong nhánh này
 
-**Demo** (no environment configured): interactive sample board held in memory. The banner explicitly warns that reload resets tasks. Only theme preferences are stored on the device. No mock login or successful cloud-save messages are shown.
+- Đăng ký, đăng nhập, đăng xuất bằng session cookie + CSRF qua Sanctum.
+- Trang đầu lấy bố cục từ ảnh tham chiếu: thanh không gian, bảng yêu thích, bảng gần đây, bảng theo từng không gian.
+- Tạo/sửa không gian, tạo/đổi tên bảng; mỗi không gian có nhiều bảng riêng.
+- Thêm tài khoản đã đăng ký vào không gian; quyền chủ sở hữu, quản trị, chỉnh sửa, chỉ xem.
+- Tạo/sửa/xóa công việc, người phụ trách/người phối hợp, ưu tiên, nhãn, hạn, checklist, bình luận.
+- Kéo thả cột/thẻ, thêm/sửa/xóa cột trống, đánh dấu cột hoàn thành; Kanban và danh sách; tìm kiếm/bộ lọc.
+- Yêu thích và gần đây lưu theo từng tài khoản; giao diện sáng/tối, bố cục mobile.
+- Dữ liệu quan hệ trong MySQL, kiểm tra quyền phía server, chống sửa chéo bảng và phiên bản chống ghi đè.
+- Tự tải lại bảng mỗi 30 giây khi tab đang mở; chưa có WebSocket realtime.
 
-**Shared boards** (Supabase configured): email/password authentication, server-backed data, owner-managed editor/viewer access, transactional saves with version checks, and Realtime updates. Polling every 30 seconds is a fallback. Signup email confirmation follows your Supabase project settings.
+Các phần chưa làm như email mời, quên mật khẩu, tệp đính kèm, lịch, thông báo, lưu trữ bảng và sprint nghiệp vụ có backlog cụ thể trong [kế hoạch sprint](docs/SPRINTS.md). Đây là nền tảng MVP để phát triển tiếp, không tuyên bố đã hoàn thiện toàn bộ tính năng Trello.
 
-## Configure shared data
+## Kiểm thử
 
-1. Create a Supabase project.
-2. Run `supabase/migrations/202610010001_workspace.sql` once in its SQL Editor. It creates tables, RLS policies and checked write functions, with no demo seeds.
-3. Copy `.env.example` to `.env.local`. Set `VITE_SUPABASE_URL` and the project's **publishable/anon** key. Never use a secret/service-role key in the browser.
-4. Restart Vite. Sign up and confirm your email if required. Sign in and create a private empty board.
-5. In **Thành viên**, add names to the assignment roster. Separately grant access to each teammate's email. Teammates register/sign in with that email to see the board. This access operation does **not** send an email invitation.
-6. Optionally enable `public.workspaces` in Database > Publications (`supabase_realtime`). Without it, foreground polling still works.
-7. Set your deployment's Supabase environment variables before building. For SPA hosting, rewrite unknown routes to `index.html`.
-
-## Permissions and scope
-
-- Owner: edit boards, maintain the assignment roster, grant/revoke editor/viewer access.
-- Editor: edit the entire board and its roster.
-- Viewer: read tasks and activity only; SQL RPCs reject writes.
-- Assignment roster names are **not authentication accounts** and do not grant access.
-- Access is checked through RLS and security-definer RPCs; direct client inserts/updates/deletes are revoked.
-- Saving uses an expected version. Concurrent edits produce a conflict instead of overwriting silently; reload the board and reapply the retained draft as appropriate.
-- Server history preserves old events and records the authenticated author/time for each save.
-- These are board-level roles. Per-task employee restrictions, a separate manager role, attachments/uploads and notifications are not implemented in this branch.
-- Checklist/comment edits are committed together when **Lưu công việc** is pressed. Closing without saving discards the draft.
-
-## Keyboard and mobile
-
-Open a task with its card button. Change status in the task form on mobile. Drag only from a grip handle; card content remains scrollable/tappable. On a focused grip, Space begins dragging, arrow keys move, Escape cancels. Filtering disables dragging to avoid ambiguous placement among hidden tasks.
-
-Date-only deadlines use the Vietnam calendar day. Completion is a property of the column and works with renamed/custom columns.
-
-## Checks
-
-```sh
+```powershell
 npm run build
 npm run lint
-node --experimental-strip-types tests/board.test.ts
+npm test
+cd backend
+php artisan test
 ```
 
-`tests/board.test.ts` checks immutable moves, empty-column placement, invalid drop targets and date/completion behavior. Build and frontend browser checks can run without Supabase; cloud authorization and concurrency require a configured test project and two authenticated users. See `supabase/TESTING.md` for that checklist.
+Frontend kiểm thử DOM các luồng chính và quy tắc kéo thả. Backend mặc định chạy PHPUnit bằng SQLite in-memory; cần bật `pdo_sqlite`. Có cấu hình chạy cùng bộ kiểm thử trên MySQL test riêng trong [SETUP.md](docs/SETUP.md). Không chạy test vào database đang sử dụng.
+
+## Tài liệu
+
+- [Cài đặt, Navicat và xử lý lỗi](docs/SETUP.md)
+- [Kiến trúc, dữ liệu, quyền và API](docs/ARCHITECTURE.md)
+- [Sprint nhỏ: frontend, backend và tiêu chí nghiệm thu](docs/SPRINTS.md)
+
+Nhánh này thay lớp lưu Supabase trước đây bằng Laravel/MySQL. Dữ liệu Supabase cũ **chưa được tự động nhập** vào MySQL; cần làm bước chuyển đổi riêng nếu đã có dữ liệu thực tế. Nhánh cũ vẫn được giữ để đối chiếu.

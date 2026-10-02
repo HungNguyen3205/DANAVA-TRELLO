@@ -99,7 +99,11 @@ export function KanbanBoard({
               />
             ))}
           </SortableContext>
-          <button className="add-column" onClick={() => onColumn(null)}>
+          <button
+            disabled={disabled}
+            className="add-column"
+            onClick={() => onColumn(null)}
+          >
             <Plus size={18} />
             Thêm cột
           </button>

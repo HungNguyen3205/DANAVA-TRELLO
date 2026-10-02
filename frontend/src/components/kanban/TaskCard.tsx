@@ -51,9 +51,9 @@ export function CardContent({ task, board }: { task: Task; board: Board }) {
             </span>
           )}
         </div>
-        {task.assigneeId && (
-          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-2 ring-background" title={`User: ${assignee?.name || task.assigneeId}`}>
-            {assignee?.initials || task.assigneeId.charAt(0).toUpperCase()}
+        {assignee && (
+          <span className="avatar" title={assignee.name}>
+            {assignee.initials}
           </span>
         )}
       </div>

@@ -1,0 +1,14 @@
+{
+  "name": "danava-work",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "setup:frontend": "npm --prefix frontend ci",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix frontend run test",
+    "test:backend": "composer --working-dir=backend test"
+  },
+  "engines": { "node": ">=22.12.0" }
+}

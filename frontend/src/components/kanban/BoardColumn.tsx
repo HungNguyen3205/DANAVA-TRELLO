@@ -68,6 +68,7 @@ export function BoardColumn({
           )}
           <button
             className="icon-button"
+            disabled={disabled}
             onClick={() => onEdit(column)}
             aria-label={`Cài đặt cột: ${column.title}`}
           >
@@ -93,7 +94,11 @@ export function BoardColumn({
         {tasks.length === 0 && (
           <div className="column-empty">Chưa có công việc</div>
         )}
-        <button className="add-card" onClick={() => onAdd(column.id)}>
+        <button
+          disabled={disabled}
+          className="add-card"
+          onClick={() => onAdd(column.id)}
+        >
           <Plus size={16} />
           Thêm công việc
         </button>

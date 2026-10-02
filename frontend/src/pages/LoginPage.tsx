@@ -1,66 +1,166 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import api from '../lib/axios';
-
+import { useState } from "react";
+import { Layers3, LockKeyhole } from "lucide-react";
+import { api, csrf } from "../lib/api";
+import type { Account } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 export function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const login = useAuthStore((state) => state.login);
-  const navigate = useNavigate();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data } = await api.post('/login', { email, password });
-      login(data.user, data.access_token);
-      navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại');
-    }
-  };
-
+  const { setUser, error: connectionError, refresh } = useAuth();
+  const [signup, setSignup] = useState(false),
+    [name, setName] = useState(""),
+    [email, setEmail] = useState(""),
+    [password, setPassword] = useState(""),
+    [confirmation, setConfirmation] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-background">
-      <div className="w-full max-w-md p-8 bg-card rounded-xl shadow-lg border border-border">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-primary">DANAVA WORK</h1>
-          <p className="text-muted-foreground mt-2">Đăng nhập để tiếp tục</p>
+    <main className="login-layout">
+      <section className="login-story">
+        <a className="brand home-brand" href="/">
+          <span className="brand-mark">D</span>
+          <span>
+            DANAVA <small>WORK</small>
+          </span>
+        </a>
+        <div>
+          <span className="eyebrow">MỖI DỰ ÁN. MỘT KHÔNG GIAN.</span>
+          <h1>
+            Cùng một mục tiêu.
+            <br />
+            Rõ từng công việc.
+          </h1>
+          <p>
+            Tập trung dự án, thành viên và tiến độ vào một nơi. Bắt đầu từ không
+            gian làm việc của bạn.
+          </p>
+          <div className="login-workspace-example">
+            <Layers3 />
+            <div>
+              <strong>Không gian làm việc</strong>
+              <span>Dự án → Bảng Kanban → Công việc</span>
+            </div>
+          </div>
         </div>
-        
-        {error && <div className="mb-4 p-3 bg-red-500/10 text-red-500 rounded-md text-sm">{error}</div>}
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input 
-              type="email" 
+        <small>DANAVA WORK · Dành cho đội ngũ của bạn</small>
+      </section>
+      <section className="login-form-area">
+        <form
+          className="login-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setError("");
+            setBusy(true);
+            try {
+              await csrf();
+              const result = await api<{ user: Account }>(
+                signup ? "/auth/register" : "/auth/login",
+                "POST",
+                signup
+                  ? {
+                      name,
+                      email,
+                      password,
+                      password_confirmation: confirmation,
+                    }
+                  : { email, password },
+              );
+              setUser(result.user);
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <span className="login-lock">
+            <LockKeyhole size={22} />
+          </span>
+          <h2>{signup ? "Tạo tài khoản" : "Chào mừng trở lại"}</h2>
+          <p>
+            {signup
+              ? "Tạo tài khoản để bắt đầu không gian đầu tiên."
+              : "Đăng nhập để mở không gian làm việc của bạn."}
+          </p>
+          {connectionError && (
+            <div className="inline-error" role="alert">
+              {connectionError}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void refresh()}
+              >
+                Thử kết nối lại
+              </button>
+            </div>
+          )}
+          {signup && (
+            <label>
+              Họ và tên
+              <input
+                required
+                autoComplete="name"
+                value={name}
+                maxLength={100}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+          )}
+          <label>
+            Email
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="ban@danava.vn"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 rounded-md border border-input bg-background"
-              required 
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Mật khẩu</label>
-            <input 
-              type="password" 
+          </label>
+          <label>
+            Mật khẩu
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete={signup ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 rounded-md border border-input bg-background"
-              required 
             />
-          </div>
-          <button type="submit" className="w-full py-2 bg-primary text-white rounded-md hover:bg-orange-600 transition-colors">
-            Đăng nhập
+          </label>
+          {signup && (
+            <label>
+              Nhập lại mật khẩu
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={confirmation}
+                onChange={(e) => setConfirmation(e.target.value)}
+              />
+            </label>
+          )}
+          {error && (
+            <p className="error-message" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="primary-button login-submit" disabled={busy}>
+            {busy ? "Đang xử lý…" : signup ? "Tạo tài khoản" : "Đăng nhập"}
           </button>
+          <div className="login-switch">
+            {signup ? "Đã có tài khoản?" : "Chưa có tài khoản?"}{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setSignup(!signup);
+                setError("");
+              }}
+            >
+              {signup ? "Đăng nhập" : "Đăng ký"}
+            </button>
+          </div>
         </form>
-        
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Chưa có tài khoản? <Link to="/register" className="text-primary hover:underline">Đăng ký ngay</Link>
-        </p>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
