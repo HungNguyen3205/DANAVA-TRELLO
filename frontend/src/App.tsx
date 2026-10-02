@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { lazy, Suspense } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { WorkspaceLayout } from './components/layout/WorkspaceLayout';
 import { WorkspaceDetail } from './pages/WorkspaceDetail';
@@ -7,6 +8,10 @@ import { BoardView } from './pages/BoardView';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { useAuthStore } from './store/authStore';
+
+const WorkspaceDashboard = lazy(() =>
+  import('./pages/WorkspaceDashboard').then((module) => ({ default: module.WorkspaceDashboard })),
+);
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -16,7 +21,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
-      <Toaster position="top-right" theme="dark" richColors />
+      <Toaster position="top-right" theme="light" richColors />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -33,6 +38,14 @@ function App() {
                 Đang tải Không gian làm việc...
               </div>
             } />
+            <Route
+              path="w/:workspaceId/dashboard"
+              element={
+                <Suspense fallback={<div className="animate-pulse p-8 font-medium text-primary">Đang tải Dashboard...</div>}>
+                  <WorkspaceDashboard />
+                </Suspense>
+              }
+            />
             <Route path="w/:workspaceId" element={<WorkspaceDetail />} />
           </Route>
           

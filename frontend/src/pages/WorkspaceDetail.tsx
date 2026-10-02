@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
-import { Star, Columns, Users, Settings, Briefcase, Plus, LayoutDashboard, Activity } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Star, Columns, Users, Settings, Plus, LayoutDashboard, Activity } from 'lucide-react';
 import { CreateBoardModal } from '../components/workspace/CreateBoardModal';
 import api from '../lib/axios';
 
 export function WorkspaceDetail() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
-  const { workspaces, fetchData } = useOutletContext<any>();
   
   const [workspace, setWorkspace] = useState<any>(null);
   const [boards, setBoards] = useState<any[]>([]);
@@ -15,13 +14,7 @@ export function WorkspaceDetail() {
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (workspaceId) {
-      loadWorkspace(workspaceId);
-    }
-  }, [workspaceId]);
-
-  const loadWorkspace = async (id: string) => {
+  const loadWorkspace = useCallback(async (id: string) => {
     setLoading(true);
     try {
       const { data } = await api.get(`/workspaces/${id}`);
@@ -32,7 +25,13 @@ export function WorkspaceDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (workspaceId) {
+      void loadWorkspace(workspaceId);
+    }
+  }, [workspaceId, loadWorkspace]);
 
   const createBoard = async (name: string, color: string) => {
     if (!name || !workspaceId) return;
@@ -63,7 +62,7 @@ export function WorkspaceDetail() {
               
               <div className="flex items-center gap-3 mt-3">
                 <div className="flex -space-x-2">
-                  {workspace.members?.slice(0, 5).map((m: any, i: number) => (
+                  {workspace.members?.slice(0, 5).map((m: any) => (
                     <div key={m.id} className="w-7 h-7 rounded-full bg-secondary border border-card flex items-center justify-center text-[10px] font-bold z-10 relative">
                       {m.name?.charAt(0).toUpperCase()}
                     </div>
@@ -86,7 +85,7 @@ export function WorkspaceDetail() {
       {/* Tabs */}
       <div className="border-b border-border/50 mb-6 flex gap-6">
         <TabButton icon={<LayoutDashboard size={16} />} label="Bảng" active={activeTab === 'boards'} onClick={() => setActiveTab('boards')} />
-        <TabButton icon={<Activity size={16} />} label="Tổng quan" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+        <TabButton icon={<Activity size={16} />} label="Dashboard" active={false} onClick={() => navigate(`/w/${workspaceId}/dashboard`)} />
         <TabButton icon={<Users size={16} />} label="Thành viên" active={activeTab === 'members'} onClick={() => setActiveTab('members')} />
         <TabButton icon={<Settings size={16} />} label="Cài đặt" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
       </div>
