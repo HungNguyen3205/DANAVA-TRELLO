@@ -124,7 +124,7 @@ export function TaskCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, data: { type: "Task", task }, disabled });
+  } = useSortable({ id: `task-${task.id}`, data: { type: "Task", task }, disabled });
   
   return (
     <article

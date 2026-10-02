@@ -44,7 +44,7 @@ export function BoardColumn({
     transition,
     isDragging,
   } = useSortable({
-    id: column.id,
+    id: `col-${column.id}`,
     data: { type: "Column", column },
     disabled,
   });
@@ -141,7 +141,7 @@ export function BoardColumn({
       
       <div className="flex-1 overflow-y-auto px-3 pb-3 custom-scrollbar flex flex-col gap-3 min-h-[120px]">
         <SortableContext
-          items={tasks.map((t) => t.id)}
+          items={tasks.map((t) => `task-${t.id}`)}
           strategy={verticalListSortingStrategy}
         >
           {tasks.map((task) => (
