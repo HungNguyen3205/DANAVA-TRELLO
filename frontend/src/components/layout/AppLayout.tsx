@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import api from '../../lib/axios';
+import { getPersonalDashboard } from '../../lib/personalDashboard';
 
 export function AppLayout() {
   const logout = useAuthStore(state => state.logout);
@@ -39,10 +40,7 @@ export function AppLayout() {
 
   const fetchData = async () => {
     try {
-      const [wsRes] = await Promise.all([
-        api.get('/me/dashboard').catch(() => ({ data: {} }))
-      ]);
-      const data = wsRes.data;
+      const data = await getPersonalDashboard();
       if (data) {
         setWorkspaces(data.recent_workspaces || []);
         setBoards(data.recent_boards || []);
