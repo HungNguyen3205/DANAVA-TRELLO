@@ -8,6 +8,7 @@ import {
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import api from '../lib/axios';
+import { getPersonalDashboard } from '../lib/personalDashboard';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 
@@ -33,8 +34,8 @@ export function HomePage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/me/dashboard');
-      setData(response.data);
+      const dashboard = await getPersonalDashboard();
+      setData(dashboard);
     } catch (e) {
       console.error(e);
     } finally {
