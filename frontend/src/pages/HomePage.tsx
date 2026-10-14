@@ -151,26 +151,26 @@ export function HomePage() {
             <p className="text-muted-foreground mt-1 text-sm font-medium">
               {format(new Date(), "EEEE, 'ngày' dd 'tháng' MM 'năm' yyyy", { locale: vi })}
             </p>
-            <div className="mt-3.5 inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-card border border-border/70 shadow-sm text-sm transition-all hover:border-border">
-              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Calendar size={16} />
+            <div className="mt-3.5 inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-card border border-border/70 shadow-sm text-sm transition-all hover:border-border overflow-x-auto max-w-full">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Calendar size={15} />
               </div>
               {data?.summary?.due_today > 0 || data?.summary?.overdue > 0 ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground font-normal">Hôm nay:</span>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/20 text-xs">
-                    <Clock size={13} className="shrink-0" />
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  <span className="text-muted-foreground font-medium text-xs sm:text-sm">Hôm nay:</span>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium border border-amber-500/20 text-xs shrink-0">
+                    <Clock size={13} className="shrink-0 text-amber-600 dark:text-amber-400" />
                     <span><strong>{data.summary.due_today}</strong> cần hoàn thành</span>
                   </div>
                   {data.summary.overdue > 0 && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-medium border border-rose-500/20 text-xs">
-                      <AlertTriangle size={13} className="shrink-0" />
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300 font-medium border border-rose-500/20 text-xs shrink-0">
+                      <AlertTriangle size={13} className="shrink-0 text-rose-600 dark:text-rose-400" />
                       <span><strong>{data.summary.overdue}</strong> quá hạn</span>
                     </div>
                   )}
                 </div>
               ) : (
-                <span className="text-muted-foreground font-normal">
+                <span className="text-muted-foreground font-normal whitespace-nowrap">
                   Bạn không có công việc nào cần xử lý gấp hôm nay. Tuyệt vời!
                 </span>
               )}
