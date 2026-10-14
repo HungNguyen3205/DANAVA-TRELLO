@@ -14,16 +14,22 @@ class UsersSeeder extends Seeder
         $workspace = Workspace::first();
 
         $users = [
-            ['email' => 'namhung@danava.vn', 'name' => 'Nam Hùng (Admin)', 'role' => 'admin'],
-            ['email' => 'dev@danava.vn', 'name' => 'Lập trình viên (Member)', 'role' => 'member'],
-            ['email' => 'tester@danava.vn', 'name' => 'Kiểm thử (Member)', 'role' => 'member'],
-            ['email' => 'guest@danava.vn', 'name' => 'Khách hàng (Viewer)', 'role' => 'viewer'],
+            ['email' => 'namhung@danava.vn', 'username' => 'namhung', 'name' => 'Nam Hùng', 'role' => 'admin', 'system_role' => 'system_admin'],
+            ['email' => 'letanthanh@danava.vn', 'username' => 'letanthanh', 'name' => 'Lê Tấn Thành', 'role' => 'admin', 'system_role' => 'user'],
+            ['email' => 'dev@danava.vn', 'username' => 'dev', 'name' => 'Lập trình viên', 'role' => 'member', 'system_role' => 'user'],
+            ['email' => 'tester@danava.vn', 'username' => 'tester', 'name' => 'Kiểm thử viên', 'role' => 'member', 'system_role' => 'user'],
         ];
 
         foreach ($users as $u) {
             $user = User::firstOrCreate(
                 ['email' => $u['email']],
-                ['name' => $u['name'], 'password' => Hash::make('123456')]
+                [
+                    'username' => $u['username'],
+                    'name' => $u['name'],
+                    'password' => Hash::make('123456'),
+                    'system_role' => $u['system_role'] ?? 'user',
+                    'must_change_password' => false,
+                ]
             );
 
             if ($workspace) {
