@@ -29,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
         
         // Clear all memory caches securely
         import('../lib/personalDashboard').then(m => m.clearPersonalDashboardCache());
+        import('../lib/workspace').then(m => m.clearWorkspaceCache());
         import('./boardStore').then(m => m.useBoardStore.getState().clearCache());
       },
       updateUser: (user) => {

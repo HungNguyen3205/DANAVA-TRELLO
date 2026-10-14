@@ -85,18 +85,20 @@ class UsersSeeder extends Seeder
                 'owner_id' => $namhung->id
             ]);
 
-            // Dọn các member cũ không mong muốn khỏi workspace này (chỉ giữ đúng namhung và letanthanh như local)
-            DB::table('workspace_members')->where('workspace_id', $workspace->id)
-                ->whereNotIn('user_id', [$namhung->id, $letanthanh->id])
-                ->delete();
+            // Đảm bảo các thành viên chính xác: Admin, Nam Hùng, letanthanh
+            // 1. Admin Danava (Admin workspace)
+            DB::table('workspace_members')->updateOrInsert(
+                ['workspace_id' => $workspace->id, 'user_id' => $admin->id],
+                ['role' => 'admin', 'created_at' => now(), 'updated_at' => now()]
+            );
 
-            // Gán Nam Hùng là admin của Không gian làm việc
+            // 2. Gán Nam Hùng là admin của Không gian làm việc
             DB::table('workspace_members')->updateOrInsert(
                 ['workspace_id' => $workspace->id, 'user_id' => $namhung->id],
                 ['role' => 'admin', 'created_at' => now(), 'updated_at' => now()]
             );
 
-            // Gán letanthanh là member của Không gian làm việc
+            // 3. Gán letanthanh là member của Không gian làm việc
             DB::table('workspace_members')->updateOrInsert(
                 ['workspace_id' => $workspace->id, 'user_id' => $letanthanh->id],
                 ['role' => 'member', 'created_at' => now(), 'updated_at' => now()]

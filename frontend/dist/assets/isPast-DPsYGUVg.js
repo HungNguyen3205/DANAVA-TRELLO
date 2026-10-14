@@ -1,0 +1,1 @@
+import{f as e}from"./index-CYGL6wok.js";function t(t){return+e(t)<Date.now()}export{t};
