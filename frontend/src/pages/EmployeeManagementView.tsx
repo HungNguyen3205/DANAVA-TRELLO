@@ -114,7 +114,7 @@ export function EmployeeManagementView() {
                 <th className="px-6 py-3.5">Họ và tên & Tài khoản</th>
                 <th className="px-6 py-3.5">Vai trò</th>
                 <th className="px-6 py-3.5 text-center">Trạng thái</th>
-                <th className="px-6 py-3.5">Không gian</th>
+                <th className="px-4 py-3.5 text-center">Không gian</th>
                 <th className="px-6 py-3.5 text-center">Thao tác</th>
               </tr>
             </thead>
@@ -156,8 +156,10 @@ export function EmployeeManagementView() {
                         {emp.account_status === 'active' ? 'Hoạt động' : 'Bị khóa'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                      {emp.workspaces_count} không gian
+                    <td className="px-4 py-4 text-center">
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-muted text-foreground/80 border border-border/60 whitespace-nowrap" title={`${emp.workspaces_count} không gian làm việc`}>
+                        {emp.workspaces_count}
+                      </span>
                     </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
