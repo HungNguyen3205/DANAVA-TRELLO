@@ -6,36 +6,88 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class UsersSeeder extends Seeder
 {
     public function run(): void
     {
+        // 1. Dọn sạch các tài khoản demo cũ thừa (dev, tester) nếu có
+        User::whereIn('email', ['dev@danava.vn', 'tester@danava.vn'])->delete();
+
+        // 2. Cập nhật hoặc tạo tài khoản Admin Danava - System Admin duy nhất
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@danava.vn'],
+            [
+                'username' => 'admin',
+                'name' => 'Admin Danava',
+                'password' => Hash::make('123456'),
+                'system_role' => 'system_admin',
+                'account_status' => 'active',
+                'must_change_password' => false,
+            ]
+        );
+
+        // 3. Cập nhật hoặc tạo tài khoản Hùng Nguyễn Nam - User
+        $namhung = User::updateOrCreate(
+            ['email' => 'namhung@danava.vn'],
+            [
+                'username' => 'namhung',
+                'name' => 'Hùng Nguyễn Nam',
+                'password' => Hash::make('123456'),
+                'system_role' => 'user',
+                'account_status' => 'active',
+                'must_change_password' => false,
+                'phone' => '0971120038',
+                'gender' => 'Nam',
+                'dob' => '2005-02-03',
+                'address' => '136 Phuong Sai',
+                'join_date' => '2026-09-01',
+                'contact_email' => 'namhung03022005@gmail.com',
+                'avatar' => '/storage/avatars/6HY7qEsGfi6xjZFGozVRF5Covms1ICodfBiDq9Ra.jpg',
+            ]
+        );
+
+        // 4. Cập nhật hoặc tạo tài khoản letanthanh - User
+        $letanthanh = User::updateOrCreate(
+            ['email' => 'letanthanh@danava.vn'],
+            [
+                'username' => 'letanthanh',
+                'name' => 'letanthanh',
+                'password' => Hash::make('123456'),
+                'system_role' => 'user',
+                'account_status' => 'active',
+                'must_change_password' => false,
+                'created_by' => $admin->id,
+            ]
+        );
+
+        // 5. Cập nhật hoặc tạo tài khoản test - User
+        $test = User::updateOrCreate(
+            ['email' => 'test@danava.vn'],
+            [
+                'username' => 'test',
+                'name' => 'test',
+                'password' => Hash::make('123456'),
+                'system_role' => 'user',
+                'account_status' => 'active',
+                'must_change_password' => false,
+                'created_by' => $admin->id,
+            ]
+        );
+
+        // 6. Gán workspace cho đúng như local: Nam Hùng (1 workspace), letanthanh (1 workspace)
         $workspace = Workspace::first();
-
-        $users = [
-            ['email' => 'namhung@danava.vn', 'username' => 'namhung', 'name' => 'Nam Hùng', 'role' => 'admin', 'system_role' => 'user'],
-            ['email' => 'letanthanh@danava.vn', 'username' => 'letanthanh', 'name' => 'Lê Tấn Thành', 'role' => 'admin', 'system_role' => 'user'],
-            ['email' => 'test@danava.vn', 'username' => 'test', 'name' => 'test', 'role' => 'member', 'system_role' => 'user'],
-        ];
-
-        foreach ($users as $u) {
-            $user = User::firstOrCreate(
-                ['email' => $u['email']],
-                [
-                    'username' => $u['username'],
-                    'name' => $u['name'],
-                    'password' => Hash::make('123456'),
-                    'system_role' => $u['system_role'] ?? 'user',
-                    'must_change_password' => false,
-                ]
+        if ($workspace) {
+            DB::table('workspace_members')->updateOrInsert(
+                ['workspace_id' => $workspace->id, 'user_id' => $namhung->id],
+                ['role' => 'admin', 'created_at' => now(), 'updated_at' => now()]
             );
 
-            if ($workspace) {
-                $workspace->members()->syncWithoutDetaching([
-                    $user->id => ['role' => $u['role']]
-                ]);
-            }
+            DB::table('workspace_members')->updateOrInsert(
+                ['workspace_id' => $workspace->id, 'user_id' => $letanthanh->id],
+                ['role' => 'member', 'created_at' => now(), 'updated_at' => now()]
+            );
         }
     }
 }
