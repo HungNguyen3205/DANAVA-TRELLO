@@ -313,9 +313,25 @@ export function HomePage() {
                   Không gian của bạn
                 </h2>
                 {recentWorkspaces.length === 0 ? (
-                  <div className="bg-card border border-border p-6 rounded-2xl text-center text-sm text-muted-foreground">
-                    Bạn chưa tham gia Không gian làm việc nào. <br/>
-                    Hãy liên hệ Admin hoặc tự <span className="text-primary font-medium cursor-pointer">Tạo Không gian</span>.
+                  <div className="relative overflow-hidden bg-gradient-to-b from-card to-card/60 border border-dashed border-border/80 hover:border-primary/40 rounded-2xl p-6 sm:p-7 text-center transition-all group shadow-xs">
+                    <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/10 via-purple-500/10 to-indigo-500/10 border border-primary/15 flex items-center justify-center text-primary shadow-xs group-hover:scale-105 transition-transform duration-300">
+                      <Briefcase size={26} strokeWidth={1.75} className="group-hover:rotate-6 transition-transform" />
+                    </div>
+                    <h3 className="font-semibold text-foreground text-sm mb-1.5">
+                      Chưa có Không gian làm việc
+                    </h3>
+                    <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-5 leading-relaxed">
+                      Bạn chưa tham gia không gian nào. Hãy tạo không gian mới để bắt đầu quản lý bảng và phân bổ công việc cùng đồng đội.
+                    </p>
+                    <div className="flex items-center justify-center gap-2.5">
+                      <Link 
+                        to="/workspaces"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-xl shadow-xs hover:shadow transition-all"
+                      >
+                        <Plus size={14} />
+                        Tạo Không gian
+                      </Link>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
