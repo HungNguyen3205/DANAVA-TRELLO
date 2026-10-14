@@ -1,1 +1,0 @@
-import{f as e}from"./index-3fB4mCDO.js";function t(t){return+e(t)<Date.now()}export{t};

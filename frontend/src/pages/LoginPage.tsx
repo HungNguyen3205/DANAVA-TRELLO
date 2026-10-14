@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, LayoutTemplate, Sun, Moon, Flashlight } from 'lucide-react';
+import { Eye, EyeOff, Loader2, LayoutTemplate, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
 import api from '../lib/axios';
@@ -14,11 +14,8 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   
   // Global theme
-  const globalIsDark = useUIStore(state => state.isDarkMode);
+  const isDark = useUIStore(state => state.isDarkMode);
   const toggleGlobalTheme = useUIStore(state => state.toggleTheme);
-  
-  // The actual visual dark mode is determined by global preference OR temporarily overridden if inspecting password (flashlight)
-  const isDark = globalIsDark || showPassword;
   
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const formRef = useRef<HTMLDivElement>(null);
@@ -114,16 +111,6 @@ export function LoginPage() {
               <div className={`absolute rounded-full bg-slate-300/40 transition-all duration-1000 ${isDark ? 'w-3 h-3 top-[40%] left-[20%] opacity-100' : 'opacity-0 scale-0'}`} />
             </div>
           </div>
-
-          {/* Flashlight Beam when inspecting password */}
-          <div className={`absolute z-15 right-0 top-1/2 -translate-y-1/2 w-[150%] h-[200px] origin-right transition-all duration-700 ease-in-out pointer-events-none
-            ${showPassword ? 'opacity-100' : 'opacity-0 scale-x-0'}`}
-            style={{
-              background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.15) 80%, rgba(255, 255, 255, 0.4))',
-              clipPath: 'polygon(0 30%, 100% 45%, 100% 55%, 0 70%)',
-              transform: 'translateY(-20px)'
-            }}
-          />
 
           {/* Mountains */}
           <div className="absolute bottom-0 w-full h-[50%] z-20 pointer-events-none">
@@ -245,10 +232,10 @@ export function LoginPage() {
                     className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-md transition-all duration-300
                       ${showPassword ? 'text-indigo-500' : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600')}`}
                     tabIndex={-1}
-                    title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu (Bật đèn pin)"}
+                    title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                   >
                     {showPassword ? (
-                      <Flashlight size={20} className="animate-pulse" />
+                      <EyeOff size={20} />
                     ) : (
                       <Eye size={20} />
                     )}
