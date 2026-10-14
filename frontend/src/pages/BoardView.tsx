@@ -45,16 +45,16 @@ export function BoardView() {
       isOpen: true,
       title: 'Nhập tên công việc mới:',
       onConfirm: async (title) => {
-        if (title) {
+        setPromptData(null);
+        if (title?.trim()) {
           try {
-            await api.post(`/columns/${columnId}/tasks`, { title });
+            await api.post(`/columns/${columnId}/tasks`, { title: title.trim() });
             toast.success('Đã thêm thẻ mới');
             fetchBoard(boardId || '1', true);
           } catch (e) {
             toast.error('Lỗi khi thêm thẻ');
           }
         }
-        setPromptData(null);
       }
     });
   };
@@ -65,17 +65,17 @@ export function BoardView() {
         isOpen: true,
         title: 'Nhập tên cột mới:',
         onConfirm: async (title) => {
-          if (title) {
+          setPromptData(null);
+          if (title?.trim()) {
             try {
               const id = boardId?.replace('board-', '') || '1';
-              await api.post(`/boards/${id}/columns`, { title });
+              await api.post(`/boards/${id}/columns`, { title: title.trim() });
               toast.success('Đã tạo cột mới');
               fetchBoard(boardId || '1', true);
             } catch (e) {
               toast.error('Lỗi khi tạo cột');
             }
           }
-          setPromptData(null);
         }
       });
     } else {
@@ -84,16 +84,16 @@ export function BoardView() {
         isOpen: true,
         title: `Đổi tên cột "${c.title}"`,
         onConfirm: async (title) => {
-          if (title) {
+          setPromptData(null);
+          if (title?.trim()) {
             try {
-              await api.put(`/columns/${c.id}`, { title });
+              await api.put(`/columns/${c.id}`, { title: title.trim() });
               toast.success('Đã cập nhật cột');
               fetchBoard(boardId || '1', true);
             } catch (e) {
               toast.error('Lỗi khi cập nhật cột');
             }
           }
-          setPromptData(null);
         }
       });
     }

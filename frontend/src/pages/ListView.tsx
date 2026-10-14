@@ -60,16 +60,16 @@ export function ListView() {
       isOpen: true,
       title: 'Nhập tên công việc mới:',
       onConfirm: async (title) => {
-        if (title) {
+        setPromptData(null);
+        if (title?.trim()) {
           try {
-            await api.post(`/columns/${columnId}/tasks`, { title });
+            await api.post(`/columns/${columnId}/tasks`, { title: title.trim() });
             toast.success('Đã thêm thẻ mới');
             fetchBoard(boardId || '1', true);
           } catch (e) {
             toast.error('Lỗi khi thêm thẻ');
           }
         }
-        setPromptData(null);
       }
     });
   };

@@ -22,14 +22,26 @@ export function PromptModal({
   onCancel 
 }: PromptModalProps) {
   const [value, setValue] = useState(defaultValue);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setValue(defaultValue || (type === 'select' && options?.length > 0 ? options[0] : ''));
+      setIsSubmitting(false);
     }
   }, [isOpen]); // Only reset when modal opens
 
   if (!isOpen) return null;
+
+  const handleConfirm = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await Promise.resolve(onConfirm(value));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
@@ -39,17 +51,17 @@ export function PromptModal({
         {type === 'text' && (
           <input 
             type="text" 
-            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6 text-foreground"
+            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6 text-foreground disabled:opacity-50"
             placeholder={placeholder}
             value={value}
+            disabled={isSubmitting}
             onChange={(e) => {
-              console.log('Input changed:', e.target.value);
               setValue(e.target.value);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                onConfirm(value);
+                handleConfirm();
               }
             }}
             autoFocus
@@ -59,8 +71,9 @@ export function PromptModal({
         {type === 'date' && (
           <input 
             type="date" 
-            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6"
+            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6 disabled:opacity-50"
             value={value}
+            disabled={isSubmitting}
             onChange={(e) => setValue(e.target.value)}
             autoFocus
           />
@@ -68,8 +81,9 @@ export function PromptModal({
 
         {type === 'select' && (
           <select 
-            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6"
+            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6 disabled:opacity-50"
             value={value}
+            disabled={isSubmitting}
             onChange={(e) => setValue(e.target.value)}
           >
             {options.map(opt => (
@@ -80,16 +94,20 @@ export function PromptModal({
 
         <div className="flex gap-3 justify-end">
           <button 
+            type="button"
             onClick={onCancel}
-            className="px-4 py-2 hover:bg-accent text-muted-foreground font-medium rounded-md text-sm transition-colors"
+            disabled={isSubmitting}
+            className="px-4 py-2 hover:bg-accent text-muted-foreground font-medium rounded-md text-sm transition-colors disabled:opacity-50"
           >
             Hủy
           </button>
           <button 
-            onClick={() => onConfirm(value)}
-            className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md text-sm hover:bg-primary/90 transition-colors shadow-sm"
+            type="button"
+            onClick={handleConfirm}
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md text-sm hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
           >
-            Xác nhận
+            {isSubmitting ? 'Đang lưu...' : 'Xác nhận'}
           </button>
         </div>
       </div>
