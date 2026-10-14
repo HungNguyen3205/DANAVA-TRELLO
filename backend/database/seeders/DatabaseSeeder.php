@@ -19,13 +19,13 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin Danava',
                 'username' => 'admin',
-                'system_role' => 'admin',
+                'system_role' => 'system_admin',
                 'password' => Hash::make('123456')
             ]
         );
 
         $workspace = Workspace::firstOrCreate(
-            ['name' => 'Không gian làm việc của Nam Hùng'],
+            ['name' => 'Không gian làm việc DANAVA'],
             ['owner_id' => $user->id]
         );
 

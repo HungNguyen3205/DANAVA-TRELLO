@@ -15,7 +15,7 @@ class SystemAdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() || $request->user()->system_role !== 'system_admin') {
+        if (!$request->user() || !in_array($request->user()->system_role, ['system_admin', 'admin'])) {
             return response()->json([
                 'message' => 'Bạn không có quyền truy cập chức năng này.'
             ], 403);

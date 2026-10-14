@@ -45,7 +45,7 @@ export function PersonalLayout() {
           <SidebarItem icon={<User size={18} />} label="Hồ sơ cá nhân" to="/profile" active={location.pathname === '/profile'} />
           <SidebarItem icon={<Settings size={18} />} label="Cài đặt tài khoản" to="/account/settings" active={location.pathname === '/account/settings'} />
 
-          {user?.system_role === 'system_admin' && (
+          {(user?.system_role === 'system_admin' || user?.system_role === 'admin') && (
             <>
               <div className="mt-8 mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-600 dark:text-amber-500 flex items-center gap-1.5">
                 <ShieldAlert size={14} /> Quản trị hệ thống
