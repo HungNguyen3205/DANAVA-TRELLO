@@ -165,11 +165,10 @@ export function EmployeeManagementView() {
                     <div className="flex items-center justify-center gap-2">
                       <button 
                         onClick={() => setShowResetModal(emp.id)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-foreground bg-muted hover:bg-muted/80 border border-border rounded-lg transition-colors shadow-xs"
+                        className="inline-flex items-center justify-center p-2 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-800/40 rounded-lg transition-colors shadow-xs"
                         title="Đổi mật khẩu"
                       >
-                        <KeyRound size={14} className="text-amber-600 dark:text-amber-400" />
-                        <span>Đổi MK</span>
+                        <KeyRound size={15} />
                       </button>
                       
                       {emp.account_status === 'active' ? (
