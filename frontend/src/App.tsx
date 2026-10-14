@@ -66,6 +66,11 @@ function App() {
             
             {/* Level 1: Personal Layout */}
             <Route element={<PersonalLayout />}>
+              <Route path="/dashboard" element={
+                <Suspense fallback={<div className="animate-pulse p-8 font-medium text-primary">Đang tải Tổng quan...</div>}>
+                  <WorkspaceDashboard />
+                </Suspense>
+              } />
               <Route path="/home" element={<HomePage />} />
               <Route path="/workspaces" element={<WorkspaceHome />} />
               <Route path="/my-tasks" element={<MyTasksPage />} />

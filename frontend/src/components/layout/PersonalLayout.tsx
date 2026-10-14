@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Briefcase, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert } from 'lucide-react';
+import { Home, Briefcase, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined } from 'lucide-react';
 import React, { useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -29,7 +29,18 @@ export function PersonalLayout() {
         isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-          <div className="mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          {/* Mục CHUNG */}
+          <div className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            Chung
+          </div>
+          <SidebarItem 
+            icon={<ChartNoAxesCombined size={18} />} 
+            label="Tổng quan" 
+            to="/dashboard" 
+            active={location.pathname === '/dashboard'} 
+          />
+
+          <div className="mt-6 mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             Không gian cá nhân
           </div>
           

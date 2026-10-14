@@ -80,23 +80,45 @@ interface DashboardData {
 const RANGE_OPTIONS = [7, 14, 30];
 
 export function WorkspaceDashboard() {
-  const { workspaceId } = useParams();
+  const { workspaceId: paramWorkspaceId } = useParams();
   const navigate = useNavigate();
   const [range, setRange] = useState(14);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [resolvedWorkspaceId, setResolvedWorkspaceId] = useState<string | null>(paramWorkspaceId || null);
+  const [workspacesList, setWorkspacesList] = useState<any[]>([]);
+
+  // If no workspaceId in URL, fetch workspaces and pick the first one
+  useEffect(() => {
+    if (paramWorkspaceId) {
+      setResolvedWorkspaceId(paramWorkspaceId);
+    } else {
+      api.get('/workspaces').then(res => {
+        const list = res.data || [];
+        setWorkspacesList(list);
+        if (list.length > 0) {
+          setResolvedWorkspaceId(list[0].id.toString());
+        } else {
+          setLoading(false);
+        }
+      }).catch(() => {
+        setError('Không thể tải danh sách Không gian làm việc.');
+        setLoading(false);
+      });
+    }
+  }, [paramWorkspaceId]);
 
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!resolvedWorkspaceId) return;
     const controller = new AbortController();
 
     async function loadDashboard() {
       setLoading(true);
       setError('');
       try {
-        const response = await api.get<DashboardData>(`/workspaces/${workspaceId}/dashboard`, {
+        const response = await api.get<DashboardData>(`/workspaces/${resolvedWorkspaceId}/dashboard`, {
           params: { days: range },
           signal: controller.signal,
         });
@@ -112,7 +134,7 @@ export function WorkspaceDashboard() {
 
     void loadDashboard();
     return () => controller.abort();
-  }, [workspaceId, range, reloadVersion]);
+  }, [resolvedWorkspaceId, range, reloadVersion]);
 
   const totalSprints = useMemo(() => {
     if (!data) return 0;
@@ -150,9 +172,24 @@ export function WorkspaceDashboard() {
             <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-violet-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-violet-600 dark:text-violet-400">
               <Sparkles size={14} /> Workspace Intelligence
             </div>
-            <h1 className="text-3xl font-black tracking-[-0.04em] text-foreground md:text-4xl">
-              Tổng quan {data.workspace.name}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-black tracking-[-0.04em] text-foreground md:text-4xl">
+                Tổng quan {data.workspace.name}
+              </h1>
+              {workspacesList.length > 1 && (
+                <select
+                  value={resolvedWorkspaceId || ''}
+                  onChange={(e) => setResolvedWorkspaceId(e.target.value)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-border bg-card text-foreground shadow-sm focus:ring-2 focus:ring-primary/20"
+                >
+                  {workspacesList.map((ws) => (
+                    <option key={ws.id} value={ws.id}>
+                      {ws.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
               Theo dõi sức khỏe dự án, năng suất đội ngũ và các công việc cần ưu tiên trong một màn hình duy nhất.
             </p>
@@ -177,7 +214,7 @@ export function WorkspaceDashboard() {
             </div>
             <button
               type="button"
-              onClick={() => navigate(`/w/${workspaceId}`)}
+              onClick={() => navigate(`/w/${resolvedWorkspaceId}/boards`)}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:bg-violet-700"
             >
               Xem các bảng <ArrowRight size={16} />
