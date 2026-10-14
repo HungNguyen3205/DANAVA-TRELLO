@@ -71,14 +71,40 @@ class BoardMemberController extends Controller
 
     public function destroy(Request $request, $workspaceId, Board $board, $userId)
     {
+        $currentUserId = $request->user()->id;
+        $isSystemAdmin = in_array($request->user()->system_role, ['admin', 'system_admin']);
+
+        // Check if user is Workspace Owner
+        $isWorkspaceOwner = DB::table('workspaces')
+            ->where('id', $workspaceId)
+            ->where('owner_id', $currentUserId)
+            ->exists();
+
+        // Check if user is Workspace Admin
+        $isWorkspaceAdmin = DB::table('workspace_members')
+            ->where('workspace_id', $workspaceId)
+            ->where('user_id', $currentUserId)
+            ->where('role', 'admin')
+            ->exists();
+
+        // Check if user is Board Admin
+        $isBoardAdmin = DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $currentUserId)
+            ->where('role', 'admin')
+            ->exists();
+
+        // A user can remove themselves, OR must be System Admin / Workspace Owner / Workspace Admin / Board Admin
+        $canRemove = $isSystemAdmin || $isWorkspaceOwner || $isWorkspaceAdmin || $isBoardAdmin || ($currentUserId == $userId);
+
+        abort_unless($canRemove, 403, 'Bạn không có quyền xóa thành viên này khỏi bảng.');
+
         // Don't remove the last admin
-        if ($request->user()->id == $userId || true) {
-            $adminCount = DB::table('board_members')->where('board_id', $board->id)->where('role', 'admin')->count();
-            $memberRole = DB::table('board_members')->where('board_id', $board->id)->where('user_id', $userId)->value('role');
-            
-            if ($adminCount <= 1 && $memberRole === 'admin') {
-                return response()->json(['message' => 'Không thể gỡ Quản trị viên duy nhất của bảng.'], 400);
-            }
+        $adminCount = DB::table('board_members')->where('board_id', $board->id)->where('role', 'admin')->count();
+        $memberRole = DB::table('board_members')->where('board_id', $board->id)->where('user_id', $userId)->value('role');
+        
+        if ($adminCount <= 1 && $memberRole === 'admin') {
+            return response()->json(['message' => 'Không thể gỡ Quản trị viên duy nhất của bảng.'], 400);
         }
 
         DB::table('board_members')

@@ -119,4 +119,17 @@ class EmployeeController extends Controller
 
         return response()->json(['message' => 'Đã đặt lại mật khẩu tạm']);
     }
+
+    public function destroy(Request $request, User $employee)
+    {
+        if ($employee->id === $request->user()->id) {
+            return response()->json(['message' => 'Không thể tự xóa tài khoản của chính mình'], 400);
+        }
+
+        // Delete tokens and user
+        $employee->tokens()->delete();
+        $employee->delete();
+
+        return response()->json(['message' => 'Đã xóa tài khoản nhân viên thành công']);
+    }
 }

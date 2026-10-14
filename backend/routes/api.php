@@ -36,6 +36,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
         Route::post('/employees', [EmployeeController::class, 'store']);
         Route::patch('/employees/{employee}/status', [EmployeeController::class, 'updateStatus']);
         Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword']);
+        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
     });
 
     // ------------------------------------------
