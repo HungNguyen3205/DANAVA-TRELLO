@@ -76,14 +76,27 @@ class UsersSeeder extends Seeder
             ]
         );
 
-        // 6. Gán workspace cho đúng như local: Nam Hùng (1 workspace), letanthanh (1 workspace)
+        // 6. Cập nhật và gán workspace chính xác như local
         $workspace = Workspace::first();
         if ($workspace) {
+            // Đảm bảo tên Không gian làm việc chuẩn
+            $workspace->update([
+                'name' => 'Không gian làm việc DANAVA',
+                'owner_id' => $namhung->id
+            ]);
+
+            // Dọn các member cũ không mong muốn khỏi workspace này (chỉ giữ đúng namhung và letanthanh như local)
+            DB::table('workspace_members')->where('workspace_id', $workspace->id)
+                ->whereNotIn('user_id', [$namhung->id, $letanthanh->id])
+                ->delete();
+
+            // Gán Nam Hùng là admin của Không gian làm việc
             DB::table('workspace_members')->updateOrInsert(
                 ['workspace_id' => $workspace->id, 'user_id' => $namhung->id],
                 ['role' => 'admin', 'created_at' => now(), 'updated_at' => now()]
             );
 
+            // Gán letanthanh là member của Không gian làm việc
             DB::table('workspace_members')->updateOrInsert(
                 ['workspace_id' => $workspace->id, 'user_id' => $letanthanh->id],
                 ['role' => 'member', 'created_at' => now(), 'updated_at' => now()]
