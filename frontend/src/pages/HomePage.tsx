@@ -151,27 +151,27 @@ export function HomePage() {
             <p className="text-muted-foreground mt-1 text-sm font-medium">
               {format(new Date(), "EEEE, 'ngày' dd 'tháng' MM 'năm' yyyy", { locale: vi })}
             </p>
-            <div className="mt-3.5 inline-flex flex-wrap items-center gap-2.5 px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-card dark:border dark:border-border/80 shadow-md shadow-slate-900/10 text-sm font-medium">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <div className="mt-3.5 inline-flex flex-wrap items-center gap-2.5 px-4 py-2 rounded-xl bg-white text-slate-800 border border-slate-200/90 shadow-sm dark:bg-card dark:text-slate-100 dark:border-border/80 text-sm font-medium transition-colors">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
               {data?.summary?.due_today > 0 || data?.summary?.overdue > 0 ? (
-                <div className="flex flex-wrap items-center gap-1.5 text-slate-100">
-                  <span>Hôm nay bạn có</span>
-                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-slate-700 dark:text-slate-200">Hôm nay bạn có</span>
+                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 font-bold border border-amber-500/30">
                     {data.summary.due_today}
                   </span>
-                  <span>công việc cần hoàn thành</span>
+                  <span className="text-slate-700 dark:text-slate-200">công việc cần hoàn thành</span>
                   {data.summary.overdue > 0 && (
                     <>
                       <span className="text-slate-400">•</span>
-                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 font-bold border border-rose-500/30">
                         {data.summary.overdue}
                       </span>
-                      <span className="text-rose-300 font-medium">công việc quá hạn</span>
+                      <span className="text-rose-700 dark:text-rose-300 font-semibold">công việc quá hạn</span>
                     </>
                   )}
                 </div>
               ) : (
-                <span className="text-slate-200">
+                <span className="text-slate-700 dark:text-slate-200">
                   Hôm nay bạn chưa có công việc đến hạn. Đây là thời điểm tốt để lên kế hoạch mới!
                 </span>
               )}
