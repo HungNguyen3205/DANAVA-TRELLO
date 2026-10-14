@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, MoreHorizontal, Plus, Palette } from "lucide-react";
+import { GripVertical, MoreHorizontal, Plus, Palette, X } from "lucide-react";
 import type { Board, Column, Task } from "../../types";
 import { TaskCard } from "./TaskCard";
 import api from "../../lib/axios";
+import { toast } from "sonner";
+import { useBoardStore } from "../../store/boardStore";
 
 const PREDEFINED_THEMES: Record<string, any> = {
   violet: { bg: "bg-[#F6F3FF] dark:bg-[#7C5CFC]/15", header: "text-[#7C5CFC] dark:text-[#a78bfa]", iconBg: "bg-[#E8E1FF] dark:bg-[#7C5CFC]/20", iconColor: "text-[#7C5CFC] dark:text-[#a78bfa]", dot: "bg-[#7C5CFC] dark:bg-[#a78bfa]", border: "border-[#7C5CFC]/20 dark:border-[#7C5CFC]/30", hoverBg: "hover:bg-card" },
@@ -51,6 +53,35 @@ export function BoardColumn({
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [currentColor, setCurrentColor] = useState(column.color || "");
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fetchBoard = useBoardStore((state) => state.fetchBoard);
+
+  useEffect(() => {
+    if (isAddingTask) {
+      inputRef.current?.focus();
+    }
+  }, [isAddingTask]);
+
+  const handleCreateTask = async () => {
+    const trimmed = taskTitle.trim();
+    if (!trimmed || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.post(`/columns/${column.id}/tasks`, { title: trimmed });
+      toast.success('Đã thêm thẻ mới');
+      setTaskTitle("");
+      setIsAddingTask(false);
+      fetchBoard(board.id, true);
+    } catch (e) {
+      toast.error('Lỗi khi thêm thẻ');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const t = column.title.toLowerCase();
   let theme = PREDEFINED_THEMES.gray;
@@ -156,21 +187,69 @@ export function BoardColumn({
           ))}
         </SortableContext>
         
-        {tasks.length === 0 && (
+        {tasks.length === 0 && !isAddingTask && (
           <div className={`text-center py-8 border border-dashed ${theme.border} rounded-xl text-[13px] text-muted-foreground bg-card/30`}>
             Chưa có công việc
+          </div>
+        )}
+
+        {/* Inline Task Creation Form */}
+        {isAddingTask && (
+          <div className="bg-card rounded-xl p-3 border border-primary/40 shadow-md animate-in fade-in duration-150">
+            <textarea
+              ref={inputRef}
+              rows={2}
+              className="w-full bg-transparent resize-none text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-0 p-0 border-none"
+              placeholder="Nhập tiêu đề cho thẻ này..."
+              value={taskTitle}
+              disabled={isSubmitting}
+              onChange={(e) => setTaskTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleCreateTask();
+                } else if (e.key === 'Escape') {
+                  setIsAddingTask(false);
+                  setTaskTitle("");
+                }
+              }}
+            />
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
+              <button
+                type="button"
+                onClick={handleCreateTask}
+                disabled={isSubmitting || !taskTitle.trim()}
+                className="px-3 py-1.5 bg-primary text-primary-foreground font-semibold rounded-lg text-xs hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSubmitting ? 'Đang thêm...' : 'Thêm thẻ'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingTask(false);
+                  setTaskTitle("");
+                }}
+                disabled={isSubmitting}
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                title="Hủy"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       <div className="px-3 pb-3 pt-1 mt-auto">
-        <button 
-          className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-[13px] font-semibold text-muted-foreground hover:${theme.header} ${theme.hoverBg} hover:shadow-sm rounded-xl transition-all duration-200`}
-          onClick={() => onAdd(column.id)}
-        >
-          <Plus size={16} />
-          Thêm công việc
-        </button>
+        {!isAddingTask ? (
+          <button 
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-[13px] font-semibold text-muted-foreground hover:${theme.header} ${theme.hoverBg} hover:shadow-sm rounded-xl transition-all duration-200`}
+            onClick={() => setIsAddingTask(true)}
+          >
+            <Plus size={16} />
+            Thêm công việc
+          </button>
+        ) : null}
       </div>
     </section>
   );
