@@ -7,14 +7,29 @@ use Illuminate\Http\Request;
 
 class TaskDetailController extends Controller
 {
-    public function show(Task $task)
+    private function ensureAccess(Request $request, Task $task): void
     {
+        abort_unless(
+            $task->column && 
+            $task->column->board && 
+            $task->column->board->workspace && 
+            $task->column->board->workspace->members()->where('user_id', $request->user()->id)->exists(),
+            403,
+            'Bạn không có quyền truy cập công việc này.'
+        );
+    }
+
+    public function show(Request $request, Task $task)
+    {
+        $this->ensureAccess($request, $task);
         return response()->json($task->load(['checklists.items', 'labels', 'attachments', 'comments.user']));
     }
 
     // Cập nhật chi tiết thẻ (Mô tả, Tiêu đề)
     public function update(Request $request, Task $task)
     {
+        $this->ensureAccess($request, $task);
+
         $request->validate([
             'title' => 'sometimes|string',
             'description' => 'nullable|string',
@@ -57,6 +72,8 @@ class TaskDetailController extends Controller
     // Thêm comment
     public function addComment(Request $request, Task $task)
     {
+        $this->ensureAccess($request, $task);
+
         $request->validate(['content' => 'required|string']);
         
         $comment = $task->comments()->create([
@@ -68,8 +85,10 @@ class TaskDetailController extends Controller
     }
 
     // Xoá (Lưu trữ) thẻ
-    public function destroy(Task $task)
+    public function destroy(Request $request, Task $task)
     {
+        $this->ensureAccess($request, $task);
+
         $task->delete();
         return response()->json(['message' => 'Deleted successfully']);
     }
