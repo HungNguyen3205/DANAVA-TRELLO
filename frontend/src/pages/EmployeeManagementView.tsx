@@ -111,8 +111,7 @@ export function EmployeeManagementView() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border bg-muted/20 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                <th className="px-6 py-3.5">Họ và tên</th>
-                <th className="px-6 py-3.5">Tên tài khoản</th>
+                <th className="px-6 py-3.5">Họ và tên & Tài khoản</th>
                 <th className="px-6 py-3.5">Vai trò</th>
                 <th className="px-6 py-3.5">Trạng thái</th>
                 <th className="px-6 py-3.5">Không gian</th>
@@ -120,41 +119,41 @@ export function EmployeeManagementView() {
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-border">
-              {employees.map((emp) => (
-                <tr key={emp.id} className="hover:bg-muted/40 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
-                        {emp.name ? emp.name.charAt(0).toUpperCase() : 'U'}
+              {employees.map((emp) => {
+                // Determine login account display: if email exists, use email, otherwise username@danava.vn
+                const loginAccount = emp.email 
+                  ? emp.email 
+                  : (emp.username?.includes('@') ? emp.username : `${emp.username}@danava.vn`);
+
+                return (
+                  <tr key={emp.id} className="hover:bg-muted/40 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                          {emp.name ? emp.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground truncate">{emp.name}</div>
+                          <div className="text-xs text-muted-foreground font-mono mt-0.5 truncate">
+                            {loginAccount}
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold text-foreground truncate">{emp.name}</div>
-                        {emp.email && (
-                          <div className="text-xs text-muted-foreground truncate">{emp.email}</div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-mono text-xs font-semibold">
-                      <User size={13} className="shrink-0" />
-                      {emp.username?.startsWith('@') ? emp.username : `@${emp.username}`}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
-                      {emp.system_role === 'system_admin' ? <ShieldAlert size={12} /> : <Users size={12} />}
-                      {emp.system_role === 'system_admin' ? 'System Admin' : 'User'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.account_status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
-                      {emp.account_status === 'active' ? 'Hoạt động' : 'Bị khóa'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                    {emp.workspaces_count} không gian
-                  </td>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
+                        {emp.system_role === 'system_admin' ? <ShieldAlert size={12} /> : <Users size={12} />}
+                        {emp.system_role === 'system_admin' ? 'System Admin' : 'User'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.account_status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
+                        {emp.account_status === 'active' ? 'Hoạt động' : 'Bị khóa'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                      {emp.workspaces_count} không gian
+                    </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
                       <button 
@@ -197,7 +196,8 @@ export function EmployeeManagementView() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         )}

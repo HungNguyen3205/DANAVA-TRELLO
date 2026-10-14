@@ -1,0 +1,1 @@
+import{d as e}from"./index-Ci6AvBpa.js";function t(t){return+e(t)<Date.now()}export{t};
