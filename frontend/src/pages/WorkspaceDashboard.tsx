@@ -163,8 +163,9 @@ export function WorkspaceDashboard() {
   }
 
   return (
-    <div className="workspace-dashboard mx-auto w-full max-w-[1480px] space-y-6 pb-10">
-      <section className="relative overflow-hidden rounded-[28px] border border-border bg-card px-6 py-7 shadow-[0_20px_60px_rgba(76,65,145,0.10)] md:px-8">
+    <div className="flex-1 h-full w-full overflow-y-auto bg-background/50 custom-scrollbar p-4 sm:p-6 md:p-8">
+      <div className="workspace-dashboard mx-auto w-full max-w-[1440px] space-y-8 pb-12 animate-in fade-in duration-300">
+        <section className="relative overflow-hidden rounded-[28px] border border-border bg-card px-6 py-7 shadow-[0_20px_60px_rgba(76,65,145,0.10)] md:px-8">
         <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-violet-100/70 dark:bg-violet-500/20 blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-120px] left-[38%] h-60 w-60 rounded-full bg-sky-100/70 dark:bg-sky-500/20 blur-3xl" />
         <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -425,11 +426,12 @@ export function WorkspaceDashboard() {
         </ChartCard>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <SprintCard label="Sprint đang chuẩn bị" value={data.sprint_summary.pending} color="amber" total={totalSprints} />
-        <SprintCard label="Sprint đang chạy" value={data.sprint_summary.active} color="violet" total={totalSprints} />
-        <SprintCard label="Sprint đã hoàn thành" value={data.sprint_summary.completed} color="emerald" total={totalSprints} />
-      </section>
+        <section className="grid gap-4 md:grid-cols-3">
+          <SprintCard label="Sprint đang chuẩn bị" value={data.sprint_summary.pending} color="amber" total={totalSprints} />
+          <SprintCard label="Sprint đang chạy" value={data.sprint_summary.active} color="violet" total={totalSprints} />
+          <SprintCard label="Sprint đã hoàn thành" value={data.sprint_summary.completed} color="emerald" total={totalSprints} />
+        </section>
+      </div>
     </div>
   );
 }
