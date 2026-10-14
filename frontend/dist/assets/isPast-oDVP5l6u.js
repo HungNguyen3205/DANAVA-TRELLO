@@ -1,1 +1,0 @@
-import{d as e}from"./index-YgKSS8C2.js";function t(t){return+e(t)<Date.now()}export{t};

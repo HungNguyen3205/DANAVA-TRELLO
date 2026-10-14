@@ -151,13 +151,31 @@ export function HomePage() {
             <p className="text-muted-foreground mt-1 text-sm font-medium">
               {format(new Date(), "EEEE, 'ngày' dd 'tháng' MM 'năm' yyyy", { locale: vi })}
             </p>
-            <p className="text-sm mt-3 bg-primary/10 text-primary-foreground/80 text-primary px-3 py-1.5 rounded-lg inline-block border border-primary/20">
+            <div className="mt-3.5 inline-flex flex-wrap items-center gap-2.5 px-4 py-2 rounded-xl bg-slate-900 text-white dark:bg-card dark:border dark:border-border/80 shadow-md shadow-slate-900/10 text-sm font-medium">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               {data?.summary?.due_today > 0 || data?.summary?.overdue > 0 ? (
-                <>Hôm nay bạn có <strong>{data.summary.due_today}</strong> công việc cần hoàn thành và <strong>{data.summary.overdue}</strong> công việc đang quá hạn.</>
+                <div className="flex flex-wrap items-center gap-1.5 text-slate-100">
+                  <span>Hôm nay bạn có</span>
+                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                    {data.summary.due_today}
+                  </span>
+                  <span>công việc cần hoàn thành</span>
+                  {data.summary.overdue > 0 && (
+                    <>
+                      <span className="text-slate-400">•</span>
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
+                        {data.summary.overdue}
+                      </span>
+                      <span className="text-rose-300 font-medium">công việc quá hạn</span>
+                    </>
+                  )}
+                </div>
               ) : (
-                <>Hôm nay bạn chưa có công việc đến hạn. Đây là thời điểm tốt để lên kế hoạch tiếp theo.</>
+                <span className="text-slate-200">
+                  Hôm nay bạn chưa có công việc đến hạn. Đây là thời điểm tốt để lên kế hoạch mới!
+                </span>
               )}
-            </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
