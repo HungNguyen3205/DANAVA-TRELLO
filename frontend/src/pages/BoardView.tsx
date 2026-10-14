@@ -223,17 +223,15 @@ export function BoardView() {
                   className="w-56 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                 />
               </div>
-              <button 
-                onClick={() => setPromptData({
-                  isOpen: true,
-                  title: 'Thêm công việc',
-                  onConfirm: () => { setPromptData(null); handleAdd(board.columns[0]?.id, "New Task"); }
-                })}
-                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm hover:-translate-y-[1px]"
-              >
-                <Plus size={16} />
-                Thêm công việc
-              </button>
+              {board.columns && board.columns.length > 0 && (
+                <button 
+                  onClick={() => handleAdd(board.columns[0]?.id)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm hover:-translate-y-[1px]"
+                >
+                  <Plus size={16} />
+                  Thêm công việc
+                </button>
+              )}
             </div>
           </div>
 

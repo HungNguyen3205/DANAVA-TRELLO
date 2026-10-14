@@ -1,1 +1,0 @@
-import{f as e}from"./index-C-McPywF.js";function t(t){return+e(t)<Date.now()}export{t};

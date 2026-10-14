@@ -1,0 +1,1 @@
+import{f as e}from"./index-D664sd8S.js";function t(t){return+e(t)<Date.now()}export{t};
