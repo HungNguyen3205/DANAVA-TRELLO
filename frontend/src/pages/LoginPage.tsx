@@ -125,21 +125,8 @@ export function LoginPage() {
             }}
           />
 
-          {/* Mountains */}
-          <div className="absolute bottom-0 w-full h-[50%] z-20 pointer-events-none">
-            {/* Mountain 3 (Back) */}
-            <div className={`absolute bottom-[-10%] right-[-20%] w-[120%] h-[80%] rounded-[100%] transition-colors duration-1000
-              ${isDark ? 'bg-slate-800/50' : 'bg-emerald-800/20'}`} style={{ transform: 'rotate(-5deg)' }}></div>
-            {/* Mountain 2 */}
-            <div className={`absolute bottom-[-20%] left-[-20%] w-[80%] h-[100%] rounded-[100%] transition-colors duration-1000
-              ${isDark ? 'bg-indigo-950/80' : 'bg-emerald-600/30'}`} style={{ transform: 'rotate(10deg)' }}></div>
-            {/* Mountain 1 (Front) */}
-            <div className={`absolute bottom-[-30%] left-[-10%] w-[120%] h-[90%] rounded-[100%] transition-colors duration-1000
-              ${isDark ? 'bg-slate-900' : 'bg-emerald-500/40'}`} style={{ transform: 'rotate(-8deg)' }}></div>
-            
-            {/* Glowing accents on mountains (Night only) */}
-            <div className={`absolute bottom-[10%] left-[30%] w-[20%] h-[20%] bg-blue-500/20 blur-3xl transition-opacity duration-1000 ${isDark ? 'opacity-100' : 'opacity-0'}`} />
-          </div>
+            {/* Subtle soft horizon glow instead of harsh mountain silhouettes */}
+            <div className={`absolute bottom-0 w-full h-[30%] bg-gradient-to-t ${isDark ? 'from-slate-950/80 to-transparent' : 'from-sky-200/40 to-transparent'} transition-colors duration-1000 pointer-events-none`} />
 
           {/* Brand Content */}
           <div className="relative z-30 p-10 flex flex-col h-full">
