@@ -156,7 +156,7 @@ export function AppLayout() {
                     {filteredWorkspaces.length > 0 ? (
                       <div className="space-y-0.5">
                         {filteredWorkspaces.map(ws => (
-                          <button key={ws.id} onClick={() => { navigate(`/w/${ws.id}/boards`); setWsDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-lg text-left group">
+                          <button key={ws.id} onClick={() => { navigate('/workspaces'); setWsDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-lg text-left group">
                             <div className="w-7 h-7 rounded bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                               {ws.name.charAt(0).toUpperCase()}
                             </div>

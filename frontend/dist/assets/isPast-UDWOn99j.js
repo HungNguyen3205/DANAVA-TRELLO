@@ -1,1 +1,0 @@
-import{f as e}from"./index-BbEU_WUD.js";function t(t){return+e(t)<Date.now()}export{t};

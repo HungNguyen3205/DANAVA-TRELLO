@@ -30,7 +30,7 @@ export function BoardLayout() {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
           
           <Link 
-            to={`/w/${workspaceId}/boards`}
+            to="/workspaces"
             className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
           >
             <ArrowLeft size={16} />

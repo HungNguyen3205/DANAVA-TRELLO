@@ -187,7 +187,7 @@ export function HomePage() {
               <span>Công việc của tôi</span>
             </button>
             {recentWorkspaces.length > 0 && (
-              <button onClick={() => navigate(`/w/${recentWorkspaces[0].id}/boards`)} className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg font-medium text-foreground hover:bg-accent transition-colors shadow-sm hidden sm:flex">
+              <button onClick={() => navigate('/workspaces')} className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg font-medium text-foreground hover:bg-accent transition-colors shadow-sm hidden sm:flex">
                 <Briefcase size={18} className="text-indigo-500" />
                 <span>Mở Workspace gần nhất</span>
               </button>
@@ -290,7 +290,7 @@ export function HomePage() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {continueItems.map((item, idx) => (
-                    <div key={idx} onClick={() => navigate(item.type === 'board' ? `/b/${item.id}` : `/w/${item.id}/boards`)} className="bg-card border border-border p-4 rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group flex flex-col justify-between h-28 relative overflow-hidden">
+                    <div key={idx} onClick={() => navigate(item.type === 'board' ? `/b/${item.id}` : '/workspaces')} className="bg-card border border-border p-4 rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group flex flex-col justify-between h-28 relative overflow-hidden">
                       <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-10 transition-opacity bg-gradient-to-br from-primary to-orange-600"></div>
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground z-10">
                         {item.type === 'board' ? <LayoutDashboard size={14} className="text-blue-500" /> : <Briefcase size={14} className="text-purple-500" />}
@@ -336,7 +336,7 @@ export function HomePage() {
                 ) : (
                   <div className="space-y-3">
                     {recentWorkspaces.map((ws: any) => (
-                      <div key={ws.id} onClick={() => navigate(`/w/${ws.id}/boards`)} className="flex items-center justify-between p-3 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group">
+                      <div key={ws.id} onClick={() => navigate('/workspaces')} className="flex items-center justify-between p-3 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-sm">
                             {ws.name.charAt(0).toUpperCase()}

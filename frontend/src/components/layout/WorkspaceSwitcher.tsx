@@ -41,7 +41,7 @@ export function WorkspaceSwitcher({ workspaces }: { workspaces: any[] }) {
                 key={ws.id}
                 onClick={() => {
                   setIsOpen(false);
-                  navigate(`/w/${ws.id}/boards`);
+                  navigate('/workspaces');
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
                   ws.id === currentWorkspace.id 

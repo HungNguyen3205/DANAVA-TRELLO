@@ -80,7 +80,7 @@ export function BoardSettingsView() {
     try {
       await api.delete(`/boards/${boardId}`);
       toast.success('Xóa bảng thành công');
-      navigate(`/w/${workspaceId}/boards`);
+      navigate('/workspaces');
     } catch (error: any) {
       console.error(error);
       toast.error(error.response?.data?.message || 'Lỗi khi xóa bảng');
@@ -179,7 +179,7 @@ export function BoardSettingsView() {
 
             <div className="pt-4 border-t border-border flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Thuộc không gian: <Link to={`/w/${workspaceId}/boards`} className="font-semibold text-primary hover:underline">{board.workspace?.name || 'Đang tải...'}</Link>
+                Thuộc không gian: <Link to="/workspaces" className="font-semibold text-primary hover:underline">{board.workspace?.name || 'Đang tải...'}</Link>
               </div>
               
               {canEdit && (

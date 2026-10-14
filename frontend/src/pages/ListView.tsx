@@ -167,7 +167,7 @@ export function ListView() {
       {/* Top Header / Breadcrumb */}
       <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50">
         <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium">
-          <Link to={`/w/${workspaceId}/boards`} className="hover:text-primary transition-colors flex items-center gap-1.5">
+          <Link to="/workspaces" className="hover:text-primary transition-colors flex items-center gap-1.5">
             <LayoutDashboard size={14} /> Không gian làm việc
           </Link>
           <ChevronRight size={14} className="opacity-50" />

@@ -81,17 +81,14 @@ function App() {
               <Route path="/admin/employees" element={<EmployeeManagementView />} />
             </Route>
 
-            {/* Level 2: Workspace Layout */}
+            {/* Level 2: Workspace Layout - Redirect all redundant /w/:workspaceId URLs to /workspaces */}
             <Route path="/w/:workspaceId" element={<WorkspaceGuard />}>
-              <Route element={<WorkspaceLayout />}>
-                <Route path="dashboard" element={<Navigate to="/dashboard" replace />} />
-                <Route path="boards" element={<WorkspaceDetail />} />
-                <Route path="sprints" element={<PlaceholderPage title="Quản lý Sprint" />} />
-                <Route path="members" element={<PlaceholderPage title="Thành viên" />} />
-                <Route path="settings" element={<PlaceholderPage title="Cài đặt Không gian" />} />
-                {/* Legacy redirect for old URLs */}
-                <Route index element={<Navigate to="boards" replace />} />
-              </Route>
+              <Route path="dashboard" element={<Navigate to="/dashboard" replace />} />
+              <Route path="boards" element={<Navigate to="/workspaces" replace />} />
+              <Route path="sprints" element={<Navigate to="/workspaces" replace />} />
+              <Route path="members" element={<Navigate to="/workspaces" replace />} />
+              <Route path="settings" element={<Navigate to="/workspaces" replace />} />
+              <Route index element={<Navigate to="/workspaces" replace />} />
 
               {/* Level 3: Board Layout */}
               <Route path="b/:boardId" element={<BoardGuard />}>
