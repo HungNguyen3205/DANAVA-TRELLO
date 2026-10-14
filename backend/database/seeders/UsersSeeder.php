@@ -88,6 +88,24 @@ class UsersSeeder extends Seeder
                 ['workspace_id' => $workspace->id, 'user_id' => $letanthanh->id],
                 ['role' => 'member', 'created_at' => now(), 'updated_at' => now()]
             );
+
+            // 7. Gán thành viên bảng (Board Members) giống hệt dữ liệu local
+            $boards = \App\Models\Board::where('workspace_id', $workspace->id)->get();
+            foreach ($boards as $board) {
+                // Nam Hùng là admin bảng
+                DB::table('board_members')->updateOrInsert(
+                    ['board_id' => $board->id, 'user_id' => $namhung->id],
+                    ['role' => 'admin', 'is_starred' => true, 'created_at' => now(), 'updated_at' => now()]
+                );
+
+                // Nếu là bảng "Kế hoạch DANAVA" (hoặc bảng đầu tiên), letanthanh là member
+                if ($board->id == 1 || str_contains($board->name, 'DANAVA')) {
+                    DB::table('board_members')->updateOrInsert(
+                        ['board_id' => $board->id, 'user_id' => $letanthanh->id],
+                        ['role' => 'member', 'is_starred' => false, 'created_at' => now(), 'updated_at' => now()]
+                    );
+                }
+            }
         }
     }
 }
