@@ -113,7 +113,7 @@ export function EmployeeManagementView() {
               <tr className="border-b border-border bg-muted/20 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                 <th className="px-6 py-3.5">Họ và tên & Tài khoản</th>
                 <th className="px-6 py-3.5">Vai trò</th>
-                <th className="px-6 py-3.5">Trạng thái</th>
+                <th className="px-6 py-3.5 text-center">Trạng thái</th>
                 <th className="px-6 py-3.5">Không gian</th>
                 <th className="px-6 py-3.5 text-center">Thao tác</th>
               </tr>
@@ -141,13 +141,18 @@ export function EmployeeManagementView() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
-                        {emp.system_role === 'system_admin' ? <ShieldAlert size={12} /> : <Users size={12} />}
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
+                        {emp.system_role === 'system_admin' ? <ShieldAlert size={13} /> : <Users size={13} />}
                         {emp.system_role === 'system_admin' ? 'System Admin' : 'User'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.account_status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shadow-xs ${
+                        emp.account_status === 'active' 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' 
+                          : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${emp.account_status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                         {emp.account_status === 'active' ? 'Hoạt động' : 'Bị khóa'}
                       </span>
                     </td>
