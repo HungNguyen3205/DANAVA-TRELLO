@@ -40,12 +40,14 @@ const WorkspaceDashboard = lazy(() =>
 
 
 import { useUIStore } from './store/uiStore';
+import { ReloadPrompt } from './components/pwa/ReloadPrompt';
 
 function App() {
   const isDarkMode = useUIStore(state => state.isDarkMode);
   
   return (
     <BrowserRouter>
+      <ReloadPrompt />
       <Toaster position="top-right" theme={isDarkMode ? 'dark' : 'light'} richColors />
       <Routes>
         {/* Guest Routes */}

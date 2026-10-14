@@ -7,6 +7,7 @@ import {
 import type { Task, Board } from '../../types';
 import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
+import { useBoardStore } from '../../store/boardStore';
 import { toast } from 'sonner';
 
 interface TaskDetailModalProps {
@@ -37,6 +38,48 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const update = (value: Partial<Task>) => {
     setDraft(d => ({ ...d, ...value }));
   };
+
+  React.useEffect(() => {
+    let mounted = true;
+    api.get(`/tasks/${task.id}`).then(res => {
+      if (!mounted) return;
+      const t = res.data;
+      const fullTask: Task = {
+        ...draft,
+        checklists: (t.checklists || []).map((cl: any) => ({
+          id: String(cl.id),
+          title: cl.title,
+          items: (cl.items || []).map((i: any) => ({
+            id: String(i.id),
+            text: i.content,
+            done: !!i.is_completed
+          }))
+        })),
+        attachments: (t.attachments || []).map((a: any) => ({
+          id: String(a.id),
+          fileName: a.file_name,
+          filePath: a.file_path,
+          mimeType: a.mime_type,
+          size: a.size,
+          userId: String(a.user_id),
+          createdAt: a.created_at
+        })),
+        comments: t.comments || [],
+        labels: t.labels ? t.labels.map((l: any) => ({ id: String(l.id), name: l.name, color: l.color })) : []
+      };
+      setDraft(fullTask);
+      
+      // We also update the main board store silently to cache these details
+      useBoardStore.getState().setBoard(b => {
+        if (!b) return b;
+        return {
+          ...b,
+          tasks: b.tasks.map(bt => bt.id === task.id ? fullTask : bt)
+        };
+      });
+    }).catch(console.error);
+    return () => { mounted = false; };
+  }, [task.id]);
 
   const save = async (immediateUpdate?: Partial<Task>) => {
     setBusy(true);

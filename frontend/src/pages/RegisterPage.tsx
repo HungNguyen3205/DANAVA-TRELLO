@@ -25,7 +25,10 @@ export function RegisterPage() {
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
       <div className="w-full max-w-md p-8 bg-card rounded-xl shadow-lg border border-border">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="w-12 h-12 rounded flex items-center justify-center overflow-hidden shrink-0 mb-3 border border-border shadow-sm">
+            <img src="/logo.jpg" alt="DANAVA" className="w-full h-full object-cover" />
+          </div>
           <h1 className="text-2xl font-bold text-primary">DANAVA WORK</h1>
           <p className="text-muted-foreground mt-2">Đăng ký tài khoản mới</p>
         </div>

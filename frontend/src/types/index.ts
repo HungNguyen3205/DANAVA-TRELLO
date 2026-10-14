@@ -59,6 +59,10 @@ export interface Task {
   checklists: Checklist[];
   comments: Comment[];
   attachments: Attachment[];
+  totalChecklistsItems?: number;
+  doneChecklistsItems?: number;
+  commentsCount?: number;
+  attachmentsCount?: number;
 }
 export interface Column {
   id: string;

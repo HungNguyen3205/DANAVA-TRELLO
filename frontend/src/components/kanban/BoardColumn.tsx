@@ -83,7 +83,7 @@ export function BoardColumn({
         transition,
         opacity: isDragging ? 0.4 : 1,
       }}
-      className={`flex flex-col w-[300px] shrink-0 ${theme.bg} rounded-[16px] max-h-[calc(100vh-170px)] ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
+      className={`flex flex-col w-[85vw] sm:w-[300px] max-w-[340px] shrink-0 ${theme.bg} rounded-[16px] max-h-[calc(100vh-170px)] snap-center ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
       aria-label={column.title}
     >
       <header className="px-4 pt-4 pb-3 flex items-center justify-between group sticky top-0 z-10">

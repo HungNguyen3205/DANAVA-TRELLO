@@ -95,23 +95,24 @@ class WorkspaceController extends Controller
                 });
             }
                 
-            $tasks = $taskQuery->select('tasks.id', 'tasks.due_date', 'kanban_columns.title as column_name')
-                ->get();
-                
-            $totalTasks = $tasks->count();
-            $completedTasks = $tasks->filter(function($task) {
-                return strtolower($task->column_name) === 'hoàn thành' || strtolower($task->column_name) === 'done';
-            })->count();
+            $totalTasks = (clone $taskQuery)->count();
             
-            $overdueTasks = $tasks->filter(function($task) {
-                return $task->due_date && \Carbon\Carbon::parse($task->due_date)->isPast() && strtolower($task->column_name) !== 'hoàn thành' && strtolower($task->column_name) !== 'done';
-            })->count();
+            $completedTitles = ['done', 'hoàn thành', 'completed'];
+            $completedTasks = (clone $taskQuery)
+                ->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(kanban_columns.title)'), $completedTitles)
+                ->count();
+            
+            $overdueTasks = (clone $taskQuery)
+                ->whereNotNull('tasks.due_date')
+                ->where('tasks.due_date', '<', \Carbon\Carbon::today())
+                ->whereNotIn(\Illuminate\Support\Facades\DB::raw('LOWER(kanban_columns.title)'), $completedTitles)
+                ->count();
 
             return [
                 'total_tasks' => $totalTasks,
                 'completed_tasks' => $completedTasks,
                 'overdue_tasks' => $overdueTasks,
-                'completion_rate' => $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100) : 0
+                'completion_rate' => $totalTasks > 0 ? (int) round(($completedTasks / $totalTasks) * 100) : 0
             ];
         });
 

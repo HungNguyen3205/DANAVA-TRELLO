@@ -15,10 +15,11 @@ export function WorkspaceLayout() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { isMobileSidebarOpen, closeMobileSidebar } = useUIStore();
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (force = false) => {
     setLoading(true);
     try {
-      const { data } = await api.get('/workspaces');
+      const { getWorkspaces } = await import('../../lib/workspace');
+      const data = await getWorkspaces(force);
       setWorkspaces(data);
     } catch (e) {
       console.error(e);

@@ -3,7 +3,8 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCorners,
   useSensor,
   useSensors,
@@ -38,7 +39,8 @@ export function KanbanBoard({
 }) {
   const [active, setActive] = useState<Task | Column | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -95,8 +97,8 @@ export function KanbanBoard({
       onDragCancel={() => setActive(null)}
       onDragEnd={finish}
     >
-      <div className="flex-1 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar">
-        <div className="flex h-full gap-4 min-w-max items-start px-1">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar snap-x snap-mandatory">
+        <div className="flex h-full gap-4 sm:gap-6 min-w-max items-start px-4 sm:px-6">
           <SortableContext
             items={board.columns.map((c) => `col-${c.id}`)}
             strategy={horizontalListSortingStrategy}

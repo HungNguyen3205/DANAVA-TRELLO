@@ -18,10 +18,11 @@ export function WorkspaceHome() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (force = false) => {
     setLoading(true);
     try {
-      const { data } = await api.get('/workspaces');
+      const { getWorkspaces } = await import('../lib/workspace');
+      const data = await getWorkspaces(force);
       setWorkspaces(data);
       if (data.length > 0) {
         setSelectedWorkspace(data[0]);

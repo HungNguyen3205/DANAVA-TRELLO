@@ -40,13 +40,28 @@ export interface NotificationResponse {
   unread_count: number;
 }
 
-export const getNotifications = async (page = 1, unreadOnly = false): Promise<NotificationResponse> => {
+const inFlightNotifications = new Map<string, Promise<NotificationResponse>>();
+
+export const getNotifications = (page = 1, unreadOnly = false): Promise<NotificationResponse> => {
   const params = new URLSearchParams({ page: page.toString() });
   if (unreadOnly) {
     params.append('unread', '1');
   }
-  const response = await api.get(`/notifications?${params.toString()}`);
-  return response.data;
+  const urlKey = `/notifications?${params.toString()}`;
+  
+  const existing = inFlightNotifications.get(urlKey);
+  if (existing) return existing;
+  
+  const request = api.get(urlKey).then(res => res.data);
+  inFlightNotifications.set(urlKey, request);
+  
+  void request.finally(() => {
+    if (inFlightNotifications.get(urlKey) === request) {
+      inFlightNotifications.delete(urlKey);
+    }
+  }).catch(() => {});
+  
+  return request;
 };
 
 export const markAsRead = async (id: string): Promise<void> => {

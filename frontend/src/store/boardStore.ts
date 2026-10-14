@@ -5,33 +5,75 @@ import type { Board, Task, Column } from '../types';
 interface BoardState {
   board: Board | null;
   loading: boolean;
+  boardsCache: Record<string, { data: Board, timestamp: number }>;
+  inFlight: Record<string, Promise<any>>;
   fetchBoard: (boardId: string, force?: boolean) => Promise<void>;
   setBoard: (board: Board | ((prev: Board | null) => Board | null)) => void;
+  clearCache: () => void;
 }
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const useBoardStore = create<BoardState>((set, get) => ({
   board: null,
   loading: false,
+  boardsCache: {},
+  inFlight: {},
+  clearCache: () => set({ boardsCache: {}, board: null }),
   setBoard: (updater) => {
-    set((state) => ({
-      board: typeof updater === 'function' ? updater(state.board) : updater
-    }));
+    set((state) => {
+      const newBoard = typeof updater === 'function' ? updater(state.board) : updater;
+      if (newBoard) {
+        return {
+          board: newBoard,
+          boardsCache: {
+            ...state.boardsCache,
+            [newBoard.id]: { data: newBoard, timestamp: Date.now() }
+          }
+        };
+      }
+      return { board: newBoard };
+    });
   },
   fetchBoard: async (boardId: string, force = false) => {
-    const { board } = get();
-    // Use cached if same board and not forced
-    if (board && board.id === boardId && !force) {
+    const { boardsCache, inFlight, board } = get();
+    
+    // Check if we have a valid cache
+    const cached = boardsCache[boardId];
+    const isCacheValid = cached && (Date.now() - cached.timestamp < CACHE_TTL);
+    
+    if (cached && !force) {
+      // If we have cache, immediately show it (even if expired, we show it while background fetching)
+      if (!board || board.id !== boardId) {
+        set({ board: cached.data, loading: false });
+      }
+      // If cache is valid, no need to fetch in background
+      if (isCacheValid) return;
+    } else {
+      // No cache or force refresh, show spinner if we are switching boards
+      if (!board || board.id !== boardId) {
+        set({ loading: true, board: null });
+      }
+    }
+    
+    // Prevent duplicate concurrent requests
+    if (inFlight[boardId]) {
+      await inFlight[boardId];
       return;
     }
     
-    set({ loading: true });
+    const id = boardId.replace('board-', '') || '1';
+    
+    // Create fetch promise
+    const fetchPromise = Promise.all([
+      api.get(`/boards/${id}`),
+      api.get(`/boards/${id}/kanban`)
+    ]);
+    
+    set((state) => ({ inFlight: { ...state.inFlight, [boardId]: fetchPromise } }));
+    
     try {
-      const id = boardId.replace('board-', '') || '1';
-      // Fetch both APIs in parallel to save time
-      const [boardRes, kanbanRes] = await Promise.all([
-        api.get(`/boards/${id}`),
-        api.get(`/boards/${id}/kanban`)
-      ]);
+      const [boardRes, kanbanRes] = await fetchPromise;
       
       const bData = boardRes.data;
       const columnsData = kanbanRes.data;
@@ -54,25 +96,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           collaborators: [],
           startDate: t.start_date || '',
           dueDate: t.due_date || '',
-          checklists: (t.checklists || []).map((cl: any) => ({
-            id: String(cl.id),
-            title: cl.title,
-            items: (cl.items || []).map((i: any) => ({
-              id: String(i.id),
-              text: i.content,
-              done: !!i.is_completed
-            }))
-          })),
-          attachments: (t.attachments || []).map((a: any) => ({
-            id: String(a.id),
-            fileName: a.file_name,
-            filePath: a.file_path,
-            mimeType: a.mime_type,
-            size: a.size,
-            userId: String(a.user_id),
-            createdAt: a.created_at
-          })),
-          comments: t.comments || []
+          checklists: [],
+          attachments: [],
+          comments: [],
+          totalChecklistsItems: t.total_checklists_items || 0,
+          doneChecklistsItems: t.done_checklists_items || 0,
+          commentsCount: t.comments_count || 0,
+          attachmentsCount: t.attachments_count || 0,
         }))
       );
 
@@ -96,9 +126,25 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         labels: bData.labels ? bData.labels.map((l: any) => ({ id: String(l.id), name: l.name, color: l.color })) : []
       };
       
-      set({ board: newBoard, loading: false });
+      set((state) => {
+        const nextInFlight = { ...state.inFlight };
+        delete nextInFlight[boardId];
+        return { 
+          board: newBoard, 
+          loading: false,
+          inFlight: nextInFlight,
+          boardsCache: {
+            ...state.boardsCache,
+            [boardId]: { data: newBoard, timestamp: Date.now() }
+          }
+        };
+      });
     } catch (e) {
-      set({ loading: false });
+      set((state) => {
+        const nextInFlight = { ...state.inFlight };
+        delete nextInFlight[boardId];
+        return { loading: false, inFlight: nextInFlight };
+      });
       throw e;
     }
   }

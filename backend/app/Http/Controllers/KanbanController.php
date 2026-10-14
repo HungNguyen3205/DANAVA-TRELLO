@@ -31,7 +31,16 @@ class KanbanController extends Controller
         }
 
         $columns = $board->columns()->with(['tasks' => function ($query) {
-            $query->with(['checklists.items', 'labels', 'attachments', 'comments.user'])->orderBy('order');
+            $query->with(['labels'])
+                  ->withCount([
+                      'attachments', 
+                      'comments',
+                      'checklistItems as total_checklists_items',
+                      'checklistItems as done_checklists_items' => function($q) {
+                          $q->where('is_completed', true);
+                      }
+                  ])
+                  ->orderBy('order');
         }])->orderBy('order')->get();
 
         return response()->json($columns);

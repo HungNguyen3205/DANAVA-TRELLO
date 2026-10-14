@@ -99,6 +99,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::put('/tasks/{task}/move', [KanbanController::class, 'moveTask']);
 
     // Tasks (Global Access by ID)
+    Route::get('/tasks/{task}', [TaskDetailController::class, 'show']);
     Route::put('/tasks/{task}', [TaskDetailController::class, 'update']);
     Route::delete('/tasks/{task}', [TaskDetailController::class, 'destroy']);
     Route::post('/tasks/{task}/comments', [TaskDetailController::class, 'addComment']);

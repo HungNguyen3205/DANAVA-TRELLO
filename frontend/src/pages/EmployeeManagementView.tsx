@@ -88,7 +88,7 @@ export function EmployeeManagementView() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto bg-white border border-border rounded-xl shadow-sm">
+      <div className="flex-1 overflow-auto bg-card border border-border rounded-xl shadow-sm">
         {isLoading ? (
           <div className="text-center p-8 text-muted-foreground animate-pulse">Đang tải...</div>
         ) : employees.length === 0 ? (
@@ -109,24 +109,24 @@ export function EmployeeManagementView() {
             </thead>
             <tbody className="text-sm divide-y divide-border">
               {employees.map((emp) => (
-                <tr key={emp.id} className="hover:bg-muted/10 transition-colors group">
+                <tr key={emp.id} className="hover:bg-muted/50 transition-colors group">
                   <td className="px-6 py-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                       {emp.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <div className="font-semibold text-foreground">{emp.name}</div>
-                      <div className="text-xs text-muted-foreground">@{emp.username} {emp.email && `• ${emp.email}`}</div>
+                      <div className="text-xs text-muted-foreground">{emp.username.includes('@') ? emp.username : `@${emp.username}`} {emp.email && emp.email !== emp.username ? `• ${emp.email}` : ''}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
                       {emp.system_role === 'system_admin' ? <ShieldAlert size={12} /> : <Users size={12} />}
                       {emp.system_role === 'system_admin' ? 'System Admin' : 'User'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.account_status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${emp.account_status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
                       {emp.account_status === 'active' ? 'Hoạt động' : 'Bị khóa'}
                     </span>
                   </td>
@@ -208,8 +208,14 @@ function CreateEmployeeModal({ onClose, onCreated }: { onClose: () => void, onCr
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Username</label>
-            <input required type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+            <label className="block text-sm font-medium text-foreground mb-1">Username (Tài khoản)</label>
+            <div className="relative">
+              <input required type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="VD: namhung" className="w-full pl-3 pr-[100px] py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
+                @danava.vn
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Chỉ cần nhập tên, hệ thống tự động gắn đuôi email <b>@danava.vn</b>. Nhân viên có thể đăng nhập bằng tên ngắn hoặc email đều được.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Mật khẩu tạm</label>

@@ -12,8 +12,10 @@ import { overdue } from "../../lib/board";
 
 export function CardContent({ task, board, theme }: { task: Task; board: Board; theme?: any }) {
   const assignee = board.users.find((u) => u.id === task.assigneeId);
-  const totalChecklistsItems = task.checklists?.reduce((acc, c) => acc + c.items.length, 0) || 0;
-  const doneChecklistsItems = task.checklists?.reduce((acc, c) => acc + c.items.filter(i => i.done).length, 0) || 0;
+  const totalChecklistsItems = task.totalChecklistsItems ?? (task.checklists?.reduce((acc, c) => acc + c.items.length, 0) || 0);
+  const doneChecklistsItems = task.doneChecklistsItems ?? (task.checklists?.reduce((acc, c) => acc + c.items.filter(i => i.done).length, 0) || 0);
+  const commentsCount = task.commentsCount ?? task.comments?.length ?? 0;
+  const attachmentsCount = task.attachmentsCount ?? task.attachments?.length ?? 0;
   
   const progress = totalChecklistsItems > 0 ? Math.round((doneChecklistsItems / totalChecklistsItems) * 100) : 0;
   const isDone = doneChecklistsItems === totalChecklistsItems && totalChecklistsItems > 0;
@@ -70,7 +72,7 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
         )}
         
         <div className={`flex items-center justify-between gap-2 mt-auto pt-3 border-t w-full min-h-[36px] ${
-          (task.dueDate || task.comments.length > 0 || (task.attachments && task.attachments.length > 0) || task.assigneeId) 
+          (task.dueDate || commentsCount > 0 || attachmentsCount > 0 || task.assigneeId) 
           ? 'border-border/40' 
           : 'border-transparent'
         }`}>
@@ -81,16 +83,16 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
                 <span className="tracking-tight">{task.dueDate.split("-").slice(1).reverse().join("/")}</span>
               </span>
             )}
-            {task.comments.length > 0 && (
+            {commentsCount > 0 && (
               <span className="flex items-center gap-1">
                 <MessageSquare size={13} className="opacity-70" />
-                <span className="tracking-tight">{task.comments.length}</span>
+                <span className="tracking-tight">{commentsCount}</span>
               </span>
             )}
-            {task.attachments && task.attachments.length > 0 && (
+            {attachmentsCount > 0 && (
               <span className="flex items-center gap-1">
                 <Paperclip size={13} className="opacity-70" />
-                <span className="tracking-tight">{task.attachments.length}</span>
+                <span className="tracking-tight">{attachmentsCount}</span>
               </span>
             )}
           </div>

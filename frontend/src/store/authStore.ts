@@ -26,6 +26,10 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('auth_token');
         set({ user: null, token: null, isAuthenticated: false });
+        
+        // Clear all memory caches securely
+        import('../lib/personalDashboard').then(m => m.clearPersonalDashboardCache());
+        import('./boardStore').then(m => m.useBoardStore.getState().clearCache());
       },
       updateUser: (user) => {
         set({ user });

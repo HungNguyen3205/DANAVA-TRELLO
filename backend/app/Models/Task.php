@@ -48,6 +48,11 @@ class Task extends Model
         return $this->hasMany(Checklist::class);
     }
 
+    public function checklistItems()
+    {
+        return $this->hasManyThrough(ChecklistItem::class, Checklist::class);
+    }
+
     public function labels()
     {
         return $this->belongsToMany(Label::class, 'task_labels');
@@ -87,8 +92,12 @@ class Task extends Model
     // Scope to filter tasks in workspaces the user is a member of
     public function scopeInUserWorkspaces($query, $userId)
     {
-        return $query->whereHas('column.board.workspace.members', function ($q) use ($userId) {
-            $q->where('user_id', $userId);
+        return $query->whereHas('column.board', function ($q) use ($userId) {
+            $q->whereIn('workspace_id', function ($sub) use ($userId) {
+                $sub->select('workspace_id')
+                    ->from('workspace_members')
+                    ->where('user_id', $userId);
+            });
         });
     }
 }

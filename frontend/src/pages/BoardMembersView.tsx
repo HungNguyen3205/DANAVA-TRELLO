@@ -152,7 +152,7 @@ export function BoardMembersView() {
                       </div>
                       <div>
                         <div className="font-semibold text-foreground">{member.name}</div>
-                        <div className="text-xs text-muted-foreground">@{member.username}</div>
+                        <div className="text-xs text-muted-foreground">{member.username.includes('@') ? member.username : `@${member.username}`}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -283,7 +283,7 @@ function AddBoardMemberModal({ workspaceId, boardId, onClose, onAdded }: { works
                     </div>
                     <div>
                       <div className="text-sm font-semibold">{m.name}</div>
-                      <div className="text-xs text-muted-foreground">@{m.username}</div>
+                      <div className="text-xs text-muted-foreground">{m.username.includes('@') ? m.username : `@${m.username}`}</div>
                     </div>
                   </div>
                   <button 

@@ -34,8 +34,21 @@ export function AppLayout() {
   const createRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
 
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
   useEffect(() => {
     fetchData();
+
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const fetchData = async () => {
@@ -78,6 +91,11 @@ export function AppLayout() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans">
+      {isOffline && (
+        <div className="bg-red-500 text-white text-center py-1 px-4 text-xs font-medium shrink-0 z-[100] flex justify-center items-center gap-2">
+          <LogOut size={12} className="rotate-90" /> Bạn đang ngoại tuyến (Offline). Các thao tác lúc này sẽ không được lưu.
+        </div>
+      )}
       {/* Top Navigation */}
       <header className="h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-[50] shrink-0 shadow-sm relative">
         <div className="flex items-center gap-1 md:gap-3 shrink-0">
@@ -92,8 +110,8 @@ export function AppLayout() {
           </button>
           
           <Link to="/home" className="flex items-center gap-2 cursor-pointer shrink-0 mr-1 md:mr-3">
-            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center text-primary-foreground font-bold shrink-0 text-sm">
-              D
+            <div className="w-7 h-7 rounded flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/logo.jpg" alt="DANAVA" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-base md:text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent whitespace-nowrap hidden sm:block">
               DANAVA WORK

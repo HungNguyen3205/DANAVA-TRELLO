@@ -230,9 +230,39 @@ export const SettingsPage = () => {
               </div>
             </div>
             <div className="p-5 md:p-6">
-              <div className="space-y-1 divide-y divide-border/50 border border-border rounded-xl overflow-hidden">
-                {[
-                  { key: 'assigned', title: 'Khi được giao việc', desc: 'Nhận thông báo khi bạn được thêm vào một nhiệm vụ' },
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                  <div className="pr-4">
+                    <div className="font-semibold text-primary flex items-center gap-2 mb-1">
+                      <Smartphone size={16} />
+                      Nhận thông báo về điện thoại/máy tính
+                    </div>
+                    <div className="text-sm text-muted-foreground">Nhận thông báo popup ngay cả khi không mở ứng dụng (Yêu cầu cấp quyền trình duyệt)</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!('Notification' in window)) {
+                        toast.error('Trình duyệt của bạn không hỗ trợ thông báo đẩy.');
+                        return;
+                      }
+                      if (Notification.permission === 'granted') {
+                        toast.success('Đã cấp quyền trước đó. Để tắt, hãy vào cài đặt trình duyệt.');
+                      } else {
+                        Notification.requestPermission().then(res => {
+                          if (res === 'granted') toast.success('Đã bật thông báo thành công!');
+                          else toast.error('Bạn đã từ chối cấp quyền thông báo.');
+                        });
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${'Notification' in window && Notification.permission === 'granted' ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${'Notification' in window && Notification.permission === 'granted' ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                <div className="space-y-1 divide-y divide-border/50 border border-border rounded-xl overflow-hidden">
+                  {[
+                    { key: 'assigned', title: 'Khi được giao việc', desc: 'Nhận thông báo khi bạn được thêm vào một nhiệm vụ' },
                   { key: 'approaching_due', title: 'Sắp đến hạn', desc: 'Nhắc nhở 24h trước khi nhiệm vụ đến hạn' },
                   { key: 'due_today', title: 'Đến hạn hôm nay', desc: 'Nhắc nhở các nhiệm vụ có hạn chót trong ngày' },
                   { key: 'overdue', title: 'Nhiệm vụ quá hạn', desc: 'Nhắc nhở khi nhiệm vụ đã trễ hạn mà chưa hoàn thành' },
@@ -315,5 +345,6 @@ export const SettingsPage = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };

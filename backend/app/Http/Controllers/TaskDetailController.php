@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 
 class TaskDetailController extends Controller
 {
+    public function show(Task $task)
+    {
+        return response()->json($task->load(['checklists.items', 'labels', 'attachments', 'comments.user']));
+    }
+
     // Cập nhật chi tiết thẻ (Mô tả, Tiêu đề)
     public function update(Request $request, Task $task)
     {

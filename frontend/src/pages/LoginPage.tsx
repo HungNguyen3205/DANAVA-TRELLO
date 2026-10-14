@@ -144,8 +144,8 @@ export function LoginPage() {
           {/* Brand Content */}
           <div className="relative z-30 p-10 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/30">
-                <LayoutTemplate className={`transition-colors duration-1000 ${isDark ? 'text-indigo-200' : 'text-white'}`} size={20} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden border border-white/20 shadow-sm bg-white/10 backdrop-blur-md">
+                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <h1 className={`text-2xl md:text-3xl font-black tracking-tight drop-shadow-sm transition-colors duration-1000
                 ${isDark ? 'text-white' : 'text-slate-800'}`}>
@@ -192,8 +192,8 @@ export function LoginPage() {
             
             {/* Mobile Logo */}
             <div className="md:hidden flex flex-col items-center gap-3 mb-8">
-              <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <LayoutTemplate className="text-white" size={24} />
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-border/50 bg-background">
+                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <h1 className={`text-2xl font-black tracking-tight transition-colors duration-1000 ${isDark ? 'text-white' : 'text-slate-800'}`}>DANAVA WORK</h1>
             </div>

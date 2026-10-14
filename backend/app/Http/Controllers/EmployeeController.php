@@ -42,9 +42,15 @@ class EmployeeController extends Controller
 
         DB::beginTransaction();
         try {
+            $baseName = strtolower($request->username);
+            // If admin accidentally types the full email, strip it for the username
+            $finalUsername = str_replace('@danava.vn', '', $baseName);
+            $email = str_contains($baseName, '@') ? $baseName : $finalUsername . '@danava.vn';
+
             $user = User::create([
-                'username' => strtolower($request->username),
-                'name' => $request->username, // Temporary name
+                'username' => $finalUsername,
+                'email' => $email,
+                'name' => $finalUsername, // Temporary name
                 'password' => Hash::make($request->password),
                 'must_change_password' => true,
                 'created_by' => $request->user()->id,
