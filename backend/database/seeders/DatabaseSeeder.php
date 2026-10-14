@@ -16,7 +16,12 @@ class DatabaseSeeder extends Seeder
     {
         $user = User::firstOrCreate(
             ['email' => 'admin@danava.vn'],
-            ['name' => 'Admin Danava', 'password' => Hash::make('123456')]
+            [
+                'name' => 'Admin Danava',
+                'username' => 'admin',
+                'role' => 'admin',
+                'password' => Hash::make('123456')
+            ]
         );
 
         $workspace = Workspace::firstOrCreate(
