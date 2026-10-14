@@ -57,7 +57,7 @@ export function PersonalLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 xl:p-8">
+      <main className="flex-1 overflow-hidden bg-background flex flex-col relative">
         <Outlet />
       </main>
     </div>

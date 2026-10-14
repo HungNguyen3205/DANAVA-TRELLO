@@ -381,3 +381,13 @@ input, textarea, [contenteditable="true"] {
   user-select: auto;
   -webkit-user-select: auto;
 }
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
