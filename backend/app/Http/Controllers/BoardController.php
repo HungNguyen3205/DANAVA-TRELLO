@@ -68,6 +68,16 @@ class BoardController extends Controller
             'color' => $request->color ?? 'bg-gradient-to-br from-blue-500 to-cyan-400',
         ]);
 
+        // Người tạo bảng tự động trở thành Quản trị viên (Admin) của bảng đó
+        \Illuminate\Support\Facades\DB::table('board_members')->insert([
+            'board_id' => $board->id,
+            'user_id' => $request->user()->id,
+            'role' => 'admin',
+            'is_starred' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         return response()->json($board, 201);
     }
 
