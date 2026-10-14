@@ -30,7 +30,7 @@ export function PersonalLayout() {
       }`}>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
           {/* Mục CHUNG */}
-          <div className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          <div className="mt-6 mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             Chung
           </div>
           <SidebarItem 

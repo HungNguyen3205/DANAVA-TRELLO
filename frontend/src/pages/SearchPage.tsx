@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../lib/axios';
 import { format, isPast, isToday } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { getAvatarUrl } from '../lib/avatar';
 
 interface TaskResult {
   id: number;
@@ -259,7 +260,7 @@ export const SearchPage = () => {
                                 <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-lg">
                                   <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-[9px] font-bold overflow-hidden shrink-0">
                                     {task.assignee.avatar ? (
-                                      <img src={task.assignee.avatar.startsWith('http') ? task.assignee.avatar : `http://localhost:8000${task.assignee.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                                      <img src={getAvatarUrl(task.assignee.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                                     ) : (
                                       task.assignee.name.charAt(0).toUpperCase()
                                     )}

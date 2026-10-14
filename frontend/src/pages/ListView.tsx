@@ -10,6 +10,7 @@ import {
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
+import { getAvatarUrl } from '../lib/avatar';
 
 // Tab Component for Header
 function BoardTabs({ boardId, workspaceId, activeTab }: { boardId: string, workspaceId: string, activeTab: 'kanban' | 'list' | 'calendar' }) {
@@ -348,7 +349,7 @@ export function ListView() {
                                   <>
                                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-background flex items-center justify-center text-[9px] font-bold text-white shadow-sm shrink-0 overflow-hidden" title={assignee.name}>
                                       {assignee.avatar ? (
-                                        <img src={assignee.avatar.startsWith('http') ? assignee.avatar : `http://localhost:8000${assignee.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                                        <img src={getAvatarUrl(assignee.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                                       ) : (
                                         assignee.initials
                                       )}

@@ -4,6 +4,7 @@ import { Star, Columns, Users, Settings, Plus, LayoutDashboard, Activity } from 
 import { CreateBoardModal } from '../components/workspace/CreateBoardModal';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
+import { getAvatarUrl } from '../lib/avatar';
 
 export function WorkspaceDetail() {
   const { workspaceId } = useParams();
@@ -80,7 +81,7 @@ export function WorkspaceDetail() {
                   {workspace.members?.slice(0, 5).map((m: any) => (
                     <div key={m.id} className="w-7 h-7 rounded-full bg-secondary border border-card flex items-center justify-center text-[10px] font-bold z-10 relative overflow-hidden">
                       {m.avatar ? (
-                        <img src={m.avatar.startsWith('http') ? m.avatar : `http://localhost:8000${m.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                        <img src={getAvatarUrl(m.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                       ) : (
                         m.name?.charAt(0).toUpperCase()
                       )}

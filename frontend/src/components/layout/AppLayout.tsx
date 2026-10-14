@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import api from '../../lib/axios';
 import { getPersonalDashboard } from '../../lib/personalDashboard';
+import { getAvatarUrl } from '../../lib/avatar';
 
 export function AppLayout() {
   const logout = useAuthStore(state => state.logout);
@@ -316,7 +317,7 @@ export function AppLayout() {
               className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-primary flex items-center justify-center text-primary-foreground font-medium text-sm shadow-sm border border-primary/20 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-transform hover:scale-105 overflow-hidden"
             >
               {user?.avatar ? (
-                <img src={user.avatar.startsWith('http') ? user.avatar : `http://localhost:8000${user.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={getAvatarUrl(user.avatar)} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 user?.name ? user.name.charAt(0).toUpperCase() : 'U'
               )}
@@ -327,7 +328,7 @@ export function AppLayout() {
                 <div className="px-4 py-3 border-b border-border/50 mb-1 flex items-center gap-3 bg-accent/30">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-primary flex items-center justify-center text-primary-foreground font-medium text-lg shadow-inner shrink-0 overflow-hidden">
                     {user?.avatar ? (
-                      <img src={user.avatar.startsWith('http') ? user.avatar : `http://localhost:8000${user.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                      <img src={getAvatarUrl(user.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                       user?.name ? user.name.charAt(0).toUpperCase() : 'U'
                     )}

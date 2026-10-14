@@ -9,6 +9,7 @@ import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
 import { useBoardStore } from '../../store/boardStore';
 import { toast } from 'sonner';
+import { getAvatarUrl } from '../../lib/avatar';
 
 interface TaskDetailModalProps {
   task: Task;
@@ -182,7 +183,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
                         {assignedUser?.avatar ? (
-                          <img src={assignedUser.avatar.startsWith('http') ? assignedUser.avatar : `http://localhost:8000${assignedUser.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                          <img src={getAvatarUrl(assignedUser.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
                           assignedUser?.initials || draft.assigneeId.charAt(0).toUpperCase()
                         )}
@@ -445,7 +446,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                             {(att.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
-                        <a href={`http://localhost:8000/storage/${att.filePath}`} target="_blank" rel="noreferrer" className="p-2 hover:bg-accent rounded text-muted-foreground transition-colors">
+                        <a href={getAvatarUrl(`/storage/${att.filePath}`)} target="_blank" rel="noreferrer" className="p-2 hover:bg-accent rounded text-muted-foreground transition-colors">
                           Mở
                         </a>
                         <button 
@@ -651,7 +652,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                           <div className="flex items-center gap-2">
                             <span className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden">
                               {user.avatar ? (
-                                <img src={user.avatar.startsWith('http') ? user.avatar : `http://localhost:8000${user.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                                <img src={getAvatarUrl(user.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                               ) : (
                                 user.initials
                               )}

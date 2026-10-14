@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { Board, Task } from "../../types";
 import { overdue } from "../../lib/board";
+import { getAvatarUrl } from "../../lib/avatar";
 
 export function CardContent({ task, board, theme }: { task: Task; board: Board; theme?: any }) {
   const assignee = board.users.find((u) => u.id === task.assigneeId);
@@ -103,7 +104,7 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
               title={`User: ${assignee?.name || task.assigneeId}`}
             >
               {assignee?.avatar ? (
-                <img src={assignee.avatar.startsWith('http') ? assignee.avatar : `http://localhost:8000${assignee.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={getAvatarUrl(assignee.avatar)} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 assignee?.initials || task.assigneeId.charAt(0).toUpperCase()
               )}

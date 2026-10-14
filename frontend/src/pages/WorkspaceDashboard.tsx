@@ -31,6 +31,7 @@ import {
   YAxis,
 } from 'recharts';
 import api from '../lib/axios';
+import { getAvatarUrl } from '../lib/avatar';
 
 interface DashboardData {
   workspace: { id: number; name: string };
@@ -72,6 +73,7 @@ interface DashboardData {
     task_title: string;
     board_name: string;
     user_name?: string | null;
+    user_avatar?: string | null;
     created_at: string;
   }>;
   sprint_summary: { pending: number; active: number; completed: number };
@@ -410,8 +412,12 @@ export function WorkspaceDashboard() {
             {data.recent_activity.length ? data.recent_activity.map((item, index) => (
               <div key={item.id} className="relative flex gap-3 py-2.5">
                 {index < data.recent_activity.length - 1 && <span className="absolute left-[17px] top-10 h-[calc(100%-18px)] w-px bg-muted" />}
-                <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-xs font-black text-violet-600 dark:text-violet-400 ring-4 ring-background">
-                  {(item.user_name || 'Hệ thống').charAt(0).toUpperCase()}
+                <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-xs font-black text-violet-600 dark:text-violet-400 ring-4 ring-background overflow-hidden">
+                  {item.user_avatar ? (
+                    <img src={getAvatarUrl(item.user_avatar)} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    (item.user_name || 'Hệ thống').charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs leading-5 text-muted-foreground">

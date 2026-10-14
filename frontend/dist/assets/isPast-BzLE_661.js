@@ -1,0 +1,1 @@
+import{f as e}from"./index-BKSOS_4W.js";function t(t){return+e(t)<Date.now()}export{t};

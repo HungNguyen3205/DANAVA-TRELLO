@@ -1,1 +1,0 @@
-import{d as e}from"./index-C_19iwAm.js";function t(t){return+e(t)<Date.now()}export{t};

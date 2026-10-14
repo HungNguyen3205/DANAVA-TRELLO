@@ -306,6 +306,7 @@ class WorkspaceController extends Controller
                     'tasks.title as task_title',
                     'boards.name as board_name',
                     'users.name as user_name',
+                    'users.avatar as user_avatar',
                 ]);
 
             $sprintSummary = DB::table('board_sprints')

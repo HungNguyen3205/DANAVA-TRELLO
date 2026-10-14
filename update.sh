@@ -20,6 +20,7 @@ fi
 
 echo "⚙️ [3/3] Đang cập nhật Backend & Database..."
 cd backend
+php artisan storage:link || true
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache

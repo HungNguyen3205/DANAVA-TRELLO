@@ -99,7 +99,11 @@ class PersonalDashboardController extends Controller
                     'priority' => $task->priority,
                     'due_date' => $task->due_date,
                     'start_date' => $task->start_date,
-                    'assignee' => ['name' => $task->assignee?->name ?? '']
+                    'assignee' => [
+                        'id' => $task->assignee?->id,
+                        'name' => $task->assignee?->name ?? '',
+                        'avatar' => $task->assignee?->avatar ?? null
+                    ]
                 ];
             };
 

@@ -6,6 +6,7 @@ import { PromptModal } from '../components/ui/PromptModal';
 import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus } from 'lucide-react';
 import api from '../lib/axios';
 import { useBoardStore } from '../store/boardStore';
+import { getAvatarUrl } from '../lib/avatar';
 
 export function BoardView() {
   const { workspaceId, boardId } = useParams();
@@ -165,7 +166,7 @@ export function BoardView() {
               {board.users?.slice(0, 3).map((u: any, i: number) => (
                 <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-background flex items-center justify-center text-[10px] font-bold z-10 relative shadow-sm text-white overflow-hidden" title={u.name}>
                   {u.avatar ? (
-                    <img src={u.avatar.startsWith('http') ? u.avatar : `http://localhost:8000${u.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={getAvatarUrl(u.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     u.initials
                   )}

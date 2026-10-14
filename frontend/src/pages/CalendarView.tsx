@@ -18,6 +18,7 @@ import {
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
+import { getAvatarUrl } from '../lib/avatar';
 
 const locales = {
   'vi': viLocale,
@@ -333,7 +334,7 @@ export function CalendarView() {
               {board.users?.slice(0, 3).map((u: any, i: number) => (
                 <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-background flex items-center justify-center text-[10px] font-bold z-10 relative shadow-sm text-white overflow-hidden" title={u.name}>
                   {u.avatar ? (
-                    <img src={u.avatar.startsWith('http') ? u.avatar : `http://localhost:8000${u.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={getAvatarUrl(u.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     u.initials
                   )}

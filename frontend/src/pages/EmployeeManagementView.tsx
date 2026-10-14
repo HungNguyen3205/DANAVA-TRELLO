@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
+import { getAvatarUrl } from '../lib/avatar';
 
 export function EmployeeManagementView() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -129,8 +130,12 @@ export function EmployeeManagementView() {
                   <tr key={emp.id} className="hover:bg-muted/40 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
-                          {emp.name ? emp.name.charAt(0).toUpperCase() : 'U'}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0 overflow-hidden">
+                          {emp.avatar ? (
+                            <img src={getAvatarUrl(emp.avatar)} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            emp.name ? emp.name.charAt(0).toUpperCase() : 'U'
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="font-semibold text-foreground truncate">{emp.name}</div>

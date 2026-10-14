@@ -7,6 +7,7 @@ import {
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board } from '../types';
+import { getAvatarUrl } from '../lib/avatar';
 
 export function BoardMembersView() {
   const { workspaceId, boardId } = useParams();
@@ -148,7 +149,7 @@ export function BoardMembersView() {
                   <tr key={member.id} className="hover:bg-muted/10 transition-colors group">
                     <td className="px-6 py-4 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
-                        {member.avatar ? <img src={member.avatar.startsWith('http') ? member.avatar : `http://localhost:8000${member.avatar}`} alt="avatar" className="w-full h-full object-cover" /> : member.name.charAt(0).toUpperCase()}
+                        {member.avatar ? <img src={getAvatarUrl(member.avatar)} alt="avatar" className="w-full h-full object-cover" /> : member.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="font-semibold text-foreground">{member.name}</div>

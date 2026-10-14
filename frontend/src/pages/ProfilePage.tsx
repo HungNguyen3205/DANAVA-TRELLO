@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import { DatePicker } from '../components/ui/DatePicker';
+import { getAvatarUrl } from '../lib/avatar';
 
 export function ProfilePage() {
   const { user, updateUser } = useAuthStore();
@@ -185,7 +186,7 @@ export function ProfilePage() {
           <div className="relative group shrink-0 z-10">
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-background shadow-sm overflow-hidden bg-gradient-to-br from-purple-600 to-primary flex items-center justify-center text-3xl font-bold text-white relative">
               {avatarPreview ? (
-                <img src={avatarPreview.startsWith('data:') || avatarPreview.startsWith('http') ? avatarPreview : `http://localhost:8000${avatarPreview}`} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={getAvatarUrl(avatarPreview)} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <span>{formData.name.charAt(0).toUpperCase() || 'U'}</span>
               )}
