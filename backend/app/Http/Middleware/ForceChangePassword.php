@@ -20,7 +20,9 @@ class ForceChangePassword
         if ($user && $user->must_change_password) {
             // Allow paths for auth (logout, me, change password)
             $allowedPaths = [
+                'api/logout',
                 'api/auth/logout',
+                'api/me',
                 'api/auth/me',
                 'api/auth/change-password',
             ];
