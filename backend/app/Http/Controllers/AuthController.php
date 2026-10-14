@@ -63,8 +63,14 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->login)
-                    ->orWhere('username', $request->login)
+        $loginInput = trim($request->login);
+        $cleanUsername = str_replace('@danava.vn', '', strtolower($loginInput));
+        $fullEmail = str_contains($loginInput, '@') ? $loginInput : $loginInput . '@danava.vn';
+
+        $user = User::where('email', $loginInput)
+                    ->orWhere('email', $fullEmail)
+                    ->orWhere('username', $loginInput)
+                    ->orWhere('username', $cleanUsername)
                     ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
