@@ -179,7 +179,7 @@ export function BoardSettingsView() {
 
             <div className="pt-4 border-t border-border flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Thuộc không gian: <Link to={`/w/${workspaceId}/dashboard`} className="font-semibold text-primary hover:underline">{board.workspace?.name || 'Đang tải...'}</Link>
+                Thuộc không gian: <Link to={`/w/${workspaceId}/boards`} className="font-semibold text-primary hover:underline">{board.workspace?.name || 'Đang tải...'}</Link>
               </div>
               
               {canEdit && (

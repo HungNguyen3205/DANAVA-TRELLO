@@ -84,11 +84,7 @@ function App() {
             {/* Level 2: Workspace Layout */}
             <Route path="/w/:workspaceId" element={<WorkspaceGuard />}>
               <Route element={<WorkspaceLayout />}>
-                <Route path="dashboard" element={
-                  <Suspense fallback={<div className="animate-pulse p-8 font-medium text-primary">Đang tải Dashboard...</div>}>
-                    <WorkspaceDashboard />
-                  </Suspense>
-                } />
+                <Route path="dashboard" element={<Navigate to="/dashboard" replace />} />
                 <Route path="boards" element={<WorkspaceDetail />} />
                 <Route path="sprints" element={<PlaceholderPage title="Quản lý Sprint" />} />
                 <Route path="members" element={<PlaceholderPage title="Thành viên" />} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, Link, useParams, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Grid, Users, Settings, ChartNoAxesCombined } from 'lucide-react';
+import { LayoutDashboard, Grid, Users, Settings } from 'lucide-react';
 import { CreateWorkspaceModal } from '../workspace/CreateWorkspaceModal';
 import api from '../../lib/axios';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
@@ -61,12 +61,6 @@ export function WorkspaceLayout() {
         <nav className="flex-1 px-3 pb-4 space-y-1 overflow-y-auto custom-scrollbar">
           {workspaceId && (
             <>
-              <SidebarItem
-                icon={<ChartNoAxesCombined size={18} />}
-                label="Tổng quan"
-                to={`/w/${workspaceId}/dashboard`}
-                active={location.pathname.includes('/dashboard')}
-              />
               <SidebarItem
                 icon={<LayoutDashboard size={18} />}
                 label="Bảng công việc"
