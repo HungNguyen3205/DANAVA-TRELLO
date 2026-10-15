@@ -53,5 +53,8 @@ class DatabaseSeeder extends Seeder
         Task::create(['column_id' => $col2->id, 'title' => 'Kiểm thử thanh toán online', 'priority' => 'Khẩn cấp', 'order' => 2000]);
         Task::create(['column_id' => $col3->id, 'title' => 'Hoàn thiện báo cáo công nợ', 'priority' => 'Bình thường', 'order' => 1000]);
         Task::create(['column_id' => $col4->id, 'title' => 'Thống nhất kế hoạch triển khai', 'priority' => 'Thấp', 'order' => 1000]);
+
+        // Tự động gọi UsersSeeder để đồng bộ đầy đủ các tài khoản, vai trò và phân quyền
+        $this->call(UsersSeeder::class);
     }
 }
