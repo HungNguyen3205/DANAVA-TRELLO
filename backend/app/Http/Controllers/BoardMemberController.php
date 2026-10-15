@@ -28,15 +28,34 @@ class BoardMemberController extends Controller
             'role' => 'required|in:admin,member',
         ]);
 
-        // Check if user is in workspace
+        $currentUserId = $request->user()->id;
+        $isBoardAdmin = DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $currentUserId)
+            ->where('role', 'admin')
+            ->exists();
+        $isSystemAdmin = in_array($request->user()->system_role, ['admin', 'system_admin']);
+
+        // Check if user is Workspace Owner/Admin
+        $isWorkspaceAdmin = DB::table('workspace_members')
+            ->where('workspace_id', $board->workspace_id)
+            ->where('user_id', $currentUserId)
+            ->where('role', 'admin')
+            ->exists();
+
+        if (!$isBoardAdmin && !$isSystemAdmin && !$isWorkspaceAdmin) {
+            return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền thêm thành viên.'], 403);
+        }
+
+        // Check if user is in workspace behind the scenes
         $inWorkspace = DB::table('workspace_members')
-            ->where('workspace_id', $workspaceId)
+            ->where('workspace_id', $board->workspace_id)
             ->where('user_id', $request->user_id)
             ->exists();
 
         if (!$inWorkspace) {
             DB::table('workspace_members')->insert([
-                'workspace_id' => $workspaceId,
+                'workspace_id' => $board->workspace_id,
                 'user_id' => $request->user_id,
                 'role' => 'member',
                 'created_at' => now(),
@@ -44,15 +63,24 @@ class BoardMemberController extends Controller
             ]);
         }
 
-        DB::table('board_members')->insertOrIgnore([
-            'board_id' => $board->id,
-            'user_id' => $request->user_id,
-            'role' => $request->role,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::table('board_members')->updateOrInsert(
+            [
+                'board_id' => $board->id,
+                'user_id' => $request->user_id,
+            ],
+            [
+                'role' => $request->role,
+                'updated_at' => now(),
+            ]
+        );
 
-        return response()->json(['message' => 'Đã thêm thành viên vào bảng']);
+        // Gửi thông báo đến người vừa được thêm vào bảng
+        $addedUser = User::find($request->user_id);
+        if ($addedUser && $addedUser->id !== $currentUserId) {
+            $addedUser->notify(new \App\Notifications\BoardMemberAddedNotification($board, $request->user()));
+        }
+
+        return response()->json(['message' => 'Đã thêm thành viên vào bảng và gửi thông báo thành công']);
     }
 
     public function update(Request $request, $workspaceId, Board $board, $userId)

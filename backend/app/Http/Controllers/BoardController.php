@@ -8,7 +8,85 @@ use Illuminate\Http\Request;
 
 class BoardController extends Controller
 {
-    // Lấy danh sách bảng trong một Không gian làm việc
+    // Lấy toàn bộ danh sách bảng của người dùng đang đăng nhập (chỉ hiển thị bảng mà người đó tạo hoặc được thêm vào)
+    public function myBoards(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        $boards = Board::whereHas('members', function ($q) use ($userId) {
+            $q->where('user_id', $userId);
+        })->with('workspace')->orderBy('updated_at', 'desc')->get();
+
+        $boardIds = $boards->pluck('id')->toArray();
+
+        $memberships = \Illuminate\Support\Facades\DB::table('board_members')
+            ->whereIn('board_id', $boardIds)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('board_id');
+
+        $membersCount = \Illuminate\Support\Facades\DB::table('board_members')
+            ->whereIn('board_id', $boardIds)
+            ->select('board_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->groupBy('board_id')
+            ->pluck('count', 'board_id');
+
+        $boards = $boards->map(function ($board) use ($memberships, $membersCount) {
+            $member = $memberships->get($board->id);
+            $board->is_starred = $member ? (bool)$member->is_starred : false;
+            $board->my_role = $member ? $member->role : 'member';
+            $board->members_count = $membersCount[$board->id] ?? 1;
+            return $board;
+        });
+
+        return response()->json($boards);
+    }
+
+    // Tạo bảng trực tiếp mà không cần cấu hình hay quản lý Không gian làm việc
+    public function storeDirect(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'color' => 'nullable|string|max:50',
+        ]);
+
+        $userId = $request->user()->id;
+
+        // Tìm hoặc tạo không gian nền cá nhân
+        $workspace = Workspace::firstOrCreate(
+            ['owner_id' => $userId],
+            ['name' => 'Không gian của ' . $request->user()->name]
+        );
+
+        \Illuminate\Support\Facades\DB::table('workspace_members')->updateOrInsert(
+            ['workspace_id' => $workspace->id, 'user_id' => $userId],
+            ['role' => 'admin', 'updated_at' => now()]
+        );
+
+        $board = $workspace->boards()->create([
+            'name' => $request->name,
+            'color' => $request->color ?? 'bg-gradient-to-br from-blue-500 to-cyan-400',
+        ]);
+
+        // Người tạo là Quản trị viên (Chủ bảng)
+        \Illuminate\Support\Facades\DB::table('board_members')->insert([
+            'board_id' => $board->id,
+            'user_id' => $userId,
+            'role' => 'admin',
+            'is_starred' => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Tự động tạo sẵn 3 cột mặc định để người dùng làm việc ngay
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Cần làm', 'order' => 1000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'order' => 2000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'order' => 3000]);
+
+        return response()->json($board, 201);
+    }
+
+    // Lấy danh sách bảng trong một Không gian (Chỉ bảng mà tài khoản có tham gia)
     public function index(Request $request, Workspace $workspace)
     {
         $userId = $request->user()->id;
@@ -22,14 +100,10 @@ class BoardController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $query = $workspace->boards();
-        
-        // If not admin, only show boards they are a member of
-        if ($workspaceMember->role !== 'admin') {
-            $query->whereHas('members', function ($q) use ($userId) {
-                $q->where('user_id', $userId);
-            });
-        }
+        // Bất kể vai trò gì, chỉ hiển thị bảng mà người đó là thành viên (được tạo hoặc được thêm vào)
+        $query = $workspace->boards()->whereHas('members', function ($q) use ($userId) {
+            $q->where('user_id', $userId);
+        });
         
         $boards = $query->get();
         $boardIds = $boards->pluck('id')->toArray();
@@ -43,6 +117,7 @@ class BoardController extends Controller
         $boards = $boards->map(function ($board) use ($memberships) {
             $member = $memberships->get($board->id);
             $board->is_starred = $member ? (bool)$member->is_starred : false;
+            $board->my_role = $member ? $member->role : 'member';
             return $board;
         });
 
@@ -53,14 +128,6 @@ class BoardController extends Controller
     public function store(Request $request, Workspace $workspace)
     {
         $userId = $request->user()->id;
-        $isSystemAdmin = $request->user()->system_role === 'system_admin';
-        $isOwner = $workspace->owner_id == $userId;
-        $workspaceMember = $workspace->members()->where('user_id', $userId)->first();
-        $isWorkspaceAdmin = $workspaceMember && $workspaceMember->pivot->role === 'admin';
-
-        if (!$isSystemAdmin && !$isOwner && !$isWorkspaceAdmin) {
-            return response()->json(['message' => 'Forbidden - Chỉ Quản trị viên Không gian làm việc mới có quyền tạo bảng'], 403);
-        }
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -72,15 +139,20 @@ class BoardController extends Controller
             'color' => $request->color ?? 'bg-gradient-to-br from-blue-500 to-cyan-400',
         ]);
 
-        // Người tạo bảng tự động trở thành Quản trị viên (Admin) của bảng đó
+        // Người tạo bảng tự động trở thành Quản trị viên (Chủ sở hữu) của bảng đó
         \Illuminate\Support\Facades\DB::table('board_members')->insert([
             'board_id' => $board->id,
-            'user_id' => $request->user()->id,
+            'user_id' => $userId,
             'role' => 'admin',
             'is_starred' => false,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        // Tạo sẵn các cột mặc định
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Cần làm', 'order' => 1000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'order' => 2000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'order' => 3000]);
 
         return response()->json($board, 201);
     }
@@ -88,24 +160,17 @@ class BoardController extends Controller
     // Xem chi tiết một bảng
     public function show(Request $request, Board $board)
     {
-        $workspace = $board->workspace;
         $userId = $request->user()->id;
-        
-        // Kiểm tra quyền
-        $workspaceMember = $workspace->members()->where('user_id', $userId)->first();
-        if (!$workspaceMember) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
+        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
 
-        // Must be workspace admin OR explicitly in the board
-        if ($workspaceMember->pivot->role !== 'admin') {
-            $inBoard = \Illuminate\Support\Facades\DB::table('board_members')
-                ->where('board_id', $board->id)
-                ->where('user_id', $userId)
-                ->exists();
-            if (!$inBoard) {
-                return response()->json(['message' => 'Forbidden - You are not a member of this board'], 403);
-            }
+        // Phải là thành viên của bảng hoặc Quản trị hệ thống
+        $inBoard = \Illuminate\Support\Facades\DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if (!$inBoard && !$isSystemAdmin) {
+            return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 
         return response()->json($board->load(['sprints', 'labels', 'columns.tasks', 'workspace.members']));
@@ -122,12 +187,18 @@ class BoardController extends Controller
     // Cập nhật bảng
     public function update(Request $request, Board $board)
     {
-        $workspace = $board->workspace;
-        
-        // Kiểm tra quyền admin
-        $member = $workspace->members()->where('user_id', $request->user()->id)->first();
-        if (!$member || $member->pivot->role !== 'admin') {
-            return response()->json(['message' => 'Forbidden - Only Admins can update boards'], 403);
+        $userId = $request->user()->id;
+        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
+
+        // Chỉ Quản trị viên (Chủ sở hữu) của bảng hoặc Admin hệ thống mới có quyền chỉnh sửa
+        $isBoardAdmin = \Illuminate\Support\Facades\DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $userId)
+            ->where('role', 'admin')
+            ->exists();
+
+        if (!$isBoardAdmin && !$isSystemAdmin) {
+            return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền chỉnh sửa bảng.'], 403);
         }
 
         $request->validate([
@@ -144,12 +215,18 @@ class BoardController extends Controller
     // Xóa bảng
     public function destroy(Request $request, Board $board)
     {
-        $workspace = $board->workspace;
-        
-        // Kiểm tra quyền admin
-        $member = $workspace->members()->where('user_id', $request->user()->id)->first();
-        if (!$member || $member->pivot->role !== 'admin') {
-            return response()->json(['message' => 'Forbidden - Only Admins can delete boards'], 403);
+        $userId = $request->user()->id;
+        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
+
+        // Chỉ Quản trị viên (Chủ sở hữu) của bảng hoặc Admin hệ thống mới có quyền xóa
+        $isBoardAdmin = \Illuminate\Support\Facades\DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $userId)
+            ->where('role', 'admin')
+            ->exists();
+
+        if (!$isBoardAdmin && !$isSystemAdmin) {
+            return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền xóa bảng.'], 403);
         }
 
         $board->delete();
@@ -167,27 +244,7 @@ class BoardController extends Controller
             ->first();
             
         if (!$member) {
-            // If they aren't directly in board_members, but they are in the workspace, 
-            // add them to board_members with default role
-            $workspaceMember = \Illuminate\Support\Facades\DB::table('workspace_members')
-                ->where('workspace_id', $board->workspace_id)
-                ->where('user_id', $userId)
-                ->first();
-                
-            if (!$workspaceMember) {
-                return response()->json(['message' => 'Forbidden'], 403);
-            }
-            
-            \Illuminate\Support\Facades\DB::table('board_members')->insert([
-                'board_id' => $board->id,
-                'user_id' => $userId,
-                'role' => $workspaceMember->role,
-                'is_starred' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            
-            return response()->json(['is_starred' => true]);
+            return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 
         // Toggle the star status

@@ -119,7 +119,7 @@ export function AppLayout() {
             </h1>
           </Link>
 
-          {/* Workspaces Dropdown */}
+          {/* Boards Dropdown */}
           <div className="relative" ref={wsRef}>
             <button 
               onClick={() => {
@@ -128,7 +128,7 @@ export function AppLayout() {
               }}
               className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md transition-colors whitespace-nowrap text-sm font-medium ${wsDropdownOpen ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
             >
-              Không gian <span className="hidden md:inline">làm việc</span>
+              Bảng của tôi
               <ChevronDown size={14} className={`transition-transform duration-200 ${wsDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             
@@ -139,7 +139,7 @@ export function AppLayout() {
                     <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
                     <input 
                       type="text" 
-                      placeholder="Tìm không gian, bảng..." 
+                      placeholder="Tìm bảng công việc..." 
                       className="w-full h-8 pl-8 pr-3 text-sm bg-accent/50 rounded-md border-transparent focus:border-primary/50 focus:bg-background transition-all outline-none"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -148,29 +148,10 @@ export function AppLayout() {
                 </div>
                 
                 <div className="overflow-y-auto custom-scrollbar p-2 flex-1">
-                  {/* My Workspaces */}
-                  <div className="mb-4">
-                    <h3 className="px-2 mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Briefcase size={12} /> Không gian của tôi
-                    </h3>
-                    {filteredWorkspaces.length > 0 ? (
-                      <div className="space-y-0.5">
-                        {filteredWorkspaces.map(ws => (
-                          <button key={ws.id} onClick={() => { navigate('/workspaces'); setWsDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-lg text-left group">
-                            <div className="w-7 h-7 rounded bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                              {ws.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="text-sm font-medium truncate flex-1 group-hover:text-primary transition-colors">{ws.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : <div className="px-2 py-1 text-xs text-muted-foreground">Không tìm thấy</div>}
-                  </div>
-
                   {/* Recent Boards */}
                   <div className="mb-4">
                     <h3 className="px-2 mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Clock size={12} /> Bảng gần đây
+                      <LayoutDashboard size={12} /> Bảng của bạn
                     </h3>
                     {filteredBoards.length > 0 ? (
                       <div className="space-y-0.5">
@@ -183,7 +164,7 @@ export function AppLayout() {
                           </button>
                         ))}
                       </div>
-                    ) : <div className="px-2 py-1 text-xs text-muted-foreground">Không có bảng nào</div>}
+                    ) : <div className="px-2 py-1 text-xs text-muted-foreground">Chưa có bảng nào</div>}
                   </div>
                   
                   {/* Starred */}
@@ -205,7 +186,7 @@ export function AppLayout() {
                       </div>
                     ) : (
                       <div className="px-2 py-2 text-xs text-muted-foreground italic text-center bg-accent/30 rounded-lg border border-dashed border-border/50">
-                        Chưa có mục nào được gắn sao
+                        Chưa có bảng nào được gắn sao
                       </div>
                     )}
                   </div>
@@ -213,7 +194,7 @@ export function AppLayout() {
 
                 <div className="p-2 border-t border-border/50">
                   <button onClick={() => { navigate('/workspaces'); setWsDropdownOpen(false); }} className="w-full text-center text-sm text-primary hover:bg-primary/10 py-1.5 rounded-md font-medium transition-colors">
-                    Xem tất cả không gian
+                    Xem tất cả bảng công việc
                   </button>
                 </div>
               </div>

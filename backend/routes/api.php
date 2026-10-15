@@ -76,6 +76,25 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::get('/workspaces/{workspace}/dashboard', [WorkspaceController::class, 'dashboard']);
     Route::get('/workspaces/{workspace}/members', [WorkspaceController::class, 'members']);
 
+    // Direct Boards (Không phụ thuộc vào Không gian làm việc)
+    Route::get('/me/boards', [BoardController::class, 'myBoards']);
+    Route::post('/me/boards', [BoardController::class, 'storeDirect']);
+    Route::post('/boards', [BoardController::class, 'storeDirect']);
+
+    // Search active users to add to board
+    Route::get('/users/search', function(\Illuminate\Http\Request $request) {
+        $q = trim($request->query('q', ''));
+        $query = \App\Models\User::where('account_status', 'active');
+        if (!empty($q)) {
+            $query->where(function($sub) use ($q) {
+                $sub->where('name', 'LIKE', "%{$q}%")
+                    ->orWhere('username', 'LIKE', "%{$q}%")
+                    ->orWhere('email', 'LIKE', "%{$q}%");
+            });
+        }
+        return response()->json($query->select('id', 'name', 'username', 'email', 'avatar')->limit(20)->get());
+    });
+
     // Workspace Boards
     Route::get('/workspaces/{workspace}/boards', [BoardController::class, 'index']);
     Route::post('/workspaces/{workspace}/boards', [BoardController::class, 'store']);

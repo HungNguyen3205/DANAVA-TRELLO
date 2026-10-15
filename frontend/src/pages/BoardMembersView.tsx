@@ -205,17 +205,33 @@ export function BoardMembersView() {
 }
 
 function AddBoardMemberModal({ workspaceId, boardId, onClose, onAdded }: { workspaceId: string, boardId: string, onClose: () => void, onAdded: () => void }) {
-  const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState("member");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    api.get(`/workspaces/${workspaceId}/members`)
-      .then(res => setWorkspaceMembers(res.data))
-      .finally(() => setIsLoading(false));
-  }, [workspaceId]);
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.get(`/users/search?q=${encodeURIComponent(search.trim())}`);
+        setAvailableUsers(res.data);
+      } catch (e) {
+        try {
+          const res = await api.get(`/workspaces/${workspaceId}/members`);
+          setAvailableUsers(res.data);
+        } catch {
+          setAvailableUsers([]);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timer = setTimeout(fetchUsers, search ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [workspaceId, search]);
 
   const handleAdd = async (userId: string) => {
     setIsSubmitting(true);
@@ -225,8 +241,9 @@ function AddBoardMemberModal({ workspaceId, boardId, onClose, onAdded }: { works
         user_id: userId,
         role: selectedRole
       });
-      toast.success("Đã thêm thành viên");
+      toast.success("Đã thêm thành viên vào bảng và gửi thông báo thành công!");
       onAdded();
+      onClose();
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Lỗi khi thêm thành viên");
     } finally {
@@ -234,16 +251,16 @@ function AddBoardMemberModal({ workspaceId, boardId, onClose, onAdded }: { works
     }
   };
 
-  const filtered = workspaceMembers.filter(m => 
-    m.name.toLowerCase().includes(search.toLowerCase()) || 
-    m.username?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = availableUsers;
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground">Thêm thành viên vào bảng</h2>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Thêm thành viên vào bảng</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Người được thêm sẽ nhận được thông báo và xem được bảng này.</p>
+          </div>
           <button onClick={onClose} className="p-1 text-muted-foreground hover:bg-muted rounded-md">&times;</button>
         </div>
         
@@ -253,7 +270,7 @@ function AddBoardMemberModal({ workspaceId, boardId, onClose, onAdded }: { works
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input 
                 type="text" 
-                placeholder="Tìm kiếm thành viên Không gian..." 
+                placeholder="Tìm nhân viên theo tên, email..." 
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"

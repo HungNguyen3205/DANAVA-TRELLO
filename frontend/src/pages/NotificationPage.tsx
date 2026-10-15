@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Check, Clock, AlertCircle, UserPlus, Filter } from 'lucide-react';
+import { Bell, Check, Clock, AlertCircle, UserPlus, Filter, Layout } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../lib/api/notifications';
 import type { AppNotification } from '../lib/api/notifications';
 import { useNavigate } from 'react-router-dom';
@@ -67,11 +67,9 @@ export const NotificationPage = () => {
       }
     }
     
-    // In this MVP we just need the board id to navigate to kanban board.
-    // Assuming workspace structure requires fetching board first or redirect directly to legacy redirect
-    // Let's use the legacy redirect we saw in App.tsx: /b/:boardId
-    // We will append ?task=:taskId
-    if (n.data.board_id) {
+    if (n.data.action_url) {
+      navigate(n.data.action_url);
+    } else if (n.data.board_id) {
       const url = `/b/${n.data.board_id}${n.data.task_id ? `?task=${n.data.task_id}` : ''}`;
       navigate(url);
     }
@@ -88,7 +86,10 @@ export const NotificationPage = () => {
             let Icon = Bell;
             let iconBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
             
-            if (n.data.type === 'assigned') {
+            if (n.data.type === 'board_invited') {
+              Icon = Layout;
+              iconBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
+            } else if (n.data.type === 'assigned') {
               Icon = UserPlus;
               iconBg = 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
             } else if (n.data.type === 'due_today' || n.data.type === 'approaching_due') {
@@ -115,12 +116,12 @@ export const NotificationPage = () => {
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted text-foreground font-medium">
-                        {n.data.board_title}
+                        {n.data.board_name || n.data.board_title || 'Bảng công việc'}
                       </span>
-                      {n.data.actor_name && (
+                      {(n.data.inviter_name || n.data.actor_name) && (
                         <>
                           <span>•</span>
-                          <span>Bởi: {n.data.actor_name}</span>
+                          <span>Bởi: {n.data.inviter_name || n.data.actor_name}</span>
                         </>
                       )}
                       <span>•</span>

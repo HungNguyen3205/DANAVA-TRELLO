@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Briefcase, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined } from 'lucide-react';
+import { Home, Briefcase, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined, Columns } from 'lucide-react';
 import React, { useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -41,11 +41,11 @@ export function PersonalLayout() {
           />
 
           <div className="mt-6 mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            Không gian cá nhân
+            Khu vực làm việc
           </div>
           
           <SidebarItem icon={<Home size={18} />} label="Trang chủ của tôi" to="/home" active={location.pathname === '/home'} />
-          <SidebarItem icon={<Briefcase size={18} />} label="Không gian làm việc" to="/workspaces" active={location.pathname === '/workspaces'} />
+          <SidebarItem icon={<Columns size={18} />} label="Bảng công việc" to="/workspaces" active={location.pathname === '/workspaces'} />
           <SidebarItem icon={<CheckSquare size={18} />} label="Công việc của tôi" to="/my-tasks" active={location.pathname === '/my-tasks'} />
           <SidebarItem icon={<Bell size={18} />} label="Thông báo" to="/notifications" active={location.pathname === '/notifications'} />
           <SidebarItem icon={<Search size={18} />} label="Tìm kiếm" to="/search" active={location.pathname === '/search'} />

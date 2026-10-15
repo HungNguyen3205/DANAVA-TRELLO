@@ -150,11 +150,12 @@ class PersonalDashboardController extends Controller
             ->limit(5)
             ->get();
             
-        $recentBoards = clone \DB::table('boards')
-            ->join('workspace_members', 'boards.workspace_id', '=', 'workspace_members.workspace_id')
-            ->where('workspace_members.user_id', $user->id)
+        $recentBoards = \DB::table('boards')
+            ->join('board_members', 'boards.id', '=', 'board_members.board_id')
+            ->where('board_members.user_id', $user->id)
             ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
-            ->limit(4)
+            ->orderBy('boards.updated_at', 'desc')
+            ->limit(8)
             ->get();
 
         $starredBoards = clone \DB::table('boards')

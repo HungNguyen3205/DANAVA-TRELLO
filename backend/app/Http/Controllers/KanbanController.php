@@ -12,22 +12,16 @@ class KanbanController extends Controller
     // Lấy tất cả Cột và Thẻ của một Bảng
     public function index(Request $request, Board $board)
     {
-        $workspace = $board->workspace;
         $userId = $request->user()->id;
+        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
 
-        $workspaceMember = $workspace->members()->where('user_id', $userId)->first();
-        if (!$workspaceMember) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
+        $inBoard = \Illuminate\Support\Facades\DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $userId)
+            ->exists();
 
-        if ($workspaceMember->pivot->role !== 'admin') {
-            $inBoard = \Illuminate\Support\Facades\DB::table('board_members')
-                ->where('board_id', $board->id)
-                ->where('user_id', $userId)
-                ->exists();
-            if (!$inBoard) {
-                return response()->json(['message' => 'Forbidden - You are not a member of this board'], 403);
-            }
+        if (!$inBoard && !$isSystemAdmin) {
+            return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 
         $columns = $board->columns()->with(['tasks' => function ($query) {
@@ -135,11 +129,16 @@ class KanbanController extends Controller
 
         // Security: Check if user is in board
         $board = KanbanColumn::find($request->column_id)->board;
-        $workspace = $board->workspace;
         $userId = $request->user()->id;
-        $workspaceMember = $workspace->members()->where('user_id', $userId)->first();
-        if (!$workspaceMember || ($workspaceMember->pivot->role !== 'admin' && !\Illuminate\Support\Facades\DB::table('board_members')->where('board_id', $board->id)->where('user_id', $userId)->exists())) {
-            return response()->json(['message' => 'Forbidden'], 403);
+        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
+
+        $inBoard = \Illuminate\Support\Facades\DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if (!$inBoard && !$isSystemAdmin) {
+            return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 
         $prevOrder = 0;

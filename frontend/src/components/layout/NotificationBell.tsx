@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Clock, AlertCircle, UserPlus, CheckCircle2 } from 'lucide-react';
+import { Bell, Check, Clock, AlertCircle, UserPlus, CheckCircle2, Layout } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../../lib/api/notifications';
 import type { AppNotification } from '../../lib/api/notifications';
 import { useNavigate } from 'react-router-dom';
@@ -61,10 +61,11 @@ export const NotificationBell = () => {
       }
     }
     
-    // Navigate to board and open task
-    // Assuming we can pass taskId via query param, e.g. /w/1/b/1/kanban?task=taskId
-    if (n.data.board_id && n.data.task_id) {
-      navigate(`/b/${n.data.board_id}?task=${n.data.task_id}`);
+    // Navigate to board or task
+    if (n.data.action_url) {
+      navigate(n.data.action_url);
+    } else if (n.data.board_id) {
+      navigate(`/b/${n.data.board_id}${n.data.task_id ? `?task=${n.data.task_id}` : ''}`);
     }
   };
 
@@ -111,7 +112,10 @@ export const NotificationBell = () => {
                   let Icon = Bell;
                   let iconBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
                   
-                  if (n.data.type === 'assigned') {
+                  if (n.data.type === 'board_invited') {
+                    Icon = Layout;
+                    iconBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
+                  } else if (n.data.type === 'assigned') {
                     Icon = UserPlus;
                     iconBg = 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
                   } else if (n.data.type === 'due_today' || n.data.type === 'approaching_due') {
@@ -136,7 +140,9 @@ export const NotificationBell = () => {
                           {n.data.message}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-                          <span className="font-medium text-primary truncate max-w-[120px]">{n.data.board_title}</span>
+                          <span className="font-medium text-primary truncate max-w-[120px]">
+                            {n.data.board_name || n.data.board_title || 'Bảng công việc'}
+                          </span>
                           <span>•</span>
                           <span>{formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: vi })}</span>
                         </div>
