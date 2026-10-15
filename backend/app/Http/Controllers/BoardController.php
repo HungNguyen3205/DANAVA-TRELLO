@@ -107,6 +107,14 @@ class BoardController extends Controller
         return response()->json($board->load(['sprints', 'labels', 'columns.tasks', 'workspace.members']));
     }
 
+    // Resolve an opaque public board code without exposing sequential database IDs in URLs.
+    public function showByPublicId(Request $request, string $publicId)
+    {
+        $board = Board::where('public_id', $publicId)->firstOrFail();
+
+        return $this->show($request, $board);
+    }
+
     // Cập nhật bảng
     public function update(Request $request, Board $board)
     {

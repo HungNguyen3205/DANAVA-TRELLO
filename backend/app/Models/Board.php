@@ -3,10 +3,29 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Board extends Model
 {
-    protected $fillable = ['workspace_id', 'name', 'description', 'color'];
+    protected $fillable = ['workspace_id', 'public_id', 'name', 'description', 'color'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Board $board) {
+            if (!$board->public_id) {
+                $board->public_id = static::generatePublicId();
+            }
+        });
+    }
+
+    public static function generatePublicId(): string
+    {
+        do {
+            $publicId = Str::lower(Str::random(12));
+        } while (static::where('public_id', $publicId)->exists());
+
+        return $publicId;
+    }
 
     public function workspace()
     {

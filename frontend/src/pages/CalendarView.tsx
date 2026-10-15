@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import type { Event, View } from 'react-big-calendar';
 import withDragAndDropModule from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -19,6 +19,7 @@ import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
 import { getAvatarUrl } from '../lib/avatar';
+import { useBoardRoute } from '../components/layout/BoardRouteContext';
 
 const locales = {
   'vi': viLocale,
@@ -42,23 +43,23 @@ interface TaskEvent extends Event {
 }
 
 // Tab Component for Header
-function BoardTabs({ boardId, workspaceId, activeTab }: { boardId: string, workspaceId: string, activeTab: 'kanban' | 'list' | 'calendar' }) {
+function BoardTabs({ basePath, activeTab }: { basePath: string, activeTab: 'kanban' | 'list' | 'calendar' }) {
   return (
     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
       <Link 
-        to={`/w/${workspaceId}/b/${boardId}/kanban`}
+        to={`${basePath}/kanban`}
         className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
       >
         <LayoutGrid size={16} /> Kanban
       </Link>
       <Link 
-        to={`/w/${workspaceId}/b/${boardId}/list`}
+        to={`${basePath}/list`}
         className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
       >
         <ListIcon size={16} /> Danh sách
       </Link>
       <Link 
-        to={`/w/${workspaceId}/b/${boardId}/calendar`}
+        to={`${basePath}/calendar`}
         className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'calendar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
       >
         <CalendarIcon size={16} /> Lịch
@@ -141,7 +142,7 @@ const CustomToolbar = (toolbar: any) => {
 import { useBoardStore } from '../store/boardStore';
 
 export function CalendarView() {
-  const { workspaceId, boardId } = useParams();
+  const { boardId, basePath } = useBoardRoute();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
@@ -327,7 +328,7 @@ export function CalendarView() {
           <span className="text-foreground font-semibold">{board.title}</span>
         </div>
         <div className="flex items-center gap-4">
-          <BoardTabs boardId={boardId || ''} workspaceId={workspaceId || ''} activeTab="calendar" />
+          <BoardTabs basePath={basePath} activeTab="calendar" />
           
           <div className="flex items-center gap-3 border-l border-border pl-4">
             <div className="flex -space-x-2 mr-2">

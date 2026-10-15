@@ -12,8 +12,8 @@ import { BoardLayout } from './components/layout/BoardLayout';
 import { AuthGuard } from './components/layout/guards/AuthGuard';
 import { GuestGuard } from './components/layout/guards/GuestGuard';
 import { WorkspaceGuard } from './components/layout/guards/WorkspaceGuard';
-import { BoardGuard } from './components/layout/guards/BoardGuard';
 import { LegacyBoardRedirect } from './components/layout/guards/LegacyBoardRedirect';
+import { BoardCodeGuard } from './components/layout/guards/BoardCodeGuard';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
@@ -90,21 +90,25 @@ function App() {
               <Route path="settings" element={<Navigate to="/workspaces" replace />} />
               <Route index element={<Navigate to="/workspaces" replace />} />
 
-              {/* Level 3: Board Layout */}
-              <Route path="b/:boardId" element={<BoardGuard />}>
-                <Route element={<BoardLayout />}>
-                  <Route path="kanban" element={<BoardView />} />
-                  <Route path="list" element={<ListView />} />
-                  <Route path="calendar" element={<CalendarView />} />
-                  <Route path="members" element={<BoardMembersView />} />
-                  <Route path="settings" element={<BoardSettingsView />} />
-                  <Route index element={<Navigate to="kanban" replace />} />
-                </Route>
+              {/* Old numeric URLs remain valid and redirect to the canonical public code. */}
+              <Route path="b/:boardId/*" element={<LegacyBoardRedirect />} />
+            </Route>
+
+            <Route path="/b/:boardId/*" element={<LegacyBoardRedirect />} />
+
+            {/* Canonical Trello-style board URL: /{public-code}/{view} */}
+            <Route path="/:boardCode" element={<BoardCodeGuard />}>
+              <Route element={<BoardLayout />}>
+                <Route path="kanban" element={<BoardView />} />
+                <Route path="list" element={<ListView />} />
+                <Route path="calendar" element={<CalendarView />} />
+                <Route path="members" element={<BoardMembersView />} />
+                <Route path="settings" element={<BoardSettingsView />} />
+                <Route index element={<Navigate to="kanban" replace />} />
               </Route>
             </Route>
 
             {/* Global Fallbacks and Redirects */}
-            <Route path="/b/:boardId" element={<LegacyBoardRedirect />} />
             <Route path="/" element={<Navigate to="/home" replace />} />
             <Route path="*" element={<PlaceholderPage title="404 - Không tìm thấy trang" />} />
           </Route>

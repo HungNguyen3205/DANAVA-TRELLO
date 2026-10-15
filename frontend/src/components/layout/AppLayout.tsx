@@ -175,7 +175,7 @@ export function AppLayout() {
                     {filteredBoards.length > 0 ? (
                       <div className="space-y-0.5">
                         {filteredBoards.map(b => (
-                          <button key={b.id} onClick={() => { navigate(`/b/${b.id}`); setWsDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-lg text-left group">
+                          <button key={b.id} onClick={() => { navigate(b.public_id ? `/${b.public_id}/kanban` : `/b/${b.id}`); setWsDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-lg text-left group">
                             <div className={`w-7 h-7 rounded flex items-center justify-center text-white text-xs shrink-0 ${b.color || 'bg-blue-500'}`}>
                               <LayoutDashboard size={14} />
                             </div>
@@ -194,7 +194,7 @@ export function AppLayout() {
                     {filteredStarredBoards.length > 0 ? (
                       <div className="space-y-0.5">
                         {filteredStarredBoards.map(b => (
-                          <button key={b.id} onClick={() => { navigate(`/b/${b.id}`); setWsDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-lg text-left group">
+                          <button key={b.id} onClick={() => { navigate(b.public_id ? `/${b.public_id}/kanban` : `/b/${b.id}`); setWsDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-2 py-1.5 hover:bg-accent rounded-lg text-left group">
                             <div className={`w-7 h-7 rounded flex items-center justify-center text-white text-xs shrink-0 ${b.color || 'bg-blue-500'}`}>
                               <LayoutDashboard size={14} />
                             </div>

@@ -97,8 +97,8 @@ export function KanbanBoard({
       onDragCancel={() => setActive(null)}
       onDragEnd={finish}
     >
-      <div className="flex-1 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar snap-x snap-mandatory">
-        <div className="flex h-full gap-4 sm:gap-6 min-w-max items-start px-4 sm:px-6">
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar snap-x snap-mandatory">
+        <div className="flex h-full min-h-0 gap-4 sm:gap-6 min-w-max items-stretch px-4 sm:px-6">
           <SortableContext
             items={board.columns.map((c) => `col-${c.id}`)}
             strategy={horizontalListSortingStrategy}

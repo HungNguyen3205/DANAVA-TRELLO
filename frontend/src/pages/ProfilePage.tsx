@@ -121,7 +121,7 @@ export function ProfilePage() {
 
       // Use native fetch to bypass any Axios interceptor / boundary issues entirely
       const token = localStorage.getItem('auth_token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
       const res = await fetch(`${apiUrl}/me`, {
         method: 'POST',
         headers: {

@@ -153,7 +153,7 @@ class PersonalDashboardController extends Controller
         $recentBoards = clone \DB::table('boards')
             ->join('workspace_members', 'boards.workspace_id', '=', 'workspace_members.workspace_id')
             ->where('workspace_members.user_id', $user->id)
-            ->select('boards.id', 'boards.name', 'boards.color', 'boards.workspace_id')
+            ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
             ->limit(4)
             ->get();
 
@@ -161,7 +161,7 @@ class PersonalDashboardController extends Controller
             ->join('board_members', 'boards.id', '=', 'board_members.board_id')
             ->where('board_members.user_id', $user->id)
             ->where('board_members.is_starred', true)
-            ->select('boards.id', 'boards.name', 'boards.color', 'boards.workspace_id')
+            ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
             ->get();
 
         $recentActivities = ActivityLog::where('user_id', $user->id)

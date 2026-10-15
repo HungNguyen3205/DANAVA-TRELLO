@@ -1,28 +1,49 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Script tự động cập nhật hệ thống DANAVA WORK trên Hosting cPanel
-set -e
+set -Eeuo pipefail
 
-echo "🚀 [1/3] Đang kéo mã nguồn mới nhất từ GitHub..."
-git pull origin main
-
-echo "🌐 [2/3] Đang cập nhật giao diện Frontend..."
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="/home/khoaluan/workspace.danava.com.vn"
+cd "$PROJECT_DIR"
 
-if [ -d "$TARGET_DIR" ]; then
-    cp -r frontend/dist/* "$TARGET_DIR/"
-    if [ -f "frontend/dist/.htaccess" ]; then
-        cp frontend/dist/.htaccess "$TARGET_DIR/"
-    fi
-    echo "✅ Đã cập nhật Frontend vào $TARGET_DIR"
+echo "🚀 [1/5] Đang kéo mã nguồn mới nhất từ GitHub..."
+git pull --ff-only origin main
+
+echo "🏗️ [2/5] Đang build Frontend từ source của commit hiện tại..."
+cd "$PROJECT_DIR/frontend"
+if command -v npm >/dev/null 2>&1; then
+    npm ci
+    npm run build
 else
-    echo "⚠️ Không tìm thấy thư mục $TARGET_DIR, bỏ qua copy."
+    echo "⚠️ Hosting không có npm; sử dụng frontend/dist đã build sẵn trong Git."
 fi
 
-echo "⚙️ [3/3] Đang cập nhật Backend & Database..."
-cd backend
+echo "📦 [3/5] Đang cập nhật PHP dependencies..."
+cd "$PROJECT_DIR/backend"
+if command -v composer >/dev/null 2>&1; then
+    composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+else
+    echo "⚠️ Hosting không có composer; giữ nguyên thư mục vendor hiện tại."
+fi
+
+echo "⚙️ [4/5] Đang chạy migration và làm mới cache Laravel..."
+php artisan down --retry=15 || true
+trap 'php artisan up || true' EXIT
 php artisan storage:link || true
 php artisan migrate --force
+php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
+php artisan view:cache
 
-echo "🎉 Hoàn tất! Hệ thống đã được cập nhật phiên bản mới nhất."
+echo "🌐 [5/5] Đang phát hành giao diện mới..."
+if [ ! -d "$TARGET_DIR" ]; then
+    echo "❌ Không tìm thấy thư mục deploy: $TARGET_DIR"
+    exit 1
+fi
+
+cp -a "$PROJECT_DIR/frontend/dist/." "$TARGET_DIR/"
+php artisan up
+trap - EXIT
+
+echo "🎉 Hoàn tất commit $(git -C "$PROJECT_DIR" rev-parse --short HEAD)."

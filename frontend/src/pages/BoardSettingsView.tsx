@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useBoardStore } from '../store/boardStore';
 import { Settings, Info, Shield, Trash2, Users, Palette, Save } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '../store/authStore';
+import { useBoardRoute } from '../components/layout/BoardRouteContext';
 
 export function BoardSettingsView() {
-  const { workspaceId, boardId } = useParams();
+  const { boardId, basePath } = useBoardRoute();
   const navigate = useNavigate();
   const { board, fetchBoard, loading } = useBoardStore();
   const user = useAuthStore(state => state.user);
@@ -203,7 +204,7 @@ export function BoardSettingsView() {
               <Shield size={18} className="text-primary" />
               <h2 className="text-lg font-bold text-foreground">Quyền truy cập</h2>
             </div>
-            <Link to={`/w/${workspaceId}/b/${boardId}/members`} className="flex items-center gap-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors">
+            <Link to={`${basePath}/members`} className="flex items-center gap-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors">
               <Users size={16} /> Quản lý thành viên
             </Link>
           </div>

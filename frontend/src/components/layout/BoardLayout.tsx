@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { LayoutDashboard, Grid, Calendar, Users, Settings, ArrowLeft } from 'lucide-react';
-import { Outlet, Link, useLocation, useParams } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
+import { useBoardRoute } from './BoardRouteContext';
 
 export function BoardLayout() {
   const location = useLocation();
-  const { workspaceId, boardId } = useParams();
+  const { basePath } = useBoardRoute();
   const { isMobileSidebarOpen, closeMobileSidebar } = useUIStore();
   
   // Close mobile sidebar on route change
@@ -41,17 +42,17 @@ export function BoardLayout() {
             Bảng công việc
           </div>
           
-          <SidebarItem icon={<Grid size={18} />} label="Kanban" to={`/w/${workspaceId}/b/${boardId}/kanban`} active={location.pathname.includes('/kanban')} />
-          <SidebarItem icon={<LayoutDashboard size={18} />} label="Danh sách" to={`/w/${workspaceId}/b/${boardId}/list`} active={location.pathname.includes('/list')} />
-          <SidebarItem icon={<Calendar size={18} />} label="Lịch" to={`/w/${workspaceId}/b/${boardId}/calendar`} active={location.pathname.includes('/calendar')} />
-          <SidebarItem icon={<Users size={18} />} label="Thành viên" to={`/w/${workspaceId}/b/${boardId}/members`} active={location.pathname.includes('/members')} />
-          <SidebarItem icon={<Settings size={18} />} label="Cài đặt bảng" to={`/w/${workspaceId}/b/${boardId}/settings`} active={location.pathname.includes('/settings')} />
+          <SidebarItem icon={<Grid size={18} />} label="Kanban" to={`${basePath}/kanban`} active={location.pathname.includes('/kanban')} />
+          <SidebarItem icon={<LayoutDashboard size={18} />} label="Danh sách" to={`${basePath}/list`} active={location.pathname.includes('/list')} />
+          <SidebarItem icon={<Calendar size={18} />} label="Lịch" to={`${basePath}/calendar`} active={location.pathname.includes('/calendar')} />
+          <SidebarItem icon={<Users size={18} />} label="Thành viên" to={`${basePath}/members`} active={location.pathname.includes('/members')} />
+          <SidebarItem icon={<Settings size={18} />} label="Cài đặt bảng" to={`${basePath}/settings`} active={location.pathname.includes('/settings')} />
           
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-background flex flex-col relative">
+      <main className="flex-1 min-h-0 overflow-y-auto bg-background flex flex-col relative">
         <Outlet />
       </main>
     </div>

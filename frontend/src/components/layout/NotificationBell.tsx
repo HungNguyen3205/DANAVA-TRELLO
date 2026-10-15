@@ -64,13 +64,7 @@ export const NotificationBell = () => {
     // Navigate to board and open task
     // Assuming we can pass taskId via query param, e.g. /w/1/b/1/kanban?task=taskId
     if (n.data.board_id && n.data.task_id) {
-      // Find workspace id from somewhere? We don't have workspace_id in notification right now.
-      // We can just navigate to the board url directly since our API uses board ID.
-      // In this app, board URLs require workspace ID: /w/:workspaceId/b/:boardId
-      // Oh wait! The notification doesn't store workspace_id.
-      // We might need to fetch the board to get its workspace_id, or just update the backend to include it.
-      // Wait, let's look at how the Board is loaded.
-      // Actually, if we just navigate to /b/:boardId?task=:taskId the router might not support it.
+      navigate(`/b/${n.data.board_id}?task=${n.data.task_id}`);
     }
   };
 

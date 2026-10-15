@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   Users, Search, Filter, Shield, ShieldAlert,
   MoreVertical, UserMinus, Eye, LayoutDashboard, ChevronRight, UserPlus
@@ -8,9 +8,10 @@ import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board } from '../types';
 import { getAvatarUrl } from '../lib/avatar';
+import { useBoardRoute } from '../components/layout/BoardRouteContext';
 
 export function BoardMembersView() {
-  const { workspaceId, boardId } = useParams();
+  const { workspaceId, boardId, basePath } = useBoardRoute();
   const [members, setMembers] = useState<any[]>([]);
   const [board, setBoard] = useState<Board | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +82,7 @@ export function BoardMembersView() {
               <LayoutDashboard size={14} /> Không gian làm việc
             </Link>
             <ChevronRight size={14} className="opacity-50" />
-            <Link to={`/w/${workspaceId}/b/${boardId}/kanban`} className="hover:text-primary transition-colors">
+            <Link to={`${basePath}/kanban`} className="hover:text-primary transition-colors">
               {board?.title || board?.name || 'Bảng'}
             </Link>
             <ChevronRight size={14} className="opacity-50" />
@@ -193,8 +194,8 @@ export function BoardMembersView() {
 
       {showAddModal && (
         <AddBoardMemberModal 
-          workspaceId={workspaceId!}
-          boardId={boardId!}
+          workspaceId={workspaceId}
+          boardId={boardId}
           onClose={() => setShowAddModal(false)}
           onAdded={fetchMembers}
         />

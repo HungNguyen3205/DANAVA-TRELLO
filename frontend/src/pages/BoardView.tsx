@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
@@ -7,9 +7,10 @@ import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, Chevron
 import api from '../lib/axios';
 import { useBoardStore } from '../store/boardStore';
 import { getAvatarUrl } from '../lib/avatar';
+import { useBoardRoute } from '../components/layout/BoardRouteContext';
 
 export function BoardView() {
-  const { workspaceId, boardId } = useParams();
+  const { boardId, basePath } = useBoardRoute();
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
@@ -130,7 +131,7 @@ export function BoardView() {
   if (!board) return <div className="p-8 text-primary flex justify-center items-center h-full font-medium animate-pulse">Đang tải dữ liệu Bảng...</div>;
 
   return (
-    <div className="flex-1 overflow-hidden h-full flex flex-col relative bg-background">
+    <div className="flex-1 min-h-0 overflow-hidden h-full flex flex-col relative bg-background">
       <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50">
         <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium">
           <Link to="/workspaces" className="hover:text-primary transition-colors flex items-center gap-1.5">
@@ -142,19 +143,19 @@ export function BoardView() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
             <Link 
-              to={`/w/${workspaceId}/b/${boardId}/kanban`}
+              to={`${basePath}/kanban`}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-background shadow-sm text-foreground"
             >
               <LayoutDashboard size={16} /> Kanban
             </Link>
             <Link 
-              to={`/w/${workspaceId}/b/${boardId}/list`}
+              to={`${basePath}/list`}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
             >
               <LayoutDashboard size={16} /> Danh sách
             </Link>
             <Link 
-              to={`/w/${workspaceId}/b/${boardId}/calendar`}
+              to={`${basePath}/calendar`}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
             >
               <LayoutDashboard size={16} /> Lịch
@@ -184,8 +185,8 @@ export function BoardView() {
       </header>
 
       {/* Main Board Container */}
-      <div className="flex-1 overflow-hidden px-6 pb-6 relative z-0 flex flex-col">
-        <div className="bg-card border border-border shadow-sm rounded-[20px] p-6 flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6 relative z-0 flex flex-col">
+        <div className="bg-card border border-border shadow-sm rounded-[20px] p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
           
           {/* Board Internal Header */}
           <div className="flex items-center justify-between mb-6 shrink-0">
@@ -236,7 +237,7 @@ export function BoardView() {
           </div>
 
           {/* Kanban Board Render */}
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 min-h-0 overflow-hidden relative">
             {(() => {
               const normalizedSearch = searchQuery.toLowerCase().trim();
               const visibleTasks = board.tasks.filter((t) => {

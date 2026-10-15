@@ -108,6 +108,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
       const newBoard = {
         id: String(bData.id),
+        publicId: bData.public_id ? String(bData.public_id) : undefined,
         title: bData.name,
         name: bData.name,
         description: bData.description,

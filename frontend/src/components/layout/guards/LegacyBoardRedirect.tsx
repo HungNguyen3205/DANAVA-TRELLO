@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../lib/axios';
 
 export function LegacyBoardRedirect() {
   const { boardId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -19,9 +20,10 @@ export function LegacyBoardRedirect() {
 
     api.get(`/boards/${id}`)
       .then((res) => {
-        if (res.data && res.data.workspace_id) {
-          // Found the workspace ID! Redirect to the new correct URL
-          navigate(`/w/${res.data.workspace_id}/b/${id}/kanban${window.location.search}`, { replace: true });
+        if (res.data?.public_id) {
+          const requestedView = ['kanban', 'list', 'calendar', 'members', 'settings']
+            .find((view) => location.pathname.endsWith(`/${view}`)) || 'kanban';
+          navigate(`/${res.data.public_id}/${requestedView}${location.search}`, { replace: true });
         } else {
           setError(true);
         }
@@ -32,7 +34,7 @@ export function LegacyBoardRedirect() {
       .finally(() => {
         setLoading(false);
       });
-  }, [boardId, navigate]);
+  }, [boardId, location.pathname, location.search, navigate]);
 
   if (loading) {
     return (

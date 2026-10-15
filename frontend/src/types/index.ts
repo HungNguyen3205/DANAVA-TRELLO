@@ -79,6 +79,7 @@ export interface Sprint {
 }
 export interface Board {
   id: string;
+  publicId?: string;
   title: string;
   name?: string;
   description?: string;

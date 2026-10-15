@@ -79,6 +79,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     // Workspace Boards
     Route::get('/workspaces/{workspace}/boards', [BoardController::class, 'index']);
     Route::post('/workspaces/{workspace}/boards', [BoardController::class, 'store']);
+    Route::get('/boards/by-code/{publicId}', [BoardController::class, 'showByPublicId']);
     Route::get('/boards/{board}', [BoardController::class, 'show']);
     Route::put('/boards/{board}', [BoardController::class, 'update']);
     Route::delete('/boards/{board}', [BoardController::class, 'destroy']);

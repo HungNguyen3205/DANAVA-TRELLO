@@ -72,7 +72,7 @@ export const NotificationPage = () => {
     // Let's use the legacy redirect we saw in App.tsx: /b/:boardId
     // We will append ?task=:taskId
     if (n.data.board_id) {
-      const url = `/b/${n.data.board_id}/kanban${n.data.task_id ? `?task=${n.data.task_id}` : ''}`;
+      const url = `/b/${n.data.board_id}${n.data.task_id ? `?task=${n.data.task_id}` : ''}`;
       navigate(url);
     }
   };

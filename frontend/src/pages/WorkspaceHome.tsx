@@ -18,6 +18,17 @@ export function WorkspaceHome() {
     fetchData();
   }, []);
 
+  const selectWorkspace = async (workspace: any) => {
+    setSelectedWorkspace(workspace);
+    setBoards([]);
+    try {
+      const { data } = await api.get(`/workspaces/${workspace.id}/boards`);
+      setBoards(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const fetchData = async (force = false) => {
     setLoading(true);
     try {
@@ -25,11 +36,11 @@ export function WorkspaceHome() {
       const data = await getWorkspaces(force);
       setWorkspaces(data);
       if (data.length > 0) {
-        setSelectedWorkspace(data[0]);
-        // Fire request but don't wait sequentially for workspaces if we can optimize
-        api.get(`/workspaces/${data[0].id}/boards`).then(bRes => {
-            setBoards(bRes.data);
-        }).catch(console.error);
+        const current = data.find((workspace: any) => workspace.id === selectedWorkspace?.id) || data[0];
+        await selectWorkspace(current);
+      } else {
+        setSelectedWorkspace(null);
+        setBoards([]);
       }
     } catch (e) {
       console.error(e);
@@ -53,7 +64,7 @@ export function WorkspaceHome() {
     if (!name) return;
     try {
       await api.post(`/workspaces`, { name });
-      fetchData();
+      fetchData(true);
     } catch (e) {
       console.error(e);
     }
@@ -96,6 +107,39 @@ export function WorkspaceHome() {
             </div>
           ) : (
             <section>
+              <div className="mb-6">
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Không gian của bạn</h2>
+                  <button
+                    onClick={() => setPromptData({ isOpen: true, title: 'Nhập tên Không gian làm việc:', onConfirm: (v) => { createWorkspace(v); setPromptData(null); }})}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 shadow-sm"
+                  >
+                    <Plus size={15} /> Tạo không gian
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {workspaces.map((workspace) => {
+                    const isActive = selectedWorkspace?.id === workspace.id;
+                    return (
+                      <button
+                        key={workspace.id}
+                        type="button"
+                        onClick={() => selectWorkspace(workspace)}
+                        className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isActive ? 'border-primary bg-primary/10 shadow-sm' : 'border-border bg-card hover:border-primary/40 hover:shadow-sm'}`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold shrink-0">
+                          {workspace.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm truncate">{workspace.name}</div>
+                          <div className="text-xs text-muted-foreground">{workspace.boards?.length || 0} bảng</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="mb-6 pb-6 border-b border-border/50">
                 <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">KHÔNG GIAN LÀM VIỆC HIỆN TẠI</h2>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -130,7 +174,7 @@ export function WorkspaceHome() {
                       bgClass={board.color || 'bg-gradient-to-br from-blue-500 to-cyan-400'} 
                       isStarred={board.is_starred}
                       onToggleStar={(e) => { e.stopPropagation(); toggleStar(board.id, board.is_starred); }}
-                      onClick={() => navigate(`/b/${board.id}`)}
+                      onClick={() => navigate(board.public_id ? `/${board.public_id}/kanban` : `/b/${board.id}`)}
                     />
                   ))}
                   <button 
