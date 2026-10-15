@@ -26,15 +26,11 @@ else
     echo "⚠️ Hosting không có composer; giữ nguyên thư mục vendor hiện tại."
 fi
 
-echo "⚙️ [4/5] Đang chạy migration và làm mới cache Laravel..."
+echo "⚙️ [4/5] Đang đồng bộ cơ sở dữ liệu và làm mới cache Laravel..."
 php artisan down --retry=15 || true
 trap 'php artisan up || true' EXIT
 php artisan storage:link || true
-php artisan migrate --force
-php artisan optimize:clear
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php sync_database.php
 
 echo "🌐 [5/5] Đang phát hành giao diện mới..."
 if [ ! -d "$TARGET_DIR" ]; then
@@ -46,4 +42,4 @@ cp -a "$PROJECT_DIR/frontend/dist/." "$TARGET_DIR/"
 php artisan up
 trap - EXIT
 
-echo "🎉 Hoàn tất commit $(git -C "$PROJECT_DIR" rev-parse --short HEAD)."
+echo "🎉 Cập nhật thành công hệ thống DANAVA WORK!"
