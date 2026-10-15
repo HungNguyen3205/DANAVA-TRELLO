@@ -21,8 +21,15 @@ class RestoreDatabaseDump extends Command
 
         $this->info("Bắt đầu khôi phục toàn bộ Database từ file Navicat dump ({$filePath})...");
 
-        // Tắt kiểm tra khóa ngoại
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $driver = DB::getDriverName();
+        $this->info("Đang chạy trên cơ sở dữ liệu: {$driver}");
+
+        // Tắt kiểm tra khóa ngoại tùy theo driver
+        if ($driver === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        } elseif ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF;');
+        }
 
         $sql = file_get_contents($filePath);
 
@@ -37,9 +44,16 @@ class RestoreDatabaseDump extends Command
 
         foreach ($statements as $statement) {
             try {
+                // Bỏ qua các lệnh đặc thù riêng của MySQL nếu đang chạy trên SQLite
+                if ($driver === 'sqlite') {
+                    if (str_contains($statement, 'SET ') || str_contains($statement, 'LOCK TABLES') || str_contains($statement, 'UNLOCK TABLES')) {
+                        $bar->advance();
+                        continue;
+                    }
+                }
                 DB::unprepared($statement);
             } catch (\Throwable $e) {
-                // Bỏ qua các lỗi không nghiêm trọng như version comment
+                // Bỏ qua các lỗi không nghiêm trọng
             }
             $bar->advance();
         }
@@ -48,7 +62,11 @@ class RestoreDatabaseDump extends Command
         $this->newLine();
 
         // Bật lại kiểm tra khóa ngoại
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        if ($driver === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        } elseif ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = ON;');
+        }
 
         $this->info("✅ Đã khôi phục thành công 100% dữ liệu từ Navicat vào Database!");
         return 0;
