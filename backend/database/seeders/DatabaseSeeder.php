@@ -53,6 +53,20 @@ class DatabaseSeeder extends Seeder
         Task::create(['column_id' => $col2->id, 'title' => 'Kiểm thử thanh toán online', 'priority' => 'Khẩn cấp', 'order' => 2000]);
         Task::create(['column_id' => $col3->id, 'title' => 'Hoàn thiện báo cáo công nợ', 'priority' => 'Bình thường', 'order' => 1000]);
         Task::create(['column_id' => $col4->id, 'title' => 'Thống nhất kế hoạch triển khai', 'priority' => 'Thấp', 'order' => 1000]);
+        Task::create(['column_id' => $col1->id, 'title' => 'hi', 'priority' => 'Bình thường', 'order' => 2000]);
+
+        // Tạo bảng thứ hai: HI HELLO
+        $board2 = Board::firstOrCreate(
+            ['workspace_id' => $workspace->id, 'name' => 'HI HELLO'],
+            ['color' => 'bg-gradient-to-br from-blue-500 to-cyan-400']
+        );
+
+        // Delete existing columns if any for board2
+        $board2->columns()->delete();
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Chưa bắt đầu', 'order' => 1000]);
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Đang thực hiện', 'order' => 2000]);
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Chờ duyệt', 'order' => 3000]);
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Hoàn thành', 'order' => 4000]);
 
         // Tự động gọi UsersSeeder để đồng bộ đầy đủ các tài khoản, vai trò và phân quyền
         $this->call(UsersSeeder::class);
