@@ -13,7 +13,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::withCount('workspaces');
+        $query = User::withCount(['workspaces', 'boards']);
 
         if ($request->search) {
             $search = '%' . $request->search . '%';

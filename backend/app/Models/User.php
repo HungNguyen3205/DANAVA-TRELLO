@@ -48,4 +48,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Workspace::class, 'workspace_members')->withPivot('role')->withTimestamps();
     }
+
+    public function boards()
+    {
+        return $this->belongsToMany(Board::class, 'board_members')->withPivot('role', 'is_starred')->withTimestamps();
+    }
 }

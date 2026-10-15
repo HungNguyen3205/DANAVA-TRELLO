@@ -115,7 +115,7 @@ export function EmployeeManagementView() {
                 <th className="px-6 py-3.5">Họ và tên & Tài khoản</th>
                 <th className="px-6 py-3.5">Vai trò</th>
                 <th className="px-6 py-3.5 text-center">Trạng thái</th>
-                <th className="px-4 py-3.5 text-center">Không gian</th>
+                <th className="px-4 py-3.5 text-center">Bảng công việc</th>
                 <th className="px-6 py-3.5 text-center">Thao tác</th>
               </tr>
             </thead>
@@ -162,8 +162,8 @@ export function EmployeeManagementView() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-muted text-foreground/80 border border-border/60 whitespace-nowrap" title={`${emp.workspaces_count} không gian làm việc`}>
-                        {emp.workspaces_count}
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20 whitespace-nowrap" title={`${emp.boards_count ?? 0} bảng công việc`}>
+                        {emp.boards_count ?? 0}
                       </span>
                     </td>
                   <td className="px-6 py-4">
