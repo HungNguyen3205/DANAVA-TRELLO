@@ -40,8 +40,10 @@ export const useAuthStore = create<AuthState>()(
           const token = localStorage.getItem('auth_token');
           if (!token) throw new Error('No token');
           
-          // If we already have user in persist state, we don't need to block UI, just background update
           const res = await api.get('/me');
+          if (!res.data || !res.data.id) {
+            throw new Error('Dữ liệu tài khoản không hợp lệ');
+          }
           set({ user: res.data, isAuthenticated: true, token });
         } catch (e) {
           localStorage.removeItem('auth_token');

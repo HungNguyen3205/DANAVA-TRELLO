@@ -1,0 +1,1 @@
+import{p as e}from"./index-B3-_uV6r.js";function t(t,n){let r=e(t,n?.in);return r.setHours(0,0,0,0),r}export{t};

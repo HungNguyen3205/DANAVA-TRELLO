@@ -8,15 +8,15 @@ export function AuthGuard() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
   const checkAuth = useAuthStore((state) => state.checkAuth);
-  const [loading, setLoading] = useState(!user && isAuthenticated);
+  const [loading, setLoading] = useState(isAuthenticated && (!user || !user.id || !user.name));
   
   useEffect(() => {
-    if (isAuthenticated && !user) {
+    if (isAuthenticated) {
       checkAuth().finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [isAuthenticated, user, checkAuth]);
+  }, [isAuthenticated, checkAuth]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (loading) return <div className="flex items-center justify-center min-h-screen bg-background"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;

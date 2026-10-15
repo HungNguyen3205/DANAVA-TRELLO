@@ -330,12 +330,12 @@ export function AppLayout() {
                     {user?.avatar ? (
                       <img src={getAvatarUrl(user.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      user?.name ? user.name.charAt(0).toUpperCase() : 'U'
+                      user?.name ? user.name.charAt(0).toUpperCase() : (user?.username ? user.username.charAt(0).toUpperCase() : 'U')
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">{user?.name || 'Người dùng'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user?.email || 'email@example.com'}</p>
+                    <p className="text-sm font-bold text-foreground truncate">{user?.name || user?.username || 'Tài khoản'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email || ''}</p>
                   </div>
                 </div>
                 

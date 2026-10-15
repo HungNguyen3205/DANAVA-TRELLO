@@ -146,7 +146,7 @@ export function HomePage() {
         <section className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              {getGreeting()}, {user?.name || 'bạn'}
+              {getGreeting()}, {user?.name || user?.username || 'bạn'}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm font-medium">
               {format(new Date(), "EEEE, 'ngày' dd 'tháng' MM 'năm' yyyy", { locale: vi })}
