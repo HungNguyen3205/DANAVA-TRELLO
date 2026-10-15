@@ -1,1 +1,0 @@
-import{p as e}from"./index-DLmnMYQT.js";function t(t){return+e(t)<Date.now()}export{t};

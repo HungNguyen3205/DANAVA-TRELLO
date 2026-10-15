@@ -1,4 +1,4 @@
-<?php
+    <?php
 
 namespace App\Http\Controllers;
 
@@ -52,10 +52,14 @@ class BoardController extends Controller
     // Tạo bảng mới
     public function store(Request $request, Workspace $workspace)
     {
-        // Kiểm tra quyền
-        $workspaceMember = $workspace->members()->where('user_id', $request->user()->id)->first();
-        if (!$workspaceMember || $workspaceMember->pivot->role !== 'admin') {
-            return response()->json(['message' => 'Forbidden - Only workspace admins can create boards'], 403);
+        $userId = $request->user()->id;
+        $isSystemAdmin = $request->user()->system_role === 'system_admin';
+        $isOwner = $workspace->owner_id == $userId;
+        $workspaceMember = $workspace->members()->where('user_id', $userId)->first();
+        $isWorkspaceAdmin = $workspaceMember && $workspaceMember->pivot->role === 'admin';
+
+        if (!$isSystemAdmin && !$isOwner && !$isWorkspaceAdmin) {
+            return response()->json(['message' => 'Forbidden - Chỉ Quản trị viên Không gian làm việc mới có quyền tạo bảng'], 403);
         }
 
         $request->validate([
