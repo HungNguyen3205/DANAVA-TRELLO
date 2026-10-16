@@ -5,6 +5,8 @@ import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
 import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus } from 'lucide-react';
 import api from '../lib/axios';
+import { toast } from 'sonner';
+import type { Board, Task, Column } from '../types';
 import { useBoardStore } from '../store/boardStore';
 import { getAvatarUrl } from '../lib/avatar';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
@@ -46,15 +48,18 @@ export function BoardView() {
       isOpen: true,
       title: 'Nhập tên công việc mới:',
       onConfirm: async (title) => {
-        setPromptData(null);
-        if (title?.trim()) {
-          try {
-            await api.post(`/columns/${columnId}/tasks`, { title: title.trim() });
-            toast.success('Đã thêm thẻ mới');
-            fetchBoard(boardId || '1', true);
-          } catch (e) {
-            toast.error('Lỗi khi thêm thẻ');
-          }
+        if (!title?.trim()) {
+          setPromptData(null);
+          return;
+        }
+        try {
+          await api.post(`/columns/${columnId}/tasks`, { title: title.trim() });
+          setPromptData(null);
+          toast.success('Đã thêm thẻ mới');
+          fetchBoard(boardId || '1', true);
+        } catch (e: any) {
+          setPromptData(null);
+          toast.error(e?.response?.data?.message || 'Lỗi khi thêm thẻ');
         }
       }
     });
@@ -66,16 +71,33 @@ export function BoardView() {
         isOpen: true,
         title: 'Nhập tên cột mới:',
         onConfirm: async (title) => {
-          setPromptData(null);
-          if (title?.trim()) {
-            try {
-              const id = boardId?.replace('board-', '') || '1';
-              await api.post(`/boards/${id}/columns`, { title: title.trim() });
-              toast.success('Đã tạo cột mới');
-              fetchBoard(boardId || '1', true);
-            } catch (e) {
-              toast.error('Lỗi khi tạo cột');
+          if (!title?.trim()) {
+            setPromptData(null);
+            return;
+          }
+          try {
+            const id = boardId?.replace('board-', '') || '1';
+            const res = await api.post(`/boards/${id}/columns`, { title: title.trim() });
+            setPromptData(null);
+            toast.success('Đã tạo cột mới');
+            if (res.data) {
+              setBoard((prev) => {
+                if (!prev) return prev;
+                const newCol: Column = {
+                  id: String(res.data.id),
+                  title: res.data.title,
+                  color: res.data.color || undefined,
+                };
+                return {
+                  ...prev,
+                  columns: [...prev.columns, newCol],
+                };
+              });
             }
+            await fetchBoard(boardId || '1', true);
+          } catch (e: any) {
+            setPromptData(null);
+            toast.error(e?.response?.data?.message || 'Lỗi khi tạo cột');
           }
         }
       });
@@ -85,15 +107,25 @@ export function BoardView() {
         isOpen: true,
         title: `Đổi tên cột "${c.title}"`,
         onConfirm: async (title) => {
-          setPromptData(null);
-          if (title?.trim()) {
-            try {
-              await api.put(`/columns/${c.id}`, { title: title.trim() });
-              toast.success('Đã cập nhật cột');
-              fetchBoard(boardId || '1', true);
-            } catch (e) {
-              toast.error('Lỗi khi cập nhật cột');
-            }
+          if (!title?.trim()) {
+            setPromptData(null);
+            return;
+          }
+          try {
+            await api.put(`/columns/${c.id}`, { title: title.trim() });
+            setPromptData(null);
+            toast.success('Đã cập nhật cột');
+            setBoard((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                columns: prev.columns.map(col => col.id === c.id ? { ...col, title: title.trim() } : col)
+              };
+            });
+            await fetchBoard(boardId || '1', true);
+          } catch (e: any) {
+            setPromptData(null);
+            toast.error(e?.response?.data?.message || 'Lỗi khi cập nhật cột');
           }
         }
       });
