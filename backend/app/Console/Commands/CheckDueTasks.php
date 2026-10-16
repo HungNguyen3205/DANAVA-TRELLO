@@ -70,7 +70,8 @@ class CheckDueTasks extends Command
             ->exists();
 
         if (!$exists) {
-            $user->notify(new $notificationClass($task, $board->id, $board->title));
+            $boardTitle = $board->name ?? $board->title ?? 'Bảng công việc';
+            $user->notify(new $notificationClass($task, $board->id, $boardTitle));
         }
     }
 }

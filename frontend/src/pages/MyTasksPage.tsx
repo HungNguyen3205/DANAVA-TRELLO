@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, CheckSquare, Clock, Filter, AlertCircle, CheckCircle2, ChevronRight, LayoutDashboard, Search, Star, MoreHorizontal, MessageSquare, Paperclip, CheckSquare as CheckIcon } from 'lucide-react';
+import { Check, CheckSquare, Clock, Filter, AlertCircle, CheckCircle2, ChevronRight, LayoutDashboard, Search, Star, MoreHorizontal, MessageSquare, Paperclip, CheckSquare as CheckIcon, Briefcase } from 'lucide-react';
 import api from '../lib/axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { format, isPast, isToday } from 'date-fns';
@@ -14,7 +14,7 @@ interface Task {
   completed_at: string | null;
   status: string;
   workspace: { id: number; name: string } | null;
-  board: { id: number; name: string; color: string } | null;
+  board: { id: number; public_id?: string; name: string; color: string } | null;
   sprint: { id: number; name: string } | null;
 }
 
@@ -73,9 +73,21 @@ export const MyTasksPage = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [search]);
 
+  const formatDateText = (d: string) => {
+    try {
+      const date = new Date(d);
+      if (d.includes('T') && !d.includes('T00:00:00')) {
+        return format(date, 'HH:mm dd/MM/yyyy');
+      }
+      return format(date, 'dd/MM/yyyy');
+    } catch {
+      return d;
+    }
+  };
+
   const handleTaskClick = (task: Task) => {
-    if (task.workspace && task.board) {
-      navigate(`/w/${task.workspace.id}/b/${task.board.id}/kanban?task=${task.id}`);
+    if (task.board?.public_id) {
+      navigate(`/${task.board.public_id}/kanban?task=${task.id}`);
     } else if (task.board) {
       navigate(`/b/${task.board.id}?task=${task.id}`);
     }
@@ -191,8 +203,8 @@ export const MyTasksPage = () => {
           ) : (
             <div className="flex flex-col gap-3 pb-8">
               {tasks.map(task => {
-                const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !task.completed_at;
-                const isDueToday = task.due_date && isToday(new Date(task.due_date)) && !task.completed_at;
+                const isDueToday = task.due_date ? isToday(new Date(task.due_date)) : false;
+                const isOverdue = task.due_date ? (isPast(new Date(task.due_date)) && !isDueToday && !task.completed_at) : false;
                 const isCompleted = filter === 'completed' || !!task.completed_at;
 
                 return (
@@ -212,32 +224,43 @@ export const MyTasksPage = () => {
                       </div>
                       
                       <div className="min-w-0">
-                        <h4 className={`text-[15px] font-semibold text-foreground truncate mb-1.5 ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                        <h4 className={`text-[15px] font-semibold text-foreground truncate mb-2 ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
                           {task.title}
                         </h4>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 textxs text-muted-foreground">
-                          {task.board && (
-                            <div className="flex items-center gap-1.5 font-medium text-foreground bg-muted/50 px-2 py-0.5 rounded-md">
-                              <LayoutDashboard size={12} className="opacity-70" />
-                              <span className="truncate max-w-[120px]">{task.board.name}</span>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
+                          {task.workspace && (
+                            <div className="flex items-center gap-1.5 font-medium bg-primary/10 text-primary px-2.5 py-0.5 rounded-md" title={`Không gian: ${task.workspace.name}`}>
+                              <Briefcase size={12} className="opacity-80 shrink-0" />
+                              <span className="truncate max-w-[130px]">{task.workspace.name}</span>
                             </div>
                           )}
-                          <span className="hidden sm:inline opacity-50">•</span>
-                          <span className="truncate max-w-[100px]">{task.status}</span>
+
+                          {task.board && (
+                            <div className="flex items-center gap-1.5 font-medium text-foreground bg-muted/60 px-2.5 py-0.5 rounded-md" title={`Bảng: ${task.board.name}`}>
+                              <LayoutDashboard size={12} className="opacity-70 text-indigo-500 shrink-0" />
+                              <span className="truncate max-w-[130px]">{task.board.name}</span>
+                            </div>
+                          )}
+
+                          {task.status && (
+                            <div className="flex items-center gap-1.5 font-medium text-foreground bg-accent/70 px-2.5 py-0.5 rounded-md border border-border/50" title={`Tiến độ / Trạng thái: ${task.status}`}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary/80 shrink-0"></span>
+                              <span className="truncate max-w-[110px]">{task.status}</span>
+                            </div>
+                          )}
                           
                           {task.due_date && (
-                            <>
-                              <span className="hidden sm:inline opacity-50">•</span>
-                              <div className={`flex items-center gap-1 font-medium ${
-                                isCompleted ? 'text-muted-foreground' :
-                                isOverdue ? 'text-red-500 bg-red-500/10 px-1.5 rounded' : 
-                                isDueToday ? 'text-orange-500 bg-orange-500/10 px-1.5 rounded' : ''
-                              }`}>
-                                <Clock size={12} />
-                                <span>{format(new Date(task.due_date), 'dd/MM/yyyy HH:mm')}</span>
-                                {isOverdue && !isCompleted && <span className="uppercase text-[10px] ml-1 font-bold">Quá hạn</span>}
-                              </div>
-                            </>
+                            <div className={`flex items-center gap-1.5 font-semibold px-2.5 py-0.5 rounded-md ${
+                              isCompleted ? 'text-muted-foreground bg-muted/30' :
+                              isOverdue ? 'text-red-600 bg-red-100 dark:bg-red-950/50 border border-red-200 dark:border-red-900/50' : 
+                              isDueToday ? 'text-orange-600 bg-orange-100 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-900/50' : 
+                              'text-muted-foreground bg-muted/40'
+                            }`} title={`Hạn hoàn thành: ${formatDateText(task.due_date)}`}>
+                              <Clock size={12} className="shrink-0" />
+                              <span>{formatDateText(task.due_date)}</span>
+                              {isOverdue && !isCompleted && <span className="uppercase text-[10px] ml-0.5 font-bold">Quá hạn</span>}
+                              {isDueToday && !isCompleted && <span className="uppercase text-[10px] ml-0.5 font-bold">Hôm nay</span>}
+                            </div>
                           )}
                         </div>
                       </div>

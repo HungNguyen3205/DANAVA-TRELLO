@@ -38,15 +38,28 @@ class MyTaskController extends Controller
                 $q->where(function($sub) {
                     $sub->where(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%cần làm%')
                         ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%to do%')
-                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%mới%');
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%chưa bắt đầu%')
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%chưa làm%')
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%backlog%')
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%chuẩn bị%')
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%mới%')
+                        ->orWhere(function($other) {
+                            $other->where(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'not like', '%đang thực hiện%')
+                                  ->where(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'not like', '%đang làm%')
+                                  ->where(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'not like', '%in progress%')
+                                  ->where(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'not like', '%doing%')
+                                  ->where(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'not like', '%đang xử lý%');
+                        });
                 });
             });
         } elseif ($statusType === 'in_progress') {
             $query->pending()->whereHas('column', function ($q) {
                 $q->where(function($sub) {
                     $sub->where(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%đang thực hiện%')
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%đang làm%')
                         ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%in progress%')
-                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%doing%');
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%doing%')
+                        ->orWhere(\Illuminate\Support\Facades\DB::raw('LOWER(title)'), 'like', '%đang xử lý%');
                 });
             });
         } elseif ($statusType === 'pending_all') {
@@ -99,7 +112,7 @@ class MyTaskController extends Controller
                 'completed_at' => $task->completed_at ? Carbon::parse($task->completed_at)->toIso8601String() : null,
                 'status' => $task->column ? $task->column->title : null,
                 'workspace' => $workspace ? ['id' => $workspace->id, 'name' => $workspace->name] : null,
-                'board' => $board ? ['id' => $board->id, 'name' => $board->name, 'color' => $board->color] : null,
+                'board' => $board ? ['id' => $board->id, 'public_id' => $board->public_id, 'name' => $board->name, 'color' => $board->color] : null,
                 'sprint' => $task->sprint ? ['id' => $task->sprint->id, 'name' => $task->sprint->name] : null,
             ];
         });

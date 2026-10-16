@@ -9,6 +9,14 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+
+        // Check due tasks for user in real-time
+        try {
+            \App\Services\DueTaskService::checkDueTasksForUser($user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error checking due tasks: ' . $e->getMessage());
+        }
+
         $query = $user->notifications();
 
         // Optional filter by read status
