@@ -165,22 +165,78 @@ class PersonalDashboardController extends Controller
             ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
             ->get();
 
-        $recentActivities = ActivityLog::where('user_id', $user->id)
+        $activitiesList = collect();
+
+        // 1. Lấy từ ActivityLog thực tế
+        $logs = ActivityLog::where('user_id', $user->id)
             ->with(['task.column.board.workspace'])
             ->orderBy('created_at', 'desc')
             ->limit(8)
-            ->get()
-            ->map(function ($log) {
-                return [
-                    'id' => $log->id,
-                    'action' => $log->action,
-                    'created_at' => $log->created_at,
-                    'task_title' => $log->task?->title ?? null,
-                    'board_id' => $log->task?->column?->board?->id ?? null,
-                    'board_name' => $log->task?->column?->board?->name ?? null,
-                    'workspace_name' => $log->task?->column?->board?->workspace?->name ?? null,
-                ];
-            });
+            ->get();
+
+        foreach ($logs as $log) {
+            $activitiesList->push([
+                'id' => 'log-' . $log->id,
+                'action' => $log->action,
+                'created_at' => $log->created_at,
+                'task_id' => $log->task?->id ?? null,
+                'task_title' => $log->task?->title ?? null,
+                'board_id' => $log->task?->column?->board?->id ?? null,
+                'board_name' => $log->task?->column?->board?->name ?? null,
+                'workspace_name' => $log->task?->column?->board?->workspace?->name ?? null,
+            ]);
+        }
+
+        // 2. Nếu activity_logs còn ít, lấy thêm từ bình luận thực tế của người dùng
+        if ($activitiesList->count() < 6) {
+            $comments = \App\Models\TaskComment::where('user_id', $user->id)
+                ->with(['task.column.board.workspace'])
+                ->orderBy('created_at', 'desc')
+                ->limit(6)
+                ->get();
+
+            foreach ($comments as $c) {
+                if ($c->task) {
+                    $activitiesList->push([
+                        'id' => 'comment-' . $c->id,
+                        'action' => 'đã bình luận: "' . \Illuminate\Support\Str::limit($c->content, 35) . '"',
+                        'created_at' => $c->created_at,
+                        'task_id' => $c->task->id,
+                        'task_title' => $c->task->title,
+                        'board_id' => $c->task->column?->board?->id ?? null,
+                        'board_name' => $c->task->column?->board?->name ?? null,
+                        'workspace_name' => $c->task->column?->board?->workspace?->name ?? null,
+                    ]);
+                }
+            }
+        }
+
+        // 3. Nếu vẫn còn ít, bổ sung từ các công việc gần nhất người dùng tham gia / được giao
+        if ($activitiesList->count() < 6) {
+            $tasks = \App\Models\Task::where('assignee_id', $user->id)
+                ->with(['column.board.workspace'])
+                ->orderBy('updated_at', 'desc')
+                ->limit(6)
+                ->get();
+
+            foreach ($tasks as $t) {
+                $activitiesList->push([
+                    'id' => 'task-' . $t->id,
+                    'action' => $t->completed_at ? 'đã hoàn thành' : 'đang xử lý',
+                    'created_at' => $t->updated_at ?? $t->created_at,
+                    'task_id' => $t->id,
+                    'task_title' => $t->title,
+                    'board_id' => $t->column?->board?->id ?? null,
+                    'board_name' => $t->column?->board?->name ?? null,
+                    'workspace_name' => $t->column?->board?->workspace?->name ?? null,
+                ]);
+            }
+        }
+
+        $recentActivities = $activitiesList
+            ->sortByDesc(fn($item) => \Carbon\Carbon::parse($item['created_at']))
+            ->values()
+            ->take(6);
 
         return response()->json([
             'user' => [

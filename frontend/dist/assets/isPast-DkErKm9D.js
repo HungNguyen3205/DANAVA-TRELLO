@@ -1,1 +1,0 @@
-import{p as e}from"./index-ZlcDU1fm.js";function t(t){return+e(t)<Date.now()}export{t};

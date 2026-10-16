@@ -1,0 +1,1 @@
+import{p as e}from"./index-D6neYeAr.js";function t(t){return+e(t)<Date.now()}export{t};

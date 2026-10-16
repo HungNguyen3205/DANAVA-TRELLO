@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  CheckCircle2, Circle, Clock, AlertTriangle, Plus, 
-  Search, Briefcase, Calendar, ChevronRight, Activity, Users, Settings, 
-  ShieldAlert, User, X
+  CheckCircle2, Clock, AlertTriangle, Plus, 
+  Briefcase, Calendar, ChevronRight, Activity, Users, 
+  ShieldAlert, User, X, LayoutDashboard, ArrowUpRight, Sparkles,
+  MessageSquare, CheckSquare
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -47,6 +48,24 @@ export function HomePage() {
     if (hour < 12) return 'Chào buổi sáng';
     if (hour < 18) return 'Chào buổi chiều';
     return 'Chào buổi tối';
+  };
+
+  const formatRelativeTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr.replace(' ', 'T'));
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      
+      if (diffMins < 2) return 'Vừa xong';
+      if (diffMins < 60) return `${diffMins} phút trước`;
+      if (diffHours < 24) return `${diffHours} giờ trước`;
+      return format(date, 'HH:mm dd/MM');
+    } catch {
+      return dateStr;
+    }
   };
 
   const openTaskModal = async () => {
@@ -126,56 +145,75 @@ export function HomePage() {
     <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar">
       <div className="max-w-[1440px] mx-auto p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
         
-        {/* Header Section */}
-        <section className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              {getGreeting()}, {user?.name || user?.username || 'bạn'}
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">
-              {format(new Date(), "EEEE, 'ngày' dd 'tháng' MM 'năm' yyyy", { locale: vi })}
-            </p>
-            <div className="mt-3.5 inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-card border border-border/70 shadow-sm text-sm transition-all hover:border-border overflow-x-auto max-w-full">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Calendar size={15} />
-              </div>
-              {data?.summary?.due_today > 0 || data?.summary?.overdue > 0 ? (
-                <div className="flex items-center gap-2 whitespace-nowrap">
-                  <span className="text-muted-foreground font-medium text-xs sm:text-sm">Hôm nay:</span>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium border border-amber-500/20 text-xs shrink-0">
-                    <Clock size={13} className="shrink-0 text-amber-600 dark:text-amber-400" />
-                    <span><strong>{data.summary.due_today}</strong> cần hoàn thành</span>
-                  </div>
-                  {data.summary.overdue > 0 && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300 font-medium border border-rose-500/20 text-xs shrink-0">
-                      <AlertTriangle size={13} className="shrink-0 text-rose-600 dark:text-rose-400" />
-                      <span><strong>{data.summary.overdue}</strong> quá hạn</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <span className="text-muted-foreground font-normal whitespace-nowrap">
-                  Bạn không có công việc nào cần xử lý gấp hôm nay. Tuyệt vời!
-                </span>
-              )}
-            </div>
-          </div>
+        {/* Modern Welcome Hero Card */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-card via-card to-primary/[0.04] border border-border/80 rounded-3xl p-6 sm:p-8 shadow-sm">
+          {/* Subtle background glow decoration */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button onClick={openTaskModal} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-orange-600 text-white rounded-lg font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
-              <Plus size={18} />
-              <span>Tạo công việc</span>
-            </button>
-            <button onClick={() => navigate('/my-tasks')} className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg font-medium text-foreground hover:bg-accent transition-colors shadow-sm">
-              <CheckCircle2 size={18} className="text-primary" />
-              <span>Công việc của tôi</span>
-            </button>
-            {recentWorkspaces.length > 0 && (
-              <button onClick={() => navigate('/workspaces')} className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg font-medium text-foreground hover:bg-accent transition-colors shadow-sm hidden sm:flex">
-                <Briefcase size={18} className="text-indigo-500" />
-                <span>Mở Workspace gần nhất</span>
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+                <Sparkles size={13} />
+                <span>Không gian làm việc cá nhân</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                {getGreeting()}, <span className="bg-gradient-to-r from-primary via-indigo-600 to-purple-600 bg-clip-text text-transparent">{user?.name || user?.username || 'bạn'}</span>
+              </h1>
+              <p className="text-muted-foreground text-sm flex items-center gap-2">
+                <Calendar size={14} className="text-muted-foreground/70" />
+                <span>{format(new Date(), "EEEE, 'ngày' dd 'tháng' MM 'năm' yyyy", { locale: vi })}</span>
+              </p>
+
+              {/* Status Pills */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-background/80 border border-border text-xs font-medium shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span className="text-muted-foreground">Hôm nay:</span>
+                  <strong className="text-foreground">{data?.summary?.due_today || 0} việc cần làm</strong>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-background/80 border border-border text-xs font-medium shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  <span className="text-muted-foreground">Đang xử lý:</span>
+                  <strong className="text-foreground">{data?.summary?.in_progress || 0} việc</strong>
+                </div>
+
+                {data?.summary?.overdue > 0 && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-600 dark:text-rose-400 shadow-xs">
+                    <AlertTriangle size={13} className="shrink-0 text-rose-600 dark:text-rose-400" />
+                    <span><strong>{data.summary.overdue}</strong> việc quá hạn</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Action Button Group */}
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <button 
+                onClick={openTaskModal} 
+                className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-[#5B4BD6] text-white rounded-xl text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <Plus size={16} />
+                <span>Tạo công việc</span>
               </button>
-            )}
+
+              <button 
+                onClick={() => navigate('/my-tasks')} 
+                className="flex items-center gap-2 px-4 py-2.5 bg-background hover:bg-accent text-foreground border border-border rounded-xl text-sm font-semibold shadow-xs hover:shadow-sm transition-all"
+              >
+                <CheckCircle2 size={16} className="text-primary" />
+                <span>Công việc của tôi</span>
+              </button>
+
+              <button 
+                onClick={() => navigate('/workspaces')} 
+                className="flex items-center gap-2 px-4 py-2.5 bg-background hover:bg-accent text-muted-foreground hover:text-foreground border border-border rounded-xl text-sm font-medium shadow-xs transition-all"
+              >
+                <Briefcase size={16} className="text-indigo-500" />
+                <span>Không gian</span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -186,26 +224,51 @@ export function HomePage() {
           <div className="xl:col-span-8 space-y-8">
             
             {/* Tiếp tục công việc */}
-            <section>
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Clock className="text-muted-foreground" size={20} />
-                Tiếp tục công việc
-              </h2>
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold flex items-center gap-2.5 text-foreground">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Clock size={16} />
+                  </div>
+                  Tiếp tục công việc
+                </h2>
+                <span className="text-xs text-muted-foreground font-medium">Truy cập nhanh gần đây</span>
+              </div>
+
               {continueItems.length === 0 ? (
-                <div className="bg-card border border-border p-6 rounded-2xl text-center text-sm text-muted-foreground shadow-sm">
-                  Hoạt động của bạn sẽ xuất hiện tại đây khi bạn tương tác với các Không gian.
+                <div className="bg-card border border-border p-8 rounded-2xl text-center text-sm text-muted-foreground shadow-xs">
+                  Hoạt động của bạn sẽ xuất hiện tại đây khi bạn tương tác với các Không gian hoặc Bảng.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {continueItems.map((item, idx) => (
-                    <div key={idx} onClick={() => navigate(item.type === 'board' ? `/b/${item.id}` : '/workspaces')} className="bg-card border border-border p-4 rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group flex flex-col justify-between h-28 relative overflow-hidden">
-                      <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-10 transition-opacity bg-gradient-to-br from-primary to-orange-600"></div>
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground z-10">
-                        {item.type === 'board' ? <LayoutDashboard size={14} className="text-blue-500" /> : <Briefcase size={14} className="text-purple-500" />}
-                        {item.type === 'board' ? 'Bảng' : 'Không gian'}
+                    <div 
+                      key={idx} 
+                      onClick={() => navigate(item.type === 'board' ? (item.public_id ? `/${item.public_id}/kanban` : `/b/${item.id}`) : '/workspaces')} 
+                      className="group bg-card hover:bg-accent/40 border border-border hover:border-primary/40 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden"
+                    >
+                      {/* Top accent line */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                      
+                      <div className="flex items-center justify-between z-10">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider ${
+                          item.type === 'board' 
+                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+                            : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                        }`}>
+                          {item.type === 'board' ? <LayoutDashboard size={12} /> : <Briefcase size={12} />}
+                          {item.type === 'board' ? 'Bảng' : 'Không gian'}
+                        </span>
+                        <ArrowUpRight size={15} className="text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                       </div>
+
                       <div className="z-10 mt-2">
-                        <h3 className="font-bold text-sm line-clamp-2 group-hover:text-primary transition-colors">{item.name}</h3>
+                        <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                          {item.name}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                          {item.type === 'board' ? 'Bấm để mở bảng' : 'Bấm để vào không gian'}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -213,78 +276,113 @@ export function HomePage() {
               )}
             </section>
 
-            {/* Workspace & Board gần đây */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Briefcase className="text-muted-foreground" size={20} />
-                  Không gian của bạn
-                </h2>
+            {/* Workspace & Hoạt động gần đây */}
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Không gian của bạn */}
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
+                  <h2 className="text-base font-bold flex items-center gap-2 text-foreground">
+                    <Briefcase className="text-indigo-500" size={18} />
+                    Không gian của bạn
+                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-semibold">
+                      {recentWorkspaces.length}
+                    </span>
+                  </h2>
+                  <Link to="/workspaces" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                    Xem tất cả <ChevronRight size={14} />
+                  </Link>
+                </div>
+
                 {recentWorkspaces.length === 0 ? (
-                  <div className="relative overflow-hidden bg-gradient-to-b from-card to-card/60 border border-dashed border-border/80 hover:border-primary/40 rounded-2xl p-6 sm:p-7 text-center transition-all group shadow-xs">
-                    <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/10 via-purple-500/10 to-indigo-500/10 border border-primary/15 flex items-center justify-center text-primary shadow-xs group-hover:scale-105 transition-transform duration-300">
-                      <Briefcase size={26} strokeWidth={1.75} className="group-hover:rotate-6 transition-transform" />
-                    </div>
-                    <h3 className="font-semibold text-foreground text-sm mb-1.5">
-                      Chưa có Không gian làm việc
-                    </h3>
-                    <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-5 leading-relaxed">
-                      Bạn chưa tham gia không gian nào. Hãy tạo không gian mới để bắt đầu quản lý bảng và phân bổ công việc cùng đồng đội.
-                    </p>
-                    <div className="flex items-center justify-center gap-2.5">
-                      <Link 
-                        to="/workspaces"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-xl shadow-xs hover:shadow transition-all"
-                      >
-                        <Plus size={14} />
-                        Tạo Không gian
-                      </Link>
-                    </div>
+                  <div className="p-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                    Chưa có Không gian nào.
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {recentWorkspaces.map((ws: any) => (
-                      <div key={ws.id} onClick={() => navigate('/workspaces')} className="flex items-center justify-between p-3 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-sm">
+                  <div className="space-y-2.5 flex-1">
+                    {recentWorkspaces.slice(0, 5).map((ws: any) => (
+                      <div 
+                        key={ws.id} 
+                        onClick={() => navigate('/workspaces')} 
+                        className="group flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-border hover:bg-accent/60 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0">
                             {ws.name.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <h3 className="font-bold text-sm group-hover:text-primary transition-colors">{ws.name}</h3>
-                            <p className="text-xs text-muted-foreground">{ws.boards_count || 0} Bảng • {ws.members_count || 1} Thành viên</p>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+                              {ws.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                              <span>{ws.boards_count || 0} Bảng</span>
+                              <span>•</span>
+                              <span>{ws.members_count || 1} Thành viên</span>
+                            </p>
                           </div>
                         </div>
-                        <ChevronRight size={18} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+                        <ChevronRight size={16} className="text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               
-              <div>
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Activity className="text-muted-foreground" size={20} />
-                  Hoạt động gần đây
-                </h2>
+              {/* Hoạt động gần đây */}
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
+                  <h2 className="text-base font-bold flex items-center gap-2 text-foreground">
+                    <Activity className="text-emerald-500" size={18} />
+                    Hoạt động gần đây
+                  </h2>
+                  <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    Mới nhất
+                  </span>
+                </div>
+
                 {recentActivities.length === 0 ? (
-                  <div className="bg-card border border-border p-6 rounded-2xl text-center text-sm text-muted-foreground">
+                  <div className="p-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
                     Chưa có hoạt động nào được ghi nhận.
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {recentActivities.slice(0,4).map((act: any) => (
-                      <div key={act.id} className="flex gap-3 items-start p-3 bg-card border border-border rounded-xl shadow-sm">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mt-0.5 shrink-0">
-                          <User size={14} />
+                  <div className="space-y-3 flex-1">
+                    {recentActivities.slice(0, 5).map((act: any) => (
+                      <div 
+                        key={act.id} 
+                        onClick={() => {
+                          if (act.board_id && act.task_id) {
+                            navigate(`/b/${act.board_id}?task=${act.task_id}`);
+                          } else if (act.board_id) {
+                            navigate(`/b/${act.board_id}`);
+                          }
+                        }}
+                        className="group flex gap-3 items-start p-2.5 rounded-xl hover:bg-accent/60 transition-all cursor-pointer border border-transparent hover:border-border/60"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                          {act.id?.startsWith('comment') ? (
+                            <MessageSquare size={14} className="text-indigo-500" />
+                          ) : (
+                            <CheckSquare size={14} className="text-primary" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground leading-tight">
-                            <span className="font-medium">Bạn</span> {act.action?.toLowerCase() || ''}
+                          <p className="text-xs text-foreground leading-tight">
+                            <span className="font-bold">Bạn</span> {act.action}
                           </p>
-                          {act.task_title && <p className="text-sm font-semibold truncate mt-0.5 text-primary">{act.task_title}</p>}
-                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                            <span>{act.created_at ? format(new Date(act.created_at.replace(' ', 'T')), 'HH:mm dd/MM') : ''}</span>
-                            {act.board_name && <span>• {act.board_name}</span>}
+                          {act.task_title && (
+                            <p className="text-xs font-semibold text-primary truncate mt-1 group-hover:underline">
+                              {act.task_title}
+                            </p>
+                          )}
+                          <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-2">
+                            <span>{formatRelativeTime(act.created_at)}</span>
+                            {act.board_name && (
+                              <>
+                                <span>•</span>
+                                <span className="truncate max-w-[120px] text-muted-foreground/80">{act.board_name}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -300,56 +398,84 @@ export function HomePage() {
           <div className="xl:col-span-4 space-y-6">
             
             {/* Cần tôi chú ý */}
-            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-border/50 bg-orange-50/30 dark:bg-orange-950/10">
-                <h3 className="font-bold flex items-center gap-2 text-orange-600 dark:text-orange-500">
-                  <AlertTriangle size={18} /> Cần tôi chú ý
+            <div className="bg-card border border-border rounded-2xl shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-border/50 bg-gradient-to-r from-orange-500/10 to-amber-500/5 flex items-center justify-between">
+                <h3 className="font-bold text-sm flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                  <AlertTriangle size={16} /> Cần tôi chú ý
                 </h3>
+                {attentionItems.length > 0 && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-700 dark:text-orange-300">
+                    {attentionItems.length}
+                  </span>
+                )}
               </div>
-              <div className="p-2">
+              <div className="p-3">
                 {attentionItems.length === 0 ? (
-                  <div className="p-6 text-center text-sm text-muted-foreground">
-                    Tuyệt vời! Không có công việc nào bị trễ hoặc cần xử lý khẩn cấp.
+                  <div className="p-6 text-center text-xs text-muted-foreground">
+                    Tuyệt vời! Không có công việc nào quá hạn hoặc cần xử lý khẩn cấp.
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    {attentionItems.map((item: any, idx: number) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => {
-                          if (item.board_id) navigate(`/b/${item.board_id}?task=${item.id}`);
-                          else navigate('/my-tasks');
-                        }}
-                        className="flex gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                      >
-                        <div className={`mt-0.5 shrink-0 ${item.type === 'overdue' ? 'text-red-500' : item.type === 'urgent' ? 'text-orange-500' : 'text-blue-500'}`}>
-                          <AlertTriangle size={16} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: item.type === 'overdue' ? '#ef4444' : item.type === 'urgent' ? '#f97316' : '#3b82f6' }}>
-                            {item.message}
+                  <div className="space-y-2">
+                    {attentionItems.map((item: any, idx: number) => {
+                      const isOverdue = item.type === 'overdue';
+                      const isUrgent = item.type === 'urgent';
+                      return (
+                        <div 
+                          key={idx} 
+                          onClick={() => {
+                            if (item.board_id) navigate(`/b/${item.board_id}?task=${item.id}`);
+                            else navigate('/my-tasks');
+                          }}
+                          className={`group p-3 rounded-xl border transition-all cursor-pointer ${
+                            isOverdue 
+                              ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 hover:border-rose-400' 
+                              : isUrgent 
+                              ? 'bg-orange-50/50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/40 hover:border-orange-400'
+                              : 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40 hover:border-blue-400'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                              isOverdue 
+                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' 
+                                : isUrgent 
+                                ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400'
+                                : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                            }`}>
+                              {item.message}
+                            </span>
+                            <ArrowUpRight size={13} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                            {item.task_title}
                           </p>
-                          <p className="text-sm font-medium line-clamp-2">{item.task_title}</p>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Lịch trình cá nhân */}
-            <div className="bg-card border border-border rounded-2xl shadow-sm p-5">
-              <h3 className="font-bold flex items-center gap-2 mb-4">
-                <Calendar size={18} className="text-primary" /> Lịch trình hôm nay
-              </h3>
+            {/* Lịch trình hôm nay */}
+            <div className="bg-card border border-border rounded-2xl shadow-xs p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-sm flex items-center gap-2 text-foreground">
+                  <Calendar size={16} className="text-primary" /> Lịch trình hôm nay
+                </h3>
+                {todaySchedule.length > 0 && (
+                  <span className="text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
+                    {todaySchedule.length}
+                  </span>
+                )}
+              </div>
               
               {todaySchedule.length === 0 ? (
-                <div className="text-center p-4 border border-dashed border-border rounded-xl text-sm text-muted-foreground">
+                <div className="text-center p-5 border border-dashed border-border rounded-xl text-xs text-muted-foreground">
                   Trống lịch hôm nay
                 </div>
               ) : (
-                <div className="relative border-l-2 border-primary/20 ml-3 pl-4 space-y-6 pb-2 mt-6">
+                <div className="relative border-l-2 border-primary/20 ml-2.5 pl-3.5 space-y-4 py-1">
                   {todaySchedule.map((task: any, idx: number) => (
                     <div 
                       key={idx} 
@@ -359,13 +485,13 @@ export function HomePage() {
                       }}
                       className="relative cursor-pointer group"
                     >
-                      <div className="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-primary ring-4 ring-card group-hover:scale-125 transition-transform"></div>
-                      <div className="text-xs font-bold text-primary mb-1">
+                      <div className="absolute -left-[20.5px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-card group-hover:scale-125 transition-transform"></div>
+                      <div className="text-[11px] font-bold text-primary mb-0.5">
                         {task.due_date ? format(new Date(task.due_date.replace(' ', 'T')), 'HH:mm') : ''}
                       </div>
-                      <div className="bg-accent/50 group-hover:bg-accent p-3 rounded-xl transition-colors">
-                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{task.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{task.board_name}</p>
+                      <div className="bg-muted/40 group-hover:bg-accent/80 p-2.5 rounded-xl border border-transparent group-hover:border-border transition-all">
+                        <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors truncate">{task.title}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{task.board_name}</p>
                       </div>
                     </div>
                   ))}
@@ -375,17 +501,17 @@ export function HomePage() {
 
             {/* System Admin Shortcut */}
             {user?.system_role === 'system_admin' && (
-              <div className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/20 rounded-2xl p-5 shadow-sm relative overflow-hidden">
-                <ShieldAlert className="absolute -right-4 -bottom-4 text-amber-500/10" size={100} />
+              <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20 rounded-2xl p-5 shadow-xs relative overflow-hidden">
+                <ShieldAlert className="absolute -right-3 -bottom-3 text-amber-500/10" size={88} />
                 <div className="relative z-10">
-                  <h3 className="font-bold text-amber-600 dark:text-amber-500 flex items-center gap-2 mb-2">
-                    <ShieldAlert size={18} /> Quản lý hệ thống
+                  <h3 className="font-bold text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2 mb-1.5">
+                    <ShieldAlert size={16} /> Quản lý hệ thống
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                     Khu vực dành riêng cho Quản trị viên. Tạo tài khoản nhân viên và phân quyền truy cập dự án.
                   </p>
-                  <button onClick={() => navigate('/admin/employees')} className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2">
-                    <Users size={16} /> Quản lý nhân viên
+                  <button onClick={() => navigate('/admin/employees')} className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2">
+                    <Users size={14} /> Quản lý nhân viên
                   </button>
                 </div>
               </div>
@@ -501,17 +627,5 @@ export function HomePage() {
       )}
 
     </div>
-  );
-}
-
-// Temporary icon for layout rendering
-function LayoutDashboard({ size, className }: { size: number, className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect width="7" height="9" x="3" y="3" rx="1"/>
-      <rect width="7" height="5" x="14" y="3" rx="1"/>
-      <rect width="7" height="9" x="14" y="12" rx="1"/>
-      <rect width="7" height="5" x="3" y="16" rx="1"/>
-    </svg>
   );
 }

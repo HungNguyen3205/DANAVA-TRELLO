@@ -81,6 +81,12 @@ class TaskDetailController extends Controller
             'user_id' => $request->user()->id,
             'content' => $request->content
         ]);
+
+        \App\Models\ActivityLog::create([
+            'task_id' => $task->id,
+            'user_id' => $request->user()->id,
+            'action' => 'đã bình luận: "' . \Illuminate\Support\Str::limit($request->content, 35) . '"',
+        ]);
         
         return response()->json($comment->load('user'), 201);
     }
