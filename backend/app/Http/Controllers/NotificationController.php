@@ -24,8 +24,10 @@ class NotificationController extends Controller
             $query->whereNull('read_at');
         }
 
+        $perPage = min(100, max(1, (int) $request->query('per_page', 50)));
+
         return response()->json([
-            'notifications' => $query->paginate(20),
+            'notifications' => $query->paginate($perPage),
             'unread_count' => $user->unreadNotifications()->count()
         ]);
     }

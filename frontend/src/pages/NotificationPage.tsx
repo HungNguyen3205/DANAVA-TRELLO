@@ -21,7 +21,7 @@ export const NotificationPage = () => {
       const data = await getNotifications(p, isUnreadOnly);
       
       let filteredData = data.notifications.data;
-      if (filter === 'assigned') filteredData = filteredData.filter(n => n.data.type === 'assigned');
+      if (filter === 'assigned') filteredData = filteredData.filter(n => n.data.type === 'assigned' || n.data.type === 'due_today');
       if (filter === 'due') filteredData = filteredData.filter(n => n.data.type === 'due_today' || n.data.type === 'approaching_due');
       if (filter === 'overdue') filteredData = filteredData.filter(n => n.data.type === 'overdue');
 
