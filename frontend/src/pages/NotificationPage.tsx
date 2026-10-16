@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Check, Clock, AlertCircle, UserPlus, Filter, Layout } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../lib/api/notifications';
 import type { AppNotification } from '../lib/api/notifications';
+import { updateTabNotification, notifyNotificationsUpdated } from '../lib/tabNotification';
 import { useNavigate } from 'react-router-dom';
 import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -30,6 +31,7 @@ export const NotificationPage = () => {
         setNotifications(filteredData);
       }
       setUnreadCount(data.unread_count);
+      updateTabNotification(data.unread_count);
       setHasMore(data.notifications.next_page_url !== null);
     } catch (e) {
       console.error(e);
@@ -51,6 +53,8 @@ export const NotificationPage = () => {
       await markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
       setUnreadCount(0);
+      updateTabNotification(0);
+      notifyNotificationsUpdated(0);
     } catch (e) {
       console.error(e);
     }
@@ -60,7 +64,12 @@ export const NotificationPage = () => {
     if (!n.read_at) {
       try {
         await markAsRead(n.id);
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount(prev => {
+          const next = Math.max(0, prev - 1);
+          updateTabNotification(next);
+          notifyNotificationsUpdated(next);
+          return next;
+        });
         setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item));
       } catch (e) {
         console.error(e);

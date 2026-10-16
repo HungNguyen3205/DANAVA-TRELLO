@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Clock, AlertCircle, UserPlus, CheckCircle2, Layout } from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../../lib/api/notifications';
 import type { AppNotification } from '../../lib/api/notifications';
+import { updateTabNotification } from '../../lib/tabNotification';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -24,6 +25,10 @@ export const NotificationBell = () => {
   };
 
   useEffect(() => {
+    updateTabNotification(unreadCount);
+  }, [unreadCount]);
+
+  useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
     
@@ -31,9 +36,19 @@ export const NotificationBell = () => {
     const handleFocus = () => fetchNotifications();
     window.addEventListener('focus', handleFocus);
 
+    const handleUpdated = (e: any) => {
+      if (typeof e.detail?.count === 'number') {
+        setUnreadCount(e.detail.count);
+      } else {
+        fetchNotifications();
+      }
+    };
+    window.addEventListener('notifications_updated', handleUpdated);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('notifications_updated', handleUpdated);
     };
   }, []);
 
