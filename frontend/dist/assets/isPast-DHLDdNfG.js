@@ -1,1 +1,0 @@
-import{p as e}from"./index-C0SvH-sD.js";function t(t){return+e(t)<Date.now()}export{t};

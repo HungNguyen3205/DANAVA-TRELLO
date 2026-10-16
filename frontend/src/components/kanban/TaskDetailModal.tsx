@@ -549,16 +549,26 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                   </div>
                   <div className="flex-1 relative">
                     <textarea 
-                      rows={1}
-                      placeholder="Viết bình luận..."
-                      className="w-full p-3 pr-10 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[44px]"
+                      rows={2}
+                      placeholder="Viết bình luận... (Enter để gửi, Shift + Enter để xuống dòng)"
+                      className="w-full p-3 pr-10 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[44px] max-h-36 overflow-y-auto"
                       value={newComment} 
                       onChange={e => setNewComment(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          if ((e.nativeEvent as any).isComposing) return;
+                          e.preventDefault();
+                          if (!busy && newComment.trim()) {
+                            handleAddComment();
+                          }
+                        }
+                      }}
                     />
                     <button 
                       className="absolute right-2 bottom-2 p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
                       onClick={handleAddComment}
                       disabled={busy || !newComment.trim()}
+                      title="Gửi (Enter)"
                     >
                       <Send size={16} />
                     </button>
@@ -592,9 +602,18 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                               <div className="space-y-2 mt-1">
                                 <textarea
                                   rows={2}
-                                  className="w-full p-2.5 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm"
+                                  className="w-full p-2.5 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm max-h-36 overflow-y-auto"
                                   value={editingCommentText}
                                   onChange={e => setEditingCommentText(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      if ((e.nativeEvent as any).isComposing) return;
+                                      e.preventDefault();
+                                      if (!busy && editingCommentText.trim()) {
+                                        handleSaveEditComment(c.id);
+                                      }
+                                    }
+                                  }}
                                   autoFocus
                                 />
                                 <div className="flex gap-2">
@@ -619,7 +638,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                                 </div>
                               </div>
                             ) : (
-                              <div className="bg-card border border-border/50 p-3 rounded-lg rounded-tl-none text-sm shadow-sm leading-relaxed text-foreground break-words">
+                              <div className="bg-card border border-border/50 p-3 rounded-lg rounded-tl-none text-sm shadow-sm leading-relaxed text-foreground break-words whitespace-pre-wrap">
                                 {c.content}
                               </div>
                             )}

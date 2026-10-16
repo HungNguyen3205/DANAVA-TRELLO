@@ -275,7 +275,7 @@ export function TaskEditor({
                     timeZone: "Asia/Ho_Chi_Minh",
                   })}
                 </time>
-                <p>{c.body}</p>
+                <p className="whitespace-pre-wrap">{c.body}</p>
               </div>
             ))}
             <div className="inline-form">
