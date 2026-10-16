@@ -173,7 +173,7 @@ class BoardController extends Controller
             return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 
-        return response()->json($board->load(['sprints', 'labels', 'columns.tasks', 'workspace.members']));
+        return response()->json($board->load(['sprints', 'labels', 'columns.tasks', 'members', 'workspace.members']));
     }
 
     // Resolve an opaque public board code without exposing sequential database IDs in URLs.

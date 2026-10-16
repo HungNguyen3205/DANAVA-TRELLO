@@ -156,12 +156,12 @@ export function BoardColumn({
           </button>
 
           {showColorPicker && (
-            <div className="absolute top-full right-0 mt-2 bg-card border border-border shadow-xl rounded-xl p-2 z-50 flex gap-2 w-[160px] flex-wrap">
+            <div className="absolute top-full right-0 mt-2 bg-card border border-border/80 shadow-2xl rounded-2xl p-2.5 z-50 flex gap-2 w-[160px] flex-wrap animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
               {Object.keys(PREDEFINED_THEMES).map(k => (
                 <button
                   key={k}
                   onClick={() => updateColor(k)}
-                  className={`w-6 h-6 rounded-full border border-border/50 ${PREDEFINED_THEMES[k].bg} ${currentColor === k ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                  className={`w-6 h-6 rounded-full border border-border/50 ${PREDEFINED_THEMES[k].bg} ${currentColor === k ? 'ring-2 ring-primary ring-offset-2' : ''} hover:scale-110 transition-transform`}
                   title={k}
                 />
               ))}

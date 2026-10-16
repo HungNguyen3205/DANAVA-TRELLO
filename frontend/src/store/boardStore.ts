@@ -116,11 +116,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         workspace: bData.workspace,
         columns: formattedColumns,
         tasks: formattedTasks,
-        users: bData.workspace?.members?.map((m: any) => ({
+        users: (bData.members && bData.members.length > 0 ? bData.members : bData.workspace?.members)?.map((m: any) => ({
           id: String(m.id),
           name: m.name,
-          initials: m.name.charAt(0).toUpperCase(),
-          avatar: m.avatar
+          email: m.email,
+          initials: m.name ? m.name.charAt(0).toUpperCase() : 'U',
+          avatar: m.avatar,
+          role: m.pivot?.role || m.role || 'member'
         })) || [],
         activity: [],
         sprints: bData.sprints || [],

@@ -12,6 +12,9 @@ import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
 import { getAvatarUrl } from '../lib/avatar';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
+import { BoardMembersHeader } from '../components/layout/BoardMembersHeader';
+import { CustomSelect } from '../components/ui/CustomSelect';
+import { StatusSelect } from '../components/ui/StatusSelect';
 
 // Tab Component for Header
 function BoardTabs({ basePath, activeTab }: { basePath: string, activeTab: 'kanban' | 'list' | 'calendar' }) {
@@ -178,13 +181,7 @@ export function ListView() {
           <BoardTabs basePath={basePath} activeTab="list" />
           
           <div className="flex items-center gap-3 border-l border-border pl-4">
-            <div className="flex -space-x-2 mr-2">
-              {board.users?.slice(0, 3).map((u: any, i: number) => (
-                <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-background flex items-center justify-center text-[10px] font-bold z-10 relative shadow-sm text-white" title={u.name}>
-                  {u.initials}
-                </div>
-              ))}
-            </div>
+            <BoardMembersHeader users={board.users} basePath={basePath} />
             <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent">
               <Share2 size={18} />
             </button>
@@ -223,16 +220,18 @@ export function ListView() {
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Nhóm theo:</span>
-              <select 
-                value={groupBy} 
-                onChange={e => setGroupBy(e.target.value as any)}
-                className="text-[13px] border border-border rounded-lg px-3 py-1.5 bg-background focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="status">Trạng thái</option>
-                <option value="assignee">Người phụ trách</option>
-                <option value="none">Không nhóm</option>
-              </select>
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Nhóm theo:</span>
+              <CustomSelect
+                value={groupBy}
+                onChange={(val) => setGroupBy(val as any)}
+                options={[
+                  { value: 'status', label: 'Trạng thái' },
+                  { value: 'assignee', label: 'Người phụ trách' },
+                  { value: 'none', label: 'Không nhóm' },
+                ]}
+                className="w-36"
+                triggerClassName="py-1.5 px-3 text-[13px] rounded-lg"
+              />
             </div>
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-card hover:bg-muted rounded-lg transition-colors border border-border shadow-sm">
               <Filter size={14} className="text-muted-foreground" />
@@ -325,16 +324,12 @@ export function ListView() {
 
                               {/* Status Column */}
                               <div className="col-span-4 md:col-span-3 lg:col-span-2" onClick={(e) => e.stopPropagation()}>
-                                <select 
+                                <StatusSelect 
                                   value={task.columnId}
-                                  onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                                  className="text-[13px] bg-transparent border-0 p-0 font-medium cursor-pointer focus:ring-0 truncate w-full"
-                                  style={{ color: currentColumn?.color || '#64748b' }}
-                                >
-                                  {board.columns.map(c => (
-                                    <option key={c.id} value={c.id}>{c.title}</option>
-                                  ))}
-                                </select>
+                                  columns={board.columns}
+                                  onChange={(colId) => handleStatusChange(task.id, colId)}
+                                  size="sm"
+                                />
                               </div>
 
                               {/* Priority Column */}

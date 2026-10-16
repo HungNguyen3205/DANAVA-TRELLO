@@ -2,6 +2,16 @@ import { useState } from "react";
 import { Check, Plus, Trash2 } from "lucide-react";
 import type { Board, Task } from "../types";
 import { Modal } from "./ui/Modal";
+
+function formatDateDisplay(dateStr?: string): string {
+  if (!dateStr) return '';
+  const clean = dateStr.split(' ')[0].split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return clean;
+}
 export function TaskEditor({
   task,
   board,
@@ -140,9 +150,11 @@ export function TaskEditor({
             <label>
               Hạn hoàn thành
               <input
-                type="date"
-                value={draft.dueDate}
-                onChange={(e) => update({ dueDate: e.target.value })}
+                type="text"
+                readOnly
+                value={formatDateDisplay(draft.dueDate) || "Chưa có hạn"}
+                className="cursor-default bg-muted/30 font-medium text-foreground select-none"
+                tabIndex={-1}
               />
             </label>
           </div>

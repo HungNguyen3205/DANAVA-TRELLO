@@ -10,6 +10,7 @@ import type { Board, Task, Column } from '../types';
 import { useBoardStore } from '../store/boardStore';
 import { getAvatarUrl } from '../lib/avatar';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
+import { BoardMembersHeader } from '../components/layout/BoardMembersHeader';
 
 export function BoardView() {
   const { boardId, basePath } = useBoardRoute();
@@ -195,17 +196,7 @@ export function BoardView() {
           </div>
           
           <div className="flex items-center gap-3 border-l border-border pl-4">
-            <div className="flex -space-x-2 mr-2">
-              {board.users?.slice(0, 3).map((u: any, i: number) => (
-                <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-background flex items-center justify-center text-[10px] font-bold z-10 relative shadow-sm text-white overflow-hidden" title={u.name}>
-                  {u.avatar ? (
-                    <img src={getAvatarUrl(u.avatar)} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    u.initials
-                  )}
-                </div>
-              ))}
-            </div>
+            <BoardMembersHeader users={board.users} basePath={basePath} />
             <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent">
               <Share2 size={18} />
             </button>

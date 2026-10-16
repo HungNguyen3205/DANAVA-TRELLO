@@ -10,6 +10,19 @@ import { useAuthStore } from '../../store/authStore';
 import { useBoardStore } from '../../store/boardStore';
 import { toast } from 'sonner';
 import { getAvatarUrl } from '../../lib/avatar';
+import { PrioritySelect } from '../ui/PrioritySelect';
+import { StatusSelect } from '../ui/StatusSelect';
+import { TaskDatesModal } from './TaskDatesModal';
+
+function formatDateDisplay(dateStr?: string): string {
+  if (!dateStr) return '';
+  const clean = dateStr.split(' ')[0].split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return clean;
+}
 
 interface TaskDetailModalProps {
   task: Task;
@@ -174,8 +187,8 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
           {/* Main Content Area (Left) */}
           <div className="flex-1 p-6 lg:p-8 border-r border-border min-h-[500px]">
             
-            {/* Metadata row (if labels/members exist) */}
-            {(draft.labels.length > 0 || draft.assigneeId) && (
+            {/* Metadata row (if labels/members/dates exist) */}
+            {(draft.labels.length > 0 || draft.assigneeId || draft.dueDate || draft.startDate) && (
               <div className="flex flex-wrap gap-8 mb-8 ml-10">
                 {draft.assigneeId && (
                   <div>
@@ -205,6 +218,21 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+                {draft.dueDate && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Hạn hoàn thành</h3>
+                    <button
+                      type="button"
+                      onClick={() => setIsDatesVisible(true)}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-accent/70 hover:bg-accent text-foreground text-xs font-semibold rounded-xl transition-all border border-border/80 shadow-xs hover:border-primary/50 group cursor-pointer"
+                    >
+                      <CalendarDays size={14} className="text-primary group-hover:scale-110 transition-transform" />
+                      <span>
+                        {formatDateDisplay(draft.dueDate)}
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -537,16 +565,14 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
             
             <div>
               <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Trạng thái</h4>
-              <select 
-                className="w-full p-2.5 rounded-xl bg-card border border-border/80 focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px] text-foreground font-semibold shadow-sm transition-all outline-none cursor-pointer" 
-                value={draft.columnId} 
-                onChange={e => { 
-                  update({ columnId: e.target.value }); 
-                  save({ columnId: e.target.value }); 
+              <StatusSelect
+                value={draft.columnId}
+                columns={board.columns}
+                onChange={(colId) => {
+                  update({ columnId: colId });
+                  save({ columnId: colId });
                 }}
-              >
-                {board.columns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-              </select>
+              />
             </div>
 
             <div>
@@ -555,7 +581,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 <SidebarButton icon={<UserPlus size={16} />} label="Thành viên" onClick={() => setIsMembersVisible(!isMembersVisible)} />
                 <SidebarButton icon={<Tag size={16} />} label="Nhãn" onClick={() => setIsLabelsVisible(!isLabelsVisible)} />
                 <SidebarButton icon={<CheckSquare size={16} />} label="Việc cần làm" onClick={() => setIsChecklistVisible(true)} />
-                <SidebarButton icon={<CalendarDays size={16} />} label="Ngày" onClick={() => setIsDatesVisible(!isDatesVisible)} />
+                {/* <SidebarButton icon={<CalendarDays size={16} />} label="Ngày" onClick={() => setIsDatesVisible(!isDatesVisible)} /> */}
                 <label className="w-full">
                   <input 
                     type="file" 
@@ -592,52 +618,17 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 </label>
               </div>
 
-              {isDatesVisible && (
-                <div className="mt-2 p-3 bg-card border border-border/50 rounded shadow-lg animate-in slide-in-from-top-2 duration-200">
-                  <h4 className="text-xs font-bold text-foreground mb-3 flex justify-between items-center">
-                    Ngày
-                    <button onClick={() => setIsDatesVisible(false)} className="text-muted-foreground hover:text-foreground">
-                      <X size={14} />
-                    </button>
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Ngày bắt đầu</label>
-                      <input
-                        type="date"
-                        value={draft.startDate?.split(' ')[0] || ''}
-                        onChange={(e) => update({ startDate: e.target.value })}
-                        className="w-full bg-background border border-input rounded py-1.5 px-2 text-sm text-foreground focus:border-primary/50 outline-none cursor-pointer"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Hạn hoàn thành</label>
-                      <input
-                        type="date"
-                        value={draft.dueDate?.split(' ')[0] || ''}
-                        onChange={(e) => update({ dueDate: e.target.value })}
-                        className="w-full bg-background border border-input rounded py-1.5 px-2 text-sm text-foreground focus:border-primary/50 outline-none cursor-pointer"
-                      />
-                    </div>
-                    <button 
-                      onClick={() => { setIsDatesVisible(false); save(); }}
-                      className="w-full mt-2 bg-primary text-white text-xs font-semibold py-2 rounded hover:bg-orange-600 transition-colors"
-                    >
-                      Lưu Ngày
-                    </button>
-                  </div>
-                </div>
-              )}
+
 
               {isMembersVisible && (
-                <div className="mt-2 p-3 bg-card border border-border/50 rounded shadow-lg animate-in slide-in-from-top-2 duration-200">
+                <div className="mt-2 p-4 bg-card border border-border/80 rounded-2xl shadow-xl animate-in slide-in-from-top-2 duration-200">
                   <h4 className="text-xs font-bold text-foreground mb-2 flex justify-between items-center">
                     Thành viên
-                    <button onClick={() => setIsMembersVisible(false)} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={() => setIsMembersVisible(false)} className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                       <X size={14} />
                     </button>
                   </h4>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar pr-1">
                     {board?.users?.map(user => {
                       const isAssignee = draft.assigneeId === user.id;
                       return (
@@ -671,14 +662,14 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               )}
 
               {isLabelsVisible && (
-                <div className="mt-2 p-3 bg-card border border-border/50 rounded shadow-lg animate-in slide-in-from-top-2 duration-200">
+                <div className="mt-2 p-4 bg-card border border-border/80 rounded-2xl shadow-xl animate-in slide-in-from-top-2 duration-200">
                   <h4 className="text-xs font-bold text-foreground mb-3 flex justify-between items-center">
                     Nhãn
                     <button onClick={() => {
                       setIsLabelsVisible(false);
                       setIsCreatingLabel(false);
                       setEditingLabel(null);
-                    }} className="text-muted-foreground hover:text-foreground">
+                    }} className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                       <X size={14} />
                     </button>
                   </h4>
@@ -863,34 +854,49 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Chi tiết</h4>
               
               <div className="space-y-4">
-                <label className="flex flex-col gap-1 text-sm font-medium text-foreground/80">
-                  Mức ưu tiên
-                  <select 
-                    className="w-full p-2.5 rounded bg-accent border border-border/50 focus:ring-2 focus:ring-primary/50 text-sm font-semibold transition-colors" 
-                    value={draft.priority} 
-                    onChange={e => { 
-                      const val = e.target.value as Task['priority'];
-                      update({ priority: val }); 
-                      save({ priority: val }); 
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-semibold text-foreground/90">Mức ưu tiên</span>
+                  <PrioritySelect
+                    value={draft.priority}
+                    onChange={(val) => {
+                      update({ priority: val });
+                      save({ priority: val });
                     }}
-                  >
-                    {["Thấp", "Bình thường", "Cao", "Khẩn cấp"].map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </label>
-
-                <label className="flex flex-col gap-1 text-sm font-medium text-foreground/80">
-                  Hạn hoàn thành
-                  <input 
-                    id="dueDateInput"
-                    type="date" 
-                    className="w-full p-2.5 rounded bg-accent border border-border/50 focus:ring-2 focus:ring-primary/50 text-sm font-semibold transition-colors" 
-                    value={draft.dueDate} 
-                    onChange={e => { 
-                      update({ dueDate: e.target.value }); 
-                      save({ dueDate: e.target.value }); 
-                    }} 
                   />
-                </label>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-semibold text-foreground/90">Hạn hoàn thành</span>
+                  <div
+                    onClick={() => setIsDatesVisible(true)}
+                    className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-card border border-border/80 text-[13px] font-semibold text-foreground shadow-xs transition-all cursor-pointer hover:border-primary/50 hover:bg-accent/30 ${
+                      !draft.dueDate ? 'text-muted-foreground' : ''
+                    }`}
+                    title="Nhấp để chọn hoặc đổi hạn hoàn thành"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <CalendarDays size={16} className={`shrink-0 ${draft.dueDate ? 'text-primary' : 'text-muted-foreground/60'}`} />
+                      <span className={`truncate ${draft.dueDate ? 'text-foreground font-semibold' : 'text-muted-foreground font-normal'}`}>
+                        {draft.dueDate ? formatDateDisplay(draft.dueDate) : 'Chưa có hạn hoàn thành'}
+                      </span>
+                    </div>
+                    {draft.dueDate && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          update({ dueDate: '', startDate: '' });
+                          save({ dueDate: '', startDate: '' });
+                          toast.success('Đã xóa hạn hoàn thành');
+                        }}
+                        className="p-1 hover:bg-accent/80 rounded-md text-muted-foreground hover:text-rose-500 transition-colors cursor-pointer"
+                        title="Xóa hạn hoàn thành"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -910,6 +916,19 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
           </aside>
         </div>
       </div>
+
+      {/* Centered Task Dates Modal */}
+      <TaskDatesModal
+        isOpen={isDatesVisible}
+        onClose={() => setIsDatesVisible(false)}
+        startDate={draft.startDate}
+        dueDate={draft.dueDate}
+        onSave={({ startDate, dueDate }) => {
+          update({ startDate, dueDate });
+          save({ startDate, dueDate });
+          toast.success('Đã cập nhật thời hạn công việc');
+        }}
+      />
 
       {confirmDelete && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F172A]/70 backdrop-blur-[2px] animate-in fade-in duration-200 p-4">

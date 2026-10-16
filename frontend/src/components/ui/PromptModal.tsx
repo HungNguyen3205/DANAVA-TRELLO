@@ -81,7 +81,7 @@ export function PromptModal({
 
         {type === 'select' && (
           <select 
-            className="w-full p-3 rounded-md bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm mb-6 disabled:opacity-50"
+            className="w-full p-3 rounded-xl bg-background border border-border/80 focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm mb-6 disabled:opacity-50 text-foreground font-medium shadow-xs outline-none cursor-pointer"
             value={value}
             disabled={isSubmitting}
             onChange={(e) => setValue(e.target.value)}
