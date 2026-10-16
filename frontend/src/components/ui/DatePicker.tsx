@@ -94,10 +94,18 @@ export function DatePicker({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   const currentMonth = viewDate.getMonth();
   const currentYear = viewDate.getFullYear();
 
+  const isPrevMonthDisabled =
+    currentYear < today.getFullYear() ||
+    (currentYear === today.getFullYear() && currentMonth <= today.getMonth());
+
   const handlePrevMonth = () => {
+    if (isPrevMonthDisabled) return;
     setViewDate(new Date(currentYear, currentMonth - 1, 1));
   };
 
@@ -109,7 +117,9 @@ export function DatePicker({
     const yyyy = currentYear;
     const mm = String(currentMonth + 1).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
-    onChange(`${yyyy}-${mm}-${dd}`);
+    const targetDate = `${yyyy}-${mm}-${dd}`;
+    if (targetDate < todayStr) return; // Không cho chọn ngày trong quá khứ
+    onChange(targetDate);
     setIsOpen(false);
   };
 
@@ -155,10 +165,6 @@ export function DatePicker({
     return arr;
   };
 
-  const todayStr = (() => {
-    const t = new Date();
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-  })();
 
   const displayValue = formatDateString(cleanDateValue);
 
@@ -236,8 +242,13 @@ export function DatePicker({
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="p-1.5 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                title="Tháng trước"
+                disabled={isPrevMonthDisabled}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isPrevMonthDisabled
+                    ? 'opacity-25 cursor-not-allowed text-muted-foreground'
+                    : 'hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer'
+                }`}
+                title={isPrevMonthDisabled ? 'Không thể quay lại tháng trước' : 'Tháng trước'}
               >
                 <ChevronLeft size={16} />
               </button>
@@ -272,6 +283,7 @@ export function DatePicker({
               if (!day) return <div key={`empty-${i}`} className="h-8 w-8" />;
 
               const formattedDay = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const isPast = formattedDay < todayStr;
               const isSelected = cleanDateValue === formattedDay;
               const isToday = todayStr === formattedDay;
 
@@ -279,14 +291,18 @@ export function DatePicker({
                 <button
                   key={day}
                   type="button"
+                  disabled={isPast}
                   onClick={() => handleSelectDate(day)}
                   className={`h-8 w-8 mx-auto rounded-xl flex items-center justify-center text-xs transition-all duration-150 ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground font-bold shadow-md shadow-primary/30 scale-105'
-                      : isToday
-                        ? 'border-2 border-primary/60 text-primary font-bold hover:bg-primary/10'
-                        : 'text-foreground hover:bg-accent/80 hover:text-foreground font-medium'
+                    isPast
+                      ? 'opacity-30 cursor-not-allowed text-muted-foreground line-through select-none'
+                      : isSelected
+                        ? 'bg-primary text-primary-foreground font-bold shadow-md shadow-primary/30 scale-105 cursor-pointer'
+                        : isToday
+                          ? 'border-2 border-primary/60 text-primary font-bold hover:bg-primary/10 cursor-pointer'
+                          : 'text-foreground hover:bg-accent/80 hover:text-foreground font-medium cursor-pointer'
                   }`}
+                  title={isPast ? 'Không thể chọn ngày trong quá khứ' : undefined}
                 >
                   {day}
                 </button>

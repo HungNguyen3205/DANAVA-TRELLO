@@ -58,10 +58,18 @@ export function TaskDatesModal({
 
   if (!isOpen) return null;
 
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   const currentMonth = viewDate.getMonth();
   const currentYear = viewDate.getFullYear();
 
+  const isPrevMonthDisabled =
+    currentYear < today.getFullYear() ||
+    (currentYear === today.getFullYear() && currentMonth <= today.getMonth());
+
   const handlePrevMonth = () => {
+    if (isPrevMonthDisabled) return;
     setViewDate(new Date(currentYear, currentMonth - 1, 1));
   };
 
@@ -71,6 +79,7 @@ export function TaskDatesModal({
 
   const handleSelectDay = (day: number) => {
     const formatted = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (formatted < todayStr) return; // Không cho chọn ngày trong quá khứ
     setSelectedDate(formatted);
   };
 
@@ -111,10 +120,6 @@ export function TaskDatesModal({
     return arr;
   };
 
-  const todayStr = (() => {
-    const t = new Date();
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-  })();
 
   return (
     <div
@@ -208,8 +213,13 @@ export function TaskDatesModal({
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
-                title="Tháng trước"
+                disabled={isPrevMonthDisabled}
+                className={`p-1 rounded-md transition-colors ${
+                  isPrevMonthDisabled
+                    ? 'opacity-25 cursor-not-allowed text-muted-foreground'
+                    : 'hover:bg-accent rounded-md transition-colors text-muted-foreground hover:text-foreground cursor-pointer'
+                }`}
+                title={isPrevMonthDisabled ? 'Không thể quay lại tháng trước' : 'Tháng trước'}
               >
                 <ChevronLeft size={15} />
               </button>
@@ -244,6 +254,7 @@ export function TaskDatesModal({
               if (!day) return <div key={`empty-${i}`} className="h-7 w-7" />;
 
               const formattedDay = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const isPast = formattedDay < todayStr;
               const isSelected = selectedDate === formattedDay;
               const isToday = todayStr === formattedDay;
 
@@ -251,14 +262,18 @@ export function TaskDatesModal({
                 <button
                   key={day}
                   type="button"
+                  disabled={isPast}
                   onClick={() => handleSelectDay(day)}
-                  className={`h-7 w-7 mx-auto rounded-lg flex items-center justify-center text-[11px] transition-all relative cursor-pointer ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground font-bold shadow-xs scale-105 z-10'
-                      : isToday
-                        ? 'border border-primary/70 text-primary font-bold hover:bg-primary/10'
-                        : 'text-foreground hover:bg-accent/80 hover:text-foreground font-medium'
+                  className={`h-7 w-7 mx-auto rounded-lg flex items-center justify-center text-[11px] transition-all relative ${
+                    isPast
+                      ? 'opacity-30 cursor-not-allowed text-muted-foreground line-through select-none'
+                      : isSelected
+                        ? 'bg-primary text-primary-foreground font-bold shadow-xs scale-105 z-10 cursor-pointer'
+                        : isToday
+                          ? 'border border-primary/70 text-primary font-bold hover:bg-primary/10 cursor-pointer'
+                          : 'text-foreground hover:bg-accent/80 hover:text-foreground font-medium cursor-pointer'
                   }`}
+                  title={isPast ? 'Không thể chọn ngày trong quá khứ' : undefined}
                 >
                   {day}
                 </button>
