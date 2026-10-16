@@ -41,6 +41,8 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const [isLabelsVisible, setIsLabelsVisible] = useState(false);
   const [isMembersVisible, setIsMembersVisible] = useState(false);
   const [isDatesVisible, setIsDatesVisible] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | number | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
   
   // Label states
   const [labelSearch, setLabelSearch] = useState("");
@@ -140,6 +142,40 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
       toast.success('Đã gửi bình luận');
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Không thể gửi bình luận');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSaveEditComment = async (commentId: string | number) => {
+    if (!editingCommentText.trim()) return;
+    setBusy(true);
+    try {
+      const res = await api.put(`/comments/${commentId}`, { content: editingCommentText });
+      update({
+        comments: draft.comments.map(c => c.id === commentId ? res.data : c)
+      });
+      setEditingCommentId(null);
+      setEditingCommentText("");
+      toast.success('Đã cập nhật bình luận');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Không thể cập nhật bình luận');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string | number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bình luận này?')) return;
+    setBusy(true);
+    try {
+      await api.delete(`/comments/${commentId}`);
+      update({
+        comments: draft.comments.filter(c => c.id !== commentId)
+      });
+      toast.success('Đã xóa bình luận');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Không thể xóa bình luận');
     } finally {
       setBusy(false);
     }
@@ -504,8 +540,12 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 </div>
                 
                 <div className="flex gap-3 mb-8">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
-                    {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0 overflow-hidden">
+                    {currentUser?.avatar ? (
+                      <img src={getAvatarUrl(currentUser.avatar)} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      currentUser?.name?.charAt(0).toUpperCase() || 'U'
+                    )}
                   </div>
                   <div className="flex-1 relative">
                     <textarea 
@@ -516,7 +556,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                       onChange={e => setNewComment(e.target.value)}
                     />
                     <button 
-                      className="absolute right-2 bottom-2 p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors disabled:opacity-50"
+                      className="absolute right-2 bottom-2 p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
                       onClick={handleAddComment}
                       disabled={busy || !newComment.trim()}
                     >
@@ -527,28 +567,88 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
 
                 <div className="space-y-6">
                   {draft.comments.length > 0 ? (
-                    draft.comments.map(c => (
-                      <div key={c.id} className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-muted-foreground text-xs font-bold shrink-0">
-                          U
+                    draft.comments.map(c => {
+                      const isAuthor = currentUser && (String(currentUser.id) === String(c.user_id) || String(currentUser.id) === String(c.user?.id));
+                      const isEditing = editingCommentId === c.id;
+
+                      return (
+                        <div key={c.id} className="flex gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden shadow-xs ring-1 ring-border/50">
+                            {c.user?.avatar ? (
+                              <img src={getAvatarUrl(c.user.avatar)} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              c.user?.name?.charAt(0).toUpperCase() || 'U'
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2 mb-1">
+                              <span className="font-bold text-sm text-foreground">{c.user?.name || 'Người dùng'}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {c.created_at ? new Date(c.created_at).toLocaleString('vi-VN') : 'Vừa xong'}
+                              </span>
+                            </div>
+
+                            {isEditing ? (
+                              <div className="space-y-2 mt-1">
+                                <textarea
+                                  rows={2}
+                                  className="w-full p-2.5 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm"
+                                  value={editingCommentText}
+                                  onChange={e => setEditingCommentText(e.target.value)}
+                                  autoFocus
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveEditComment(c.id)}
+                                    disabled={busy || !editingCommentText.trim()}
+                                    className="px-3 py-1 bg-primary text-white text-xs font-semibold rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer"
+                                  >
+                                    Lưu
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCommentId(null);
+                                      setEditingCommentText("");
+                                    }}
+                                    className="px-3 py-1 bg-accent hover:bg-border text-foreground text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                                  >
+                                    Hủy
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-card border border-border/50 p-3 rounded-lg rounded-tl-none text-sm shadow-sm leading-relaxed text-foreground break-words">
+                                {c.content}
+                              </div>
+                            )}
+
+                            {isAuthor && !isEditing && (
+                              <div className="flex gap-3 mt-1.5 text-xs text-muted-foreground">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingCommentId(c.id);
+                                    setEditingCommentText(c.content);
+                                  }}
+                                  className="hover:text-foreground hover:underline cursor-pointer"
+                                >
+                                  Chỉnh sửa
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteComment(c.id)}
+                                  className="hover:text-rose-500 hover:underline cursor-pointer"
+                                >
+                                  Xóa
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <div className="flex items-baseline gap-2 mb-1">
-                            <span className="font-bold text-sm text-foreground">{c.user?.name || 'Người dùng'}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {c.created_at ? new Date(c.created_at).toLocaleString('vi-VN') : 'Vừa xong'}
-                            </span>
-                          </div>
-                          <div className="bg-card border border-border/50 p-3 rounded-lg rounded-tl-none text-sm shadow-sm">
-                            {c.content}
-                          </div>
-                          <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                            <button className="hover:underline">Chỉnh sửa</button>
-                            <button className="hover:underline">Xóa</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="text-center py-6 text-sm text-muted-foreground border border-dashed border-border/50 rounded-lg bg-card/20">
                       Chưa có bình luận nào

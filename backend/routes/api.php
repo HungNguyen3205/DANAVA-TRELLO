@@ -124,6 +124,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::put('/tasks/{task}', [TaskDetailController::class, 'update']);
     Route::delete('/tasks/{task}', [TaskDetailController::class, 'destroy']);
     Route::post('/tasks/{task}/comments', [TaskDetailController::class, 'addComment']);
+    Route::put('/comments/{comment}', [TaskDetailController::class, 'updateComment']);
+    Route::delete('/comments/{comment}', [TaskDetailController::class, 'deleteComment']);
 
     // Sprints
     Route::post('/boards/{board}/sprints', [SprintController::class, 'store']);

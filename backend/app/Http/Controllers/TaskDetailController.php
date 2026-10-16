@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskComment;
 use Illuminate\Http\Request;
 
 class TaskDetailController extends Controller
@@ -82,6 +83,39 @@ class TaskDetailController extends Controller
         ]);
         
         return response()->json($comment->load('user'), 201);
+    }
+
+    // Cập nhật comment
+    public function updateComment(Request $request, TaskComment $comment)
+    {
+        $this->ensureAccess($request, $comment->task);
+
+        abort_unless(
+            $comment->user_id === $request->user()->id,
+            403,
+            'Bạn chỉ có thể chỉnh sửa bình luận của chính mình.'
+        );
+
+        $request->validate(['content' => 'required|string']);
+        $comment->update(['content' => $request->content]);
+
+        return response()->json($comment->load('user'));
+    }
+
+    // Xóa comment
+    public function deleteComment(Request $request, TaskComment $comment)
+    {
+        $this->ensureAccess($request, $comment->task);
+
+        abort_unless(
+            $comment->user_id === $request->user()->id,
+            403,
+            'Bạn chỉ có thể xóa bình luận của chính mình.'
+        );
+
+        $comment->delete();
+
+        return response()->json(['message' => 'Comment deleted successfully']);
     }
 
     // Xoá (Lưu trữ) thẻ
