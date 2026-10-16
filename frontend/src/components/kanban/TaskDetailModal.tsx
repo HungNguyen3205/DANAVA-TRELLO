@@ -46,6 +46,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
 
   const newCommentRef = useRef<HTMLTextAreaElement | null>(null);
   const editCommentRef = useRef<HTMLTextAreaElement | null>(null);
+  const descRef = useRef<HTMLTextAreaElement | null>(null);
 
   const adjustTextareaHeight = (el: HTMLTextAreaElement | null, maxHeight = 260) => {
     if (!el) return;
@@ -55,12 +56,18 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   };
 
   useEffect(() => {
-    adjustTextareaHeight(newCommentRef.current);
+    adjustTextareaHeight(newCommentRef.current, 260);
   }, [newComment]);
 
   useEffect(() => {
-    adjustTextareaHeight(editCommentRef.current);
+    adjustTextareaHeight(editCommentRef.current, 260);
   }, [editingCommentText, editingCommentId]);
+
+  useEffect(() => {
+    if (isEditingDesc) {
+      adjustTextareaHeight(descRef.current, 500);
+    }
+  }, [draft.description, isEditingDesc]);
   
   // Label states
   const [labelSearch, setLabelSearch] = useState("");
@@ -311,11 +318,13 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 {isEditingDesc ? (
                   <div className="space-y-3">
                     <textarea 
-                      rows={5}
+                      ref={descRef}
+                      rows={3}
                       placeholder="Thêm mô tả chi tiết hơn..."
-                      className="w-full p-3 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-y"
+                      className="w-full p-3 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[90px] max-h-[500px] leading-relaxed transition-[height] duration-75"
                       value={draft.description} 
                       onChange={e => update({ description: e.target.value })}
+                      onInput={e => adjustTextareaHeight(e.currentTarget, 500)}
                       autoFocus
                     />
                     <div className="flex gap-2">

@@ -96,7 +96,13 @@ export function TaskEditor({
               maxLength={5000}
               value={draft.description}
               onChange={(e) => update({ description: e.target.value })}
+              onInput={(e) => {
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = `${el.scrollHeight}px`;
+              }}
               placeholder="Mục tiêu, yêu cầu và kết quả cần đạt"
+              className="resize-none"
             />
           </label>
           <div className="form-grid">
