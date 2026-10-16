@@ -78,10 +78,11 @@ class BoardController extends Controller
             'updated_at' => now(),
         ]);
 
-        // Tự động tạo sẵn 3 cột mặc định để người dùng làm việc ngay
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Cần làm', 'order' => 1000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'order' => 2000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'order' => 3000]);
+        // Tự động tạo sẵn 4 cột mặc định có màu theo quy chuẩn làm việc
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'color' => 'violet', 'order' => 1000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'color' => 'blue', 'order' => 2000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chờ duyệt', 'color' => 'orange', 'order' => 3000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'color' => 'green', 'order' => 4000]);
 
         return response()->json($board, 201);
     }
@@ -149,10 +150,11 @@ class BoardController extends Controller
             'updated_at' => now(),
         ]);
 
-        // Tạo sẵn các cột mặc định
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Cần làm', 'order' => 1000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'order' => 2000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'order' => 3000]);
+        // Tạo sẵn 4 cột mặc định có màu theo quy chuẩn làm việc
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'color' => 'violet', 'order' => 1000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'color' => 'blue', 'order' => 2000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chờ duyệt', 'color' => 'orange', 'order' => 3000]);
+        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'color' => 'green', 'order' => 4000]);
 
         return response()->json($board, 201);
     }

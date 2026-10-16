@@ -16,6 +16,14 @@ import { BoardMembersHeader } from '../components/layout/BoardMembersHeader';
 import { CustomSelect } from '../components/ui/CustomSelect';
 import { StatusSelect } from '../components/ui/StatusSelect';
 
+const THEME_HEX_MAP: Record<string, string> = {
+  violet: '#7C5CFC',
+  blue: '#4F7DF3',
+  orange: '#E6A92D',
+  green: '#2FAF83',
+  gray: '#94A3B8',
+};
+
 // Tab Component for Header
 function BoardTabs({ basePath, activeTab }: { basePath: string, activeTab: 'kanban' | 'list' | 'calendar' }) {
   return (
@@ -120,7 +128,7 @@ export function ListView() {
       return board.columns.map(col => ({
         id: col.id,
         title: col.title,
-        color: col.color || '#94A3B8',
+        color: (col.color && THEME_HEX_MAP[col.color]) || col.color || '#94A3B8',
         tasks: visibleTasks.filter(t => t.columnId === col.id)
       }));
     }

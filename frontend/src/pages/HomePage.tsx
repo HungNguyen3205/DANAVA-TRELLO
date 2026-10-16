@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  CheckCircle2, Circle, Clock, AlertTriangle, PlayCircle, Plus, 
+  CheckCircle2, Circle, Clock, AlertTriangle, Plus, 
   Search, Briefcase, Calendar, ChevronRight, Activity, Users, Settings, 
   ShieldAlert, User, X
 } from 'lucide-react';
@@ -18,7 +18,6 @@ export function HomePage() {
   
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [focusTab, setFocusTab] = useState<'todo' | 'in_progress' | 'completed'>('todo');
 
   // Modal State
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -40,18 +39,6 @@ export function HomePage() {
       console.error(e);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const toggleTaskCompletion = async (taskId: number, currentStatus: string) => {
-    try {
-      const isCompleted = currentStatus === 'completed';
-      // In a real scenario, this would call an API to toggle completion status.
-      // For now we'll just optimistically update the local state.
-      await api.put(`/tasks/${taskId}`, { is_completed: !isCompleted });
-      await fetchDashboardData();
-    } catch (e) {
-      console.error(e);
     }
   };
 
@@ -123,9 +110,6 @@ export function HomePage() {
       </div>
     );
   }
-
-  const focusTasks = data?.focus_tasks || [];
-  const filteredFocusTasks = focusTasks.filter((t: any) => t.status === focusTab).slice(0, 7);
 
   const attentionItems = data?.attention_items || [];
   const todaySchedule = data?.today_schedule || [];
@@ -201,82 +185,6 @@ export function HomePage() {
           {/* Main Left Column (8/12) */}
           <div className="xl:col-span-8 space-y-8">
             
-            {/* Tập trung hôm nay */}
-            <section className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              <div className="p-5 md:p-6 border-b border-border/50">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <PlayCircle className="text-primary" size={22} />
-                  Tập trung hôm nay
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">Những công việc quan trọng nhất bạn cần xử lý.</p>
-                
-                <div className="flex items-center gap-6 mt-6 border-b border-border">
-                  <button onClick={() => setFocusTab('todo')} className={`pb-3 text-sm font-medium transition-colors relative ${focusTab === 'todo' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                    Cần làm
-                    {focusTab === 'todo' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>}
-                  </button>
-                  <button onClick={() => setFocusTab('in_progress')} className={`pb-3 text-sm font-medium transition-colors relative ${focusTab === 'in_progress' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                    Đang thực hiện {data?.summary?.in_progress > 0 && <span className="ml-1.5 bg-orange-500/20 text-orange-600 px-1.5 py-0.5 rounded-full text-xs">{data.summary.in_progress}</span>}
-                    {focusTab === 'in_progress' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>}
-                  </button>
-                  <button onClick={() => setFocusTab('completed')} className={`pb-3 text-sm font-medium transition-colors relative ${focusTab === 'completed' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-                    Đã hoàn thành
-                    {focusTab === 'completed' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>}
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-2 md:p-4 bg-background/30">
-                {filteredFocusTasks.length === 0 ? (
-                  <div className="p-8 text-center flex flex-col items-center">
-                    <CheckCircle2 size={48} className="text-muted-foreground/30 mb-4" />
-                    <h3 className="font-semibold text-foreground">Không có công việc nào</h3>
-                    <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                      Bạn chưa có công việc nào trong danh sách này. Hãy tạo công việc đầu tiên hoặc mở một Workspace để bắt đầu.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredFocusTasks.map((task: any) => (
-                      <div key={task.id} className="group flex items-center justify-between p-3 md:px-4 bg-card hover:bg-accent/50 rounded-xl border border-transparent hover:border-border transition-all cursor-pointer">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          <button onClick={(e) => { e.stopPropagation(); toggleTaskCompletion(task.id, task.status); }} className="text-muted-foreground hover:text-primary transition-colors shrink-0">
-                            {task.status === 'completed' ? <CheckCircle2 size={20} className="text-green-500" /> : <Circle size={20} />}
-                          </button>
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className={`font-medium truncate ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                              {task.title}
-                            </span>
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                              <span className="truncate flex items-center gap-1"><Briefcase size={12}/> {task.workspace_name}</span>
-                              <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border"></span>
-                              <span className="truncate flex items-center gap-1 text-indigo-500/80"><LayoutDashboard size={12}/> {task.board_name}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 shrink-0 pl-4">
-                          {task.due_date && (
-                            <div className="hidden md:flex items-center gap-1.5 text-xs bg-muted px-2 py-1 rounded-md text-muted-foreground">
-                              <Clock size={12} />
-                              {format(new Date(task.due_date.replace(' ', 'T')), 'dd/MM')}
-                            </div>
-                          )}
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-2 ring-background">
-                            {task.assignee?.name ? task.assignee.name.charAt(0).toUpperCase() : 'U'}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {focusTasks.length > 7 && (
-                  <button onClick={() => navigate('/my-tasks')} className="w-full mt-4 py-2 text-sm font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center justify-center gap-1">
-                    Xem tất cả <ChevronRight size={16} />
-                  </button>
-                )}
-              </div>
-            </section>
-
             {/* Tiếp tục công việc */}
             <section>
               <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -406,7 +314,14 @@ export function HomePage() {
                 ) : (
                   <div className="space-y-1">
                     {attentionItems.map((item: any, idx: number) => (
-                      <div key={idx} className="flex gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors">
+                      <div 
+                        key={idx} 
+                        onClick={() => {
+                          if (item.board_id) navigate(`/b/${item.board_id}?task=${item.id}`);
+                          else navigate('/my-tasks');
+                        }}
+                        className="flex gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                      >
                         <div className={`mt-0.5 shrink-0 ${item.type === 'overdue' ? 'text-red-500' : item.type === 'urgent' ? 'text-orange-500' : 'text-blue-500'}`}>
                           <AlertTriangle size={16} />
                         </div>
@@ -436,13 +351,20 @@ export function HomePage() {
               ) : (
                 <div className="relative border-l-2 border-primary/20 ml-3 pl-4 space-y-6 pb-2 mt-6">
                   {todaySchedule.map((task: any, idx: number) => (
-                    <div key={idx} className="relative">
-                      <div className="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-primary ring-4 ring-card"></div>
+                    <div 
+                      key={idx} 
+                      onClick={() => {
+                        if (task.board_id) navigate(`/b/${task.board_id}?task=${task.id}`);
+                        else navigate('/my-tasks');
+                      }}
+                      className="relative cursor-pointer group"
+                    >
+                      <div className="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-primary ring-4 ring-card group-hover:scale-125 transition-transform"></div>
                       <div className="text-xs font-bold text-primary mb-1">
                         {task.due_date ? format(new Date(task.due_date.replace(' ', 'T')), 'HH:mm') : ''}
                       </div>
-                      <div className="bg-accent/50 p-3 rounded-xl">
-                        <p className="text-sm font-medium">{task.title}</p>
+                      <div className="bg-accent/50 group-hover:bg-accent p-3 rounded-xl transition-colors">
+                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{task.title}</p>
                         <p className="text-xs text-muted-foreground mt-1">{task.board_name}</p>
                       </div>
                     </div>

@@ -42,10 +42,10 @@ class DatabaseSeeder extends Seeder
         // Delete existing columns if any to avoid duplicates
         $board->columns()->delete();
 
-        $col1 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'order' => 1000]);
-        $col2 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'order' => 2000]);
-        $col3 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chờ duyệt', 'order' => 3000]);
-        $col4 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'order' => 4000]);
+        $col1 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'color' => 'violet', 'order' => 1000]);
+        $col2 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'color' => 'blue', 'order' => 2000]);
+        $col3 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chờ duyệt', 'color' => 'orange', 'order' => 3000]);
+        $col4 = KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'color' => 'green', 'order' => 4000]);
 
         Task::create(['column_id' => $col1->id, 'title' => 'Tổng hợp 100 địa điểm tại Đà Nẵng', 'priority' => 'Cao', 'order' => 1000, 'assignee_id' => $user->id]);
         Task::create(['column_id' => $col1->id, 'title' => 'Chuẩn bị nội dung DANAVA Studio', 'priority' => 'Bình thường', 'order' => 2000]);
@@ -63,10 +63,10 @@ class DatabaseSeeder extends Seeder
 
         // Delete existing columns if any for board2
         $board2->columns()->delete();
-        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Chưa bắt đầu', 'order' => 1000]);
-        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Đang thực hiện', 'order' => 2000]);
-        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Chờ duyệt', 'order' => 3000]);
-        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Hoàn thành', 'order' => 4000]);
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Chưa bắt đầu', 'color' => 'violet', 'order' => 1000]);
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Đang thực hiện', 'color' => 'blue', 'order' => 2000]);
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Chờ duyệt', 'color' => 'orange', 'order' => 3000]);
+        KanbanColumn::create(['board_id' => $board2->id, 'title' => 'Hoàn thành', 'color' => 'green', 'order' => 4000]);
 
         // Tự động gọi UsersSeeder để đồng bộ đầy đủ các tài khoản, vai trò và phân quyền
         $this->call(UsersSeeder::class);
