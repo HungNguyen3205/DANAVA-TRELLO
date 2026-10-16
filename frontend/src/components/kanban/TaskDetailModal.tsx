@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Trash2, Check, AlignLeft, CheckSquare, 
   MessageSquare, UserPlus, Tag, Paperclip, 
@@ -43,6 +43,24 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const [isDatesVisible, setIsDatesVisible] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
+
+  const newCommentRef = useRef<HTMLTextAreaElement | null>(null);
+  const editCommentRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const adjustTextareaHeight = (el: HTMLTextAreaElement | null, maxHeight = 260) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  };
+
+  useEffect(() => {
+    adjustTextareaHeight(newCommentRef.current);
+  }, [newComment]);
+
+  useEffect(() => {
+    adjustTextareaHeight(editCommentRef.current);
+  }, [editingCommentText, editingCommentId]);
   
   // Label states
   const [labelSearch, setLabelSearch] = useState("");
@@ -549,11 +567,13 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                   </div>
                   <div className="flex-1 relative">
                     <textarea 
-                      rows={2}
+                      ref={newCommentRef}
+                      rows={1}
                       placeholder="Viết bình luận... (Enter để gửi, Shift + Enter để xuống dòng)"
-                      className="w-full p-3 pr-10 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[44px] max-h-36 overflow-y-auto"
+                      className="w-full p-3 pr-10 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[44px] max-h-[260px] leading-relaxed transition-[height] duration-75"
                       value={newComment} 
                       onChange={e => setNewComment(e.target.value)}
+                      onInput={e => adjustTextareaHeight(e.currentTarget)}
                       onKeyDown={e => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           if ((e.nativeEvent as any).isComposing) return;
@@ -601,10 +621,12 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                             {isEditing ? (
                               <div className="space-y-2 mt-1">
                                 <textarea
-                                  rows={2}
-                                  className="w-full p-2.5 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm max-h-36 overflow-y-auto"
+                                  ref={editCommentRef}
+                                  rows={1}
+                                  className="w-full p-2.5 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[42px] max-h-[260px] leading-relaxed transition-[height] duration-75"
                                   value={editingCommentText}
                                   onChange={e => setEditingCommentText(e.target.value)}
+                                  onInput={e => adjustTextareaHeight(e.currentTarget)}
                                   onKeyDown={e => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                       if ((e.nativeEvent as any).isComposing) return;
