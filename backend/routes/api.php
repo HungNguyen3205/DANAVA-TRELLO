@@ -75,6 +75,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show']);
     Route::get('/workspaces/{workspace}/dashboard', [WorkspaceController::class, 'dashboard']);
     Route::get('/workspaces/{workspace}/members', [WorkspaceController::class, 'members']);
+    Route::get('/analytics/overview', [WorkspaceController::class, 'globalDashboard']);
 
     // Direct Boards (Không phụ thuộc vào Không gian làm việc)
     Route::get('/me/boards', [BoardController::class, 'myBoards']);

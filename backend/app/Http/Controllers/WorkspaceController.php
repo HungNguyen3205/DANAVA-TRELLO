@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Workspace;
+use App\Models\Board;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -339,6 +340,309 @@ class WorkspaceController extends Controller
                 'workload' => $workload,
                 'upcoming_deadlines' => $upcomingDeadlines,
                 'recent_activity' => $recentActivity,
+                'sprint_summary' => [
+                    'pending' => $sprintSummary->get('pending', 0),
+                    'active' => $sprintSummary->get('active', 0),
+                    'completed' => $sprintSummary->get('completed', 0),
+                ],
+            ];
+        });
+
+        return response()->json($dashboardData);
+    }
+
+    public function globalDashboard(Request $request)
+    {
+        $range = max(7, min((int) $request->query('days', 14), 90));
+        $today = Carbon::today();
+        $rangeStart = $today->copy()->subDays($range - 1);
+
+        $user = $request->user();
+        $userId = $user->id;
+        $isSystemAdmin = in_array($user->system_role ?? '', ['system_admin', 'admin'], true);
+
+        // Get all boards accessible to user
+        $boardsQuery = Board::query();
+        if (!$isSystemAdmin) {
+            $boardsQuery->whereHas('members', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            });
+        }
+        $boards = $boardsQuery->get();
+        $boardIds = $boards->pluck('id')->toArray();
+
+        $cacheKey = "global_dashboard_{$userId}_{$range}_" . ($isSystemAdmin ? 'admin' : 'member');
+
+        $dashboardData = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function() use ($boards, $boardIds, $userId, $range, $rangeStart, $today) {
+            if (empty($boardIds)) {
+                return [
+                    'range_days' => $range,
+                    'summary' => [
+                        'total_boards' => 0,
+                        'total_members' => 0,
+                        'total_tasks' => 0,
+                        'completed_tasks' => 0,
+                        'active_tasks' => 0,
+                        'overdue_tasks' => 0,
+                        'due_soon_tasks' => 0,
+                        'completion_rate' => 0,
+                    ],
+                    'activity_trend' => [],
+                    'status_distribution' => [],
+                    'priority_distribution' => [],
+                    'board_progress' => [],
+                    'workload' => [],
+                    'upcoming_deadlines' => [],
+                    'recent_activity' => [],
+                    'sprint_summary' => ['pending' => 0, 'active' => 0, 'completed' => 0],
+                ];
+            }
+
+            $tasks = DB::table('tasks')
+                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
+                ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
+                ->leftJoin('users as assignees', 'tasks.assignee_id', '=', 'assignees.id')
+                ->whereIn('boards.id', $boardIds)
+                ->whereNull('tasks.deleted_at')
+                ->select([
+                    'tasks.id',
+                    'tasks.title',
+                    'tasks.priority',
+                    'tasks.due_date',
+                    'tasks.created_at',
+                    'tasks.updated_at',
+                    'tasks.completed_at',
+                    'tasks.assignee_id',
+                    'assignees.name as assignee_name',
+                    'assignees.avatar as assignee_avatar',
+                    'boards.id as board_id',
+                    'boards.public_id as board_public_id',
+                    'boards.name as board_name',
+                    'boards.color as board_color',
+                    'kanban_columns.title as column_name',
+                    'kanban_columns.color as column_color',
+                ])
+                ->get();
+
+            $isCompleted = static function ($task): bool {
+                $column = mb_strtolower(trim((string) $task->column_name));
+                return !empty($task->completed_at)
+                    || in_array($column, ['done', 'hoàn thành', 'completed', 'đã xong'], true);
+            };
+
+            $totalTasks = $tasks->count();
+            $completedTasks = $tasks->filter($isCompleted)->count();
+            $overdueTasks = $tasks->filter(function ($task) use ($today, $isCompleted) {
+                return $task->due_date
+                    && Carbon::parse($task->due_date)->lt($today)
+                    && !$isCompleted($task);
+            })->count();
+            $dueSoonTasks = $tasks->filter(function ($task) use ($today, $isCompleted) {
+                if (!$task->due_date || $isCompleted($task)) {
+                    return false;
+                }
+                $due = Carbon::parse($task->due_date);
+                return $due->gte($today) && $due->lte($today->copy()->addDays(7));
+            })->count();
+
+            // Status distribution
+            $statusPalette = ['#7C5CFC', '#38BDF8', '#F59E0B', '#10B981', '#EC4899', '#6366F1'];
+            $statusDistribution = $tasks
+                ->groupBy('column_name')
+                ->map(function ($items, $name) use ($statusPalette) {
+                    static $index = 0;
+                    $color = $items->first()->column_color ?: $statusPalette[$index % count($statusPalette)];
+                    $index++;
+                    return ['name' => $name, 'value' => $items->count(), 'color' => $color];
+                })
+                ->values();
+
+            // Priority distribution
+            $priorityPalette = [
+                'Khẩn cấp' => '#EF4444',
+                'Cao' => '#F97316',
+                'Bình thường' => '#3B82F6',
+                'Thấp' => '#94A3B8',
+            ];
+            $priorityDistribution = $tasks
+                ->groupBy(fn ($task) => $task->priority ?: 'Bình thường')
+                ->map(fn ($items, $name) => [
+                    'name' => $name,
+                    'value' => $items->count(),
+                    'color' => $priorityPalette[$name] ?? '#8B5CF6',
+                ])
+                ->values();
+
+            // Activity trend (created vs completed)
+            $activityTrend = collect(range(0, $range - 1))->map(function ($offset) use ($rangeStart, $tasks) {
+                $date = $rangeStart->copy()->addDays($offset);
+                $dateKey = $date->toDateString();
+
+                return [
+                    'date' => $dateKey,
+                    'label' => $date->format('d/m'),
+                    'created' => $tasks->filter(fn ($task) => Carbon::parse($task->created_at)->toDateString() === $dateKey)->count(),
+                    'completed' => $tasks->filter(fn ($task) => $task->completed_at && Carbon::parse($task->completed_at)->toDateString() === $dateKey)->count(),
+                ];
+            });
+
+            // Board progress
+            $boardProgress = $boards->map(function ($board) use ($tasks, $isCompleted) {
+                $boardTasks = $tasks->where('board_id', $board->id);
+                $total = $boardTasks->count();
+                $completed = $boardTasks->filter($isCompleted)->count();
+
+                return [
+                    'id' => $board->id,
+                    'public_id' => $board->public_id,
+                    'name' => $board->name,
+                    'total' => $total,
+                    'completed' => $completed,
+                    'progress' => $total ? round(($completed / $total) * 100) : 0,
+                    'color' => $board->color,
+                ];
+            })->sortByDesc('total')->values();
+
+            // Workload
+            $workload = $tasks
+                ->reject($isCompleted)
+                ->groupBy(fn ($task) => $task->assignee_name ?: 'Chưa phân công')
+                ->map(fn ($items, $name) => [
+                    'name' => $name,
+                    'tasks' => $items->count(),
+                    'overdue' => $items->filter(fn ($task) => $task->due_date && Carbon::parse($task->due_date)->lt($today))->count(),
+                ])
+                ->sortByDesc('tasks')
+                ->take(8)
+                ->values();
+
+            // Upcoming deadlines
+            $upcomingDeadlines = $tasks
+                ->filter(function ($task) use ($today, $isCompleted) {
+                    return $task->due_date
+                        && !$isCompleted($task)
+                        && Carbon::parse($task->due_date)->gte($today);
+                })
+                ->sortBy('due_date')
+                ->take(8)
+                ->map(fn ($task) => [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'board_id' => $task->board_id,
+                    'board' => $task->board_name,
+                    'board_public_id' => $task->board_public_id,
+                    'assignee' => $task->assignee_name ?: 'Chưa phân công',
+                    'assignee_avatar' => $task->assignee_avatar,
+                    'priority' => $task->priority,
+                    'due_date' => $task->due_date,
+                    'days_left' => $today->diffInDays(Carbon::parse($task->due_date), false),
+                ])
+                ->values();
+
+            // Total unique members
+            $totalMembers = DB::table('board_members')
+                ->whereIn('board_id', $boardIds)
+                ->distinct('user_id')
+                ->count('user_id');
+
+            // Recent activity
+            $activities = collect();
+            $logs = DB::table('activity_logs')
+                ->join('tasks', 'activity_logs.task_id', '=', 'tasks.id')
+                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
+                ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
+                ->leftJoin('users', 'activity_logs.user_id', '=', 'users.id')
+                ->whereIn('boards.id', $boardIds)
+                ->orderByDesc('activity_logs.created_at')
+                ->limit(8)
+                ->get([
+                    'activity_logs.id',
+                    'activity_logs.action',
+                    'activity_logs.created_at',
+                    'tasks.id as task_id',
+                    'tasks.title as task_title',
+                    'boards.id as board_id',
+                    'boards.public_id as board_public_id',
+                    'boards.name as board_name',
+                    'users.name as user_name',
+                    'users.avatar as user_avatar',
+                ]);
+
+            foreach ($logs as $log) {
+                $activities->push($log);
+            }
+
+            // Fallback to comments if few logs
+            if ($activities->count() < 6) {
+                $comments = DB::table('task_comments')
+                    ->join('tasks', 'task_comments.task_id', '=', 'tasks.id')
+                    ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
+                    ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
+                    ->leftJoin('users', 'task_comments.user_id', '=', 'users.id')
+                    ->whereIn('boards.id', $boardIds)
+                    ->orderByDesc('task_comments.created_at')
+                    ->limit(6)
+                    ->get([
+                        'task_comments.id',
+                        DB::raw('"commented" as action'),
+                        'task_comments.created_at',
+                        'tasks.id as task_id',
+                        'tasks.title as task_title',
+                        'boards.id as board_id',
+                        'boards.public_id as board_public_id',
+                        'boards.name as board_name',
+                        'users.name as user_name',
+                        'users.avatar as user_avatar',
+                    ]);
+                foreach ($comments as $c) {
+                    $activities->push($c);
+                }
+            }
+
+            // Fallback to latest tasks if still few
+            if ($activities->count() < 6) {
+                $recentTasks = $tasks->sortByDesc('updated_at')->take(6);
+                foreach ($recentTasks as $rt) {
+                    $activities->push((object)[
+                        'id' => 'task-' . $rt->id,
+                        'action' => $isCompleted($rt) ? 'completed' : 'updated',
+                        'created_at' => $rt->updated_at ?: $rt->created_at,
+                        'task_id' => $rt->id,
+                        'task_title' => $rt->title,
+                        'board_id' => $rt->board_id,
+                        'board_public_id' => $rt->board_public_id,
+                        'board_name' => $rt->board_name,
+                        'user_name' => $rt->assignee_name ?: 'Hệ thống',
+                        'user_avatar' => $rt->assignee_avatar,
+                    ]);
+                }
+            }
+
+            $sprintSummary = DB::table('board_sprints')
+                ->whereIn('board_id', $boardIds)
+                ->select('status')
+                ->get()
+                ->countBy('status');
+
+            return [
+                'range_days' => $range,
+                'summary' => [
+                    'total_boards' => count($boardIds),
+                    'total_members' => max(1, $totalMembers),
+                    'total_tasks' => $totalTasks,
+                    'completed_tasks' => $completedTasks,
+                    'active_tasks' => max(0, $totalTasks - $completedTasks),
+                    'overdue_tasks' => $overdueTasks,
+                    'due_soon_tasks' => $dueSoonTasks,
+                    'completion_rate' => $totalTasks ? round(($completedTasks / $totalTasks) * 100) : 0,
+                ],
+                'activity_trend' => $activityTrend,
+                'status_distribution' => $statusDistribution,
+                'priority_distribution' => $priorityDistribution,
+                'board_progress' => $boardProgress,
+                'workload' => $workload,
+                'upcoming_deadlines' => $upcomingDeadlines,
+                'recent_activity' => $activities->take(8)->values(),
                 'sprint_summary' => [
                     'pending' => $sprintSummary->get('pending', 0),
                     'active' => $sprintSummary->get('active', 0),
