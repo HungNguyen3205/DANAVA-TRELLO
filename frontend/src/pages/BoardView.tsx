@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
@@ -20,6 +20,7 @@ export function BoardView() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const openedTaskIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (boardId) {
@@ -28,19 +29,24 @@ export function BoardView() {
   }, [boardId, fetchBoard]);
 
   useEffect(() => {
-    if (board && !loading) {
-      const taskId = searchParams.get('task');
-      if (taskId) {
-        const t = board.tasks.find((t: any) => t.id.toString() === taskId);
-        if (t) {
-          setActiveTask(t);
-          // Remove param to not reopen on refresh if intended
-          // searchParams.delete('task');
-          // setSearchParams(searchParams, { replace: true });
-        }
-      }
+    const taskId = searchParams.get('task');
+    if (!taskId) {
+      openedTaskIdRef.current = null;
+      return;
     }
-  }, [board, loading, searchParams]);
+
+    if (board && !loading && openedTaskIdRef.current !== taskId) {
+      openedTaskIdRef.current = taskId;
+      const t = board.tasks.find((taskItem: any) => taskItem.id.toString() === taskId);
+      if (t) {
+        setActiveTask(t);
+      }
+      // Remove query param from URL so closing the modal or refetching board won't reopen it
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('task');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [board, loading, searchParams, setSearchParams]);
 
   const handleOpen = (t: Task) => setActiveTask(t);
   
@@ -295,6 +301,11 @@ export function BoardView() {
           board={board}
           onClose={() => {
             setActiveTask(null);
+            if (searchParams.get('task')) {
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('task');
+              setSearchParams(newParams, { replace: true });
+            }
             fetchBoard(boardId || '1', true);
           }} 
         />
