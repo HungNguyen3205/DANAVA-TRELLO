@@ -1,0 +1,1 @@
+import{p as e}from"./index-JnckyqmD.js";function t(t){return+e(t)<Date.now()}export{t};

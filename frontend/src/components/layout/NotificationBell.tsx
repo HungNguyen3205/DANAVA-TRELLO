@@ -25,8 +25,16 @@ export const NotificationBell = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000); // Poll every 1 min
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    
+    // Auto refresh when user focuses or returns to the window
+    const handleFocus = () => fetchNotifications();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -72,7 +80,10 @@ export const NotificationBell = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen) fetchNotifications();
+          setIsOpen(!isOpen);
+        }}
         className="p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-accent relative transition-colors mr-1"
       >
         <Bell size={18} />
