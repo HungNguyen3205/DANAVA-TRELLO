@@ -144,8 +144,12 @@ class PersonalDashboardController extends Controller
         $todaySchedule = $data['todaySchedule'];
         $focusTasks = $data['focusTasks'];
 
-        // Recent Workspaces
-        $recentWorkspaces = clone $user->workspaces()
+        // Recent Workspaces: chỉ lấy workspace người dùng sở hữu HOẶC workspace chung của công ty (loại trừ workspace cá nhân của người khác)
+        $recentWorkspaces = $user->workspaces()
+            ->where(function ($q) use ($user) {
+                $q->where('workspaces.owner_id', $user->id)
+                  ->orWhere('workspaces.name', 'not like', 'Không gian của %');
+            })
             ->withCount(['boards', 'members'])
             ->limit(5)
             ->get();
@@ -158,7 +162,18 @@ class PersonalDashboardController extends Controller
             ->limit(8)
             ->get();
 
-        $starredBoards = clone \DB::table('boards')
+        // Nếu người dùng chưa tương tác riêng bảng nào nhưng thuộc không gian làm việc chung, hiển thị bảng trong không gian đó
+        if ($recentBoards->isEmpty() && $recentWorkspaces->isNotEmpty()) {
+            $wsIds = $recentWorkspaces->pluck('id');
+            $recentBoards = \DB::table('boards')
+                ->whereIn('workspace_id', $wsIds)
+                ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
+                ->orderBy('updated_at', 'desc')
+                ->limit(8)
+                ->get();
+        }
+
+        $starredBoards = \DB::table('boards')
             ->join('board_members', 'boards.id', '=', 'board_members.board_id')
             ->where('board_members.user_id', $user->id)
             ->where('board_members.is_starred', true)

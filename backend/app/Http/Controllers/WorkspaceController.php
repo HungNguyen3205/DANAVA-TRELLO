@@ -21,8 +21,15 @@ class WorkspaceController extends Controller
 
     public function index(Request $request)
     {
-        // Get all workspaces the user is a member of
-        $workspaces = $request->user()->workspaces()->with('boards')->get();
+        $user = $request->user();
+        // Get all workspaces the user is a member of (excluding other users' personal workspaces)
+        $workspaces = $user->workspaces()
+            ->where(function ($q) use ($user) {
+                $q->where('workspaces.owner_id', $user->id)
+                  ->orWhere('workspaces.name', 'not like', 'Không gian của %');
+            })
+            ->with('boards')
+            ->get();
         return response()->json($workspaces);
     }
 

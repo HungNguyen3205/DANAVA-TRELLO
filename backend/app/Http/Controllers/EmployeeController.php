@@ -83,9 +83,20 @@ class EmployeeController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                // Auto-join boards in this workspace
+                $boardIds = DB::table('boards')->where('workspace_id', $request->workspace_id)->pluck('id');
+                foreach ($boardIds as $bId) {
+                    DB::table('board_members')->updateOrInsert(
+                        ['board_id' => $bId, 'user_id' => $user->id],
+                        ['role' => 'member', 'is_starred' => false, 'created_at' => now(), 'updated_at' => now()]
+                    );
+                }
             } else {
-                // Auto-join all existing company workspaces as member so the employee can collaborate immediately
-                $allWs = DB::table('workspaces')->pluck('id');
+                // Auto-join all existing company workspaces (NOT other users' personal spaces)
+                $allWs = DB::table('workspaces')
+                    ->where('name', 'not like', 'Không gian của %')
+                    ->pluck('id');
                 foreach ($allWs as $wsId) {
                     DB::table('workspace_members')->insert([
                         'workspace_id' => $wsId,
@@ -94,6 +105,15 @@ class EmployeeController extends Controller
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
+
+                    // Auto-join boards in company workspaces
+                    $boardIds = DB::table('boards')->where('workspace_id', $wsId)->pluck('id');
+                    foreach ($boardIds as $bId) {
+                        DB::table('board_members')->updateOrInsert(
+                            ['board_id' => $bId, 'user_id' => $user->id],
+                            ['role' => 'member', 'is_starred' => false, 'created_at' => now(), 'updated_at' => now()]
+                        );
+                    }
                 }
             }
 

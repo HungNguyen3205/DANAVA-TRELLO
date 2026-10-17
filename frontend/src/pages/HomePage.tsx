@@ -136,10 +136,10 @@ export function HomePage() {
   const recentBoards = data?.recent_boards || [];
   const recentActivities = data?.recent_activities || [];
 
-  const continueItems = [
-    ...recentBoards.map((b: any) => ({ type: 'board', ...b })),
-    ...recentWorkspaces.map((w: any) => ({ type: 'workspace', ...w }))
-  ].slice(0, 4);
+  // Ưu tiên hiển thị Bảng công việc trong mục "Tiếp tục công việc". Nếu chưa có bảng nào mới fallback sang Không gian
+  const continueItems = (recentBoards && recentBoards.length > 0)
+    ? recentBoards.map((b: any) => ({ type: 'board', ...b })).slice(0, 4)
+    : recentWorkspaces.map((w: any) => ({ type: 'workspace', ...w })).slice(0, 4);
 
   return (
     <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar">
@@ -248,7 +248,14 @@ export function HomePage() {
                       className="group bg-card hover:bg-accent/40 border border-border hover:border-primary/40 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden"
                     >
                       {/* Top accent line */}
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                      <div 
+                        className="absolute top-0 left-0 right-0 h-1 transition-opacity opacity-75 group-hover:opacity-100"
+                        style={{
+                          background: item.color 
+                            ? (item.color.startsWith('#') ? item.color : `#${item.color}`) 
+                            : 'linear-gradient(to right, var(--primary), #6366f1)'
+                        }}
+                      ></div>
                       
                       <div className="flex items-center justify-between z-10">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider ${
@@ -267,7 +274,7 @@ export function HomePage() {
                           {item.name}
                         </h3>
                         <p className="text-[11px] text-muted-foreground mt-1 truncate">
-                          {item.type === 'board' ? 'Bấm để mở bảng' : 'Bấm để vào không gian'}
+                          {item.type === 'board' ? 'Bấm để mở bảng công việc' : 'Bấm để vào không gian'}
                         </p>
                       </div>
                     </div>

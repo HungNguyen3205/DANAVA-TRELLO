@@ -1,1 +1,0 @@
-import{p as e}from"./index-lwi5gVX2.js";function t(t){return+e(t)<Date.now()}export{t};

@@ -70,6 +70,38 @@ try {
     echo " - Số lượt phân quyền bảng (Board Members): $boardMembersCount\n";
     echo " - Số thẻ công việc (Tasks): $tasksCount\n";
 
+    // Tự động dọn dẹp quan hệ phân quyền:
+    // 1. Thành viên không phải owner không được nằm trong Không gian cá nhân của người khác ("Không gian của ...")
+    if (Schema::hasTable('workspaces') && Schema::hasTable('workspace_members')) {
+        $personalWorkspaces = DB::table('workspaces')->where('name', 'like', 'Không gian của %')->get();
+        foreach ($personalWorkspaces as $pWs) {
+            $deleted = DB::table('workspace_members')
+                ->where('workspace_id', $pWs->id)
+                ->where('user_id', '!=', $pWs->owner_id)
+                ->delete();
+            if ($deleted > 0) {
+                echo " 🧹 Đã gỡ $deleted thành viên khỏi không gian cá nhân của người khác (ID: {$pWs->id})\n";
+            }
+        }
+
+        // 2. Tự động cấp quyền thành viên bảng công việc cho tất cả nhân viên trong Không gian chung công ty
+        if (Schema::hasTable('boards') && Schema::hasTable('board_members')) {
+            $companyWorkspaces = DB::table('workspaces')->where('name', 'not like', 'Không gian của %')->get();
+            foreach ($companyWorkspaces as $cWs) {
+                $wsBoards = DB::table('boards')->where('workspace_id', $cWs->id)->get();
+                $wsUsers = DB::table('workspace_members')->where('workspace_id', $cWs->id)->pluck('user_id');
+                foreach ($wsUsers as $uId) {
+                    foreach ($wsBoards as $b) {
+                        DB::table('board_members')->updateOrInsert(
+                            ['board_id' => $b->id, 'user_id' => $uId],
+                            ['role' => 'member', 'is_starred' => false, 'updated_at' => now()]
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     // Làm sạch cache Laravel
     Artisan::call('optimize:clear');
     echo "\n🧹 Đã làm sạch toàn bộ cache Laravel!\n";
