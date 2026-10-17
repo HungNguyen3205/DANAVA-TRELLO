@@ -225,17 +225,25 @@ export function EmployeeManagementView() {
 }
 
 function CreateEmployeeModal({ onClose, onCreated }: { onClose: () => void, onCreated: () => void }) {
+  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('user');
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.post('/admin/employees', { username, password, system_role: role });
-      toast.success('Đã tạo tài khoản');
+      await api.post('/admin/employees', { 
+        name,
+        username, 
+        password, 
+        system_role: role,
+        must_change_password: mustChangePassword 
+      });
+      toast.success('Đã tạo tài khoản thành công');
       onCreated();
       onClose();
     } catch (e: any) {
@@ -254,9 +262,19 @@ function CreateEmployeeModal({ onClose, onCreated }: { onClose: () => void, onCr
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Họ và tên nhân viên</label>
+            <input 
+              type="text" 
+              value={name} 
+              onChange={e => setName(e.target.value)} 
+              placeholder="VD: Trần Phi" 
+              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-foreground mb-1">Username (Tài khoản)</label>
             <div className="relative">
-              <input required type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="VD: namhung" className="w-full pl-3 pr-[100px] py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+              <input required type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="VD: phitran" className="w-full pl-3 pr-[100px] py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
                 @danava.vn
               </div>
@@ -264,9 +282,20 @@ function CreateEmployeeModal({ onClose, onCreated }: { onClose: () => void, onCr
             <p className="text-xs text-muted-foreground mt-1">Chỉ cần nhập tên, hệ thống tự động gắn đuôi email <b>@danava.vn</b>. Nhân viên có thể đăng nhập bằng tên ngắn hoặc email đều được.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Mật khẩu tạm</label>
-            <input required type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-            <p className="text-xs text-muted-foreground mt-1">Người dùng sẽ bị ép đổi mật khẩu ở lần đăng nhập đầu tiên.</p>
+            <label className="block text-sm font-medium text-foreground mb-1">Mật khẩu (Tối thiểu 6 ký tự)</label>
+            <input required minLength={6} type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              id="must_change_create" 
+              checked={mustChangePassword} 
+              onChange={e => setMustChangePassword(e.target.checked)} 
+              className="rounded border-border text-primary focus:ring-primary/20 h-4 w-4 cursor-pointer"
+            />
+            <label htmlFor="must_change_create" className="text-xs text-muted-foreground cursor-pointer select-none">
+              Bắt buộc nhân viên đổi mật khẩu ở lần đăng nhập đầu tiên
+            </label>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Vai trò hệ thống</label>
@@ -287,13 +316,17 @@ function CreateEmployeeModal({ onClose, onCreated }: { onClose: () => void, onCr
 
 function ResetPasswordModal({ userId, onClose }: { userId: string, onClose: () => void }) {
   const [password, setPassword] = useState('');
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await api.post(`/admin/employees/${userId}/reset-password`, { password });
+      await api.post(`/admin/employees/${userId}/reset-password`, { 
+        password,
+        must_change_password: mustChangePassword 
+      });
       toast.success('Đã đặt lại mật khẩu thành công');
       onClose();
     } catch (e: any) {
@@ -312,9 +345,20 @@ function ResetPasswordModal({ userId, onClose }: { userId: string, onClose: () =
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Mật khẩu mới</label>
-            <input required type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-            <p className="text-xs text-muted-foreground mt-1">Người dùng sẽ bị ép đổi mật khẩu lại và đăng xuất khỏi mọi thiết bị.</p>
+            <label className="block text-sm font-medium text-foreground mb-1">Mật khẩu mới (Tối thiểu 6 ký tự)</label>
+            <input required minLength={6} type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              id="must_change_reset" 
+              checked={mustChangePassword} 
+              onChange={e => setMustChangePassword(e.target.checked)} 
+              className="rounded border-border text-primary focus:ring-primary/20 h-4 w-4 cursor-pointer"
+            />
+            <label htmlFor="must_change_reset" className="text-xs text-muted-foreground cursor-pointer select-none">
+              Bắt buộc nhân viên đổi mật khẩu ở lần đăng nhập tiếp theo
+            </label>
           </div>
           <div className="pt-4 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors">Hủy</button>

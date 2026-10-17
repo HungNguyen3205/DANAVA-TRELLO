@@ -33,26 +33,38 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|unique:users,username|regex:/^[a-zA-Z0-9._@-]+$/',
+            'name' => 'nullable|string|max:100',
+            'username' => 'required|string',
             'password' => 'required|string|min:6',
             'system_role' => 'nullable|in:admin,user',
             'workspace_id' => 'nullable|exists:workspaces,id',
             'workspace_role' => 'nullable|in:admin,member',
         ]);
 
+        $cleanRaw = str_replace('@danava.vn', '', strtolower(trim($request->username)));
+        $finalUsername = Str::slug($cleanRaw, '');
+        if (empty($finalUsername)) {
+            $finalUsername = preg_replace('/[^a-zA-Z0-9._-]/', '', $cleanRaw);
+        }
+        $email = $finalUsername . '@danava.vn';
+        $fullName = trim($request->name) ? trim($request->name) : $finalUsername;
+
+        // Check if user already exists
+        $existing = User::where('username', $finalUsername)->orWhere('email', $email)->first();
+        if ($existing) {
+            return response()->json([
+                'message' => "Tài khoản '{$finalUsername}' hoặc email '{$email}' đã tồn tại trong hệ thống. Nếu muốn đổi mật khẩu, vui lòng dùng nút Đặt lại mật khẩu."
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $baseName = strtolower($request->username);
-            // If admin accidentally types the full email, strip it for the username
-            $finalUsername = str_replace('@danava.vn', '', $baseName);
-            $email = str_contains($baseName, '@') ? $baseName : $finalUsername . '@danava.vn';
-
             $user = User::create([
                 'username' => $finalUsername,
                 'email' => $email,
-                'name' => $finalUsername, // Temporary name
+                'name' => $fullName,
                 'password' => Hash::make($request->password),
-                'must_change_password' => true,
+                'must_change_password' => $request->boolean('must_change_password', false),
                 'created_by' => $request->user()->id,
                 'system_role' => $request->system_role === 'admin' ? 'system_admin' : 'user',
             ]);
@@ -71,6 +83,18 @@ class EmployeeController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+            } else {
+                // Auto-join all existing company workspaces as member so the employee can collaborate immediately
+                $allWs = DB::table('workspaces')->pluck('id');
+                foreach ($allWs as $wsId) {
+                    DB::table('workspace_members')->insert([
+                        'workspace_id' => $wsId,
+                        'user_id' => $user->id,
+                        'role' => 'member',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
 
             DB::commit();
@@ -80,7 +104,7 @@ class EmployeeController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Có lỗi xảy ra khi tạo tài khoản'], 500);
+            return response()->json(['message' => 'Có lỗi xảy ra khi tạo tài khoản: ' . $e->getMessage()], 500);
         }
     }
 
@@ -108,16 +132,16 @@ class EmployeeController extends Controller
     public function resetPassword(Request $request, User $employee)
     {
         $request->validate([
-            'password' => 'required|string|min:8',
+            'password' => 'required|string|min:6',
         ]);
 
         $employee->password = Hash::make($request->password);
-        $employee->must_change_password = true;
+        $employee->must_change_password = $request->boolean('must_change_password', false);
         $employee->save();
 
         $employee->tokens()->delete();
 
-        return response()->json(['message' => 'Đã đặt lại mật khẩu tạm']);
+        return response()->json(['message' => 'Đã đặt lại mật khẩu thành công']);
     }
 
     public function destroy(Request $request, User $employee)

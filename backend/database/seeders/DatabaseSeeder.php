@@ -70,5 +70,6 @@ class DatabaseSeeder extends Seeder
 
         // Tự động gọi UsersSeeder để đồng bộ đầy đủ các tài khoản, vai trò và phân quyền
         $this->call(UsersSeeder::class);
+        $this->call(DemoSeeder::class);
     }
 }
