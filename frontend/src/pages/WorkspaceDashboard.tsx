@@ -18,6 +18,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  User,
   Users,
 } from 'lucide-react';
 import {
@@ -95,6 +96,7 @@ const RANGE_OPTIONS = [7, 14, 30];
 export function WorkspaceDashboard() {
   const navigate = useNavigate();
   const [range, setRange] = useState(14);
+  const [scope, setScope] = useState<'personal' | 'team'>('personal');
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -113,7 +115,7 @@ export function WorkspaceDashboard() {
       setError('');
       try {
         const response = await api.get<DashboardData>('/analytics/overview', {
-          params: { days: range },
+          params: { days: range, scope },
           signal: controller.signal,
         });
         setData(response.data);
@@ -131,7 +133,7 @@ export function WorkspaceDashboard() {
 
     void loadDashboard();
     return () => controller.abort();
-  }, [range, reloadVersion]);
+  }, [range, scope, reloadVersion]);
 
   const handleRefresh = () => {
     setReloadVersion((v) => v + 1);
@@ -181,19 +183,49 @@ export function WorkspaceDashboard() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3.5 py-1 text-xs font-bold text-violet-600 dark:text-violet-400">
                 <Sparkles size={14} className="text-violet-500" />
-                <span>Executive Intelligence</span>
+                <span>{scope === 'personal' ? 'Không gian công việc của tôi' : 'Executive Intelligence'}</span>
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <h1 className="text-3xl font-black tracking-tight text-foreground md:text-4xl">
-                Tổng quan dự án & công việc
+                Tổng quan {scope === 'personal' ? 'công việc cá nhân' : 'dự án & đội ngũ'}
               </h1>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                Báo cáo tổng hợp số liệu, tiến độ thực hiện và nhịp độ công việc trên tất cả các bảng làm việc của bạn.
+                {scope === 'personal' 
+                  ? 'Báo cáo thống kê số liệu, tiến độ hoàn thành và hạn chót được phân công riêng cho bạn.'
+                  : 'Báo cáo tổng hợp số liệu, tiến độ thực hiện và nhịp độ công việc trên tất cả các bảng làm việc của cả đội.'}
               </p>
             </div>
 
             {/* Controls Bar */}
             <div className="flex flex-wrap items-center gap-3">
+              {/* Scope Selector: Cá nhân vs Toàn đội */}
+              <div className="inline-flex items-center rounded-2xl border border-border bg-card p-1 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setScope('personal')}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                    scope === 'personal'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <User size={14} />
+                  <span>Của tôi</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScope('team')}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                    scope === 'team'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Users size={14} />
+                  <span>Toàn đội</span>
+                </button>
+              </div>
+
               {/* Range Selector */}
               <div className="inline-flex items-center rounded-2xl border border-border bg-card p-1 shadow-xs">
                 {RANGE_OPTIONS.map((days) => (
@@ -415,12 +447,12 @@ export function WorkspaceDashboard() {
             )}
           </ChartCard>
 
-          {/* Team Workload */}
+          {/* Team / Personal Workload */}
           <ChartCard
             className="xl:col-span-5"
-            title="Tải công việc đội ngũ"
-            description="Số lượng công việc đang xử lý theo người phụ trách"
-            icon={<Users size={18} />}
+            title={scope === 'personal' ? 'Phân bổ theo bảng dự án' : 'Tải công việc đội ngũ'}
+            description={scope === 'personal' ? 'Số lượng công việc bạn đang phụ trách trên từng bảng' : 'Số lượng công việc đang xử lý theo người phụ trách'}
+            icon={scope === 'personal' ? <FolderKanban size={18} /> : <Users size={18} />}
           >
             {data.workload.length ? (
               <div className="h-[320px]">
@@ -480,8 +512,8 @@ export function WorkspaceDashboard() {
 
           {/* Upcoming Deadlines */}
           <ChartCard
-            title="Thời hạn quan trọng"
-            description={`${data.summary.due_soon_tasks} công việc cần giải quyết trong 7 ngày`}
+            title={scope === 'personal' ? 'Hạn chót công việc của bạn' : 'Thời hạn quan trọng'}
+            description={scope === 'personal' ? `${data.summary.due_soon_tasks} công việc của bạn cần hoàn thành sớm` : `${data.summary.due_soon_tasks} công việc cần giải quyết trong 7 ngày`}
             icon={<Clock3 size={18} />}
           >
             <div className="space-y-2.5">
