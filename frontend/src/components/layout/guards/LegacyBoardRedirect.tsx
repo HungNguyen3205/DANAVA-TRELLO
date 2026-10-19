@@ -21,7 +21,7 @@ export function LegacyBoardRedirect() {
     api.get(`/boards/${id}`)
       .then((res) => {
         if (res.data?.public_id) {
-          const requestedView = ['kanban', 'list', 'calendar', 'dashboard', 'members', 'settings']
+          const requestedView = ['kanban', 'list', 'calendar', 'dashboard', 'members', 'review', 'performance', 'performance-policy', 'settings', 'trash']
             .find((view) => location.pathname.endsWith(`/${view}`)) || 'kanban';
           navigate(`/${res.data.public_id}/${requestedView}${location.search}`, { replace: true });
         } else {

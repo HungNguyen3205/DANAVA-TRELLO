@@ -53,14 +53,20 @@ class BoardReviewController extends Controller
     {
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
-        $boardColumnIds = KanbanColumn::where('board_id', $board->id)
-            ->pluck('id')
-            ->toArray();
+        $columnQuery = KanbanColumn::where('board_id', $board->id);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('kanban_columns', 'deleted_at')) {
+            $columnQuery->whereNull('deleted_at');
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('kanban_columns', 'archived_at')) {
+            $columnQuery->whereNull('archived_at');
+        }
+        $boardColumnIds = $columnQuery->pluck('id')->toArray();
 
-        $tasks = Task::whereIn('column_id', $boardColumnIds)
-            ->whereNull('deleted_at')
-            ->with(['column', 'assignees'])
-            ->get();
+        $taskQuery = Task::whereIn('column_id', $boardColumnIds)->whereNull('deleted_at');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('tasks', 'archived_at')) {
+            $taskQuery->whereNull('archived_at');
+        }
+        $tasks = $taskQuery->with(['column', 'assignees'])->get();
 
         $doneColumnNames = ['done', 'hoàn thành', 'completed'];
 

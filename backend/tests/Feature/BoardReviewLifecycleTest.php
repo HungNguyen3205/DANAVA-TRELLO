@@ -270,4 +270,112 @@ class BoardReviewLifecycleTest extends TestCase
         $editSuccessRes->assertStatus(200);
         $this->assertEquals('Nội dung sau khi mở khóa thành công', $editSuccessRes->json('review.summary'));
     }
+
+    /**
+     * Test 7: Regular member cannot publish, lock, or unlock review
+     */
+    public function test_regular_member_cannot_publish_lock_or_unlock_review(): void
+    {
+        // Owner creates draft review
+        $this->actingAs($this->owner)->postJson("/api/boards/{$this->board->id}/review", [
+            'summary' => 'Bản nháp ban đầu',
+            'status' => 'draft',
+        ])->assertStatus(200);
+
+        // Member cannot publish
+        $this->actingAs($this->member)
+            ->postJson("/api/boards/{$this->board->id}/review/publish")
+            ->assertStatus(403);
+
+        // Member cannot lock
+        $this->actingAs($this->member)
+            ->postJson("/api/boards/{$this->board->id}/review/lock")
+            ->assertStatus(403);
+
+        // Member cannot unlock
+        $this->actingAs($this->member)
+            ->postJson("/api/boards/{$this->board->id}/review/unlock")
+            ->assertStatus(403);
+    }
+
+    /**
+     * Test 8: Can access review via board public_id
+     */
+    public function test_can_access_review_via_public_id(): void
+    {
+        $this->assertNotEmpty($this->board->public_id);
+
+        $res = $this->actingAs($this->owner)->getJson("/api/boards/{$this->board->public_id}/review");
+        $res->assertStatus(200);
+        $this->assertEquals($this->board->id, $res->json('board.id'));
+        $this->assertEquals($this->board->public_id, $res->json('board.public_id'));
+    }
+
+    /**
+     * Test 9: Profit auto-calculation and custom override
+     */
+    public function test_profit_auto_calculation_and_custom_override(): void
+    {
+        // Case A: Profit omitted -> auto-calculated
+        $resA = $this->actingAs($this->owner)->postJson("/api/boards/{$this->board->id}/review", [
+            'revenue' => 50000000,
+            'cost' => 20000000,
+        ]);
+        $resA->assertStatus(200);
+        $this->assertEquals(30000000, $resA->json('review.profit'));
+
+        // Case B: Explicit profit provided -> respects custom profit
+        $resB = $this->actingAs($this->owner)->postJson("/api/boards/{$this->board->id}/review", [
+            'revenue' => 50000000,
+            'cost' => 20000000,
+            'profit' => 35000000,
+        ]);
+        $resB->assertStatus(200);
+        $this->assertEquals(35000000, $resB->json('review.profit'));
+    }
+
+    /**
+     * Test 10: Archived and soft-deleted tasks are excluded from review stats
+     */
+    public function test_archived_and_deleted_tasks_excluded_from_stats(): void
+    {
+        // Create an archived task
+        Task::create([
+            'column_id' => $this->todoCol->id,
+            'created_by' => $this->owner->id,
+            'assignee_id' => $this->member->id,
+            'title' => 'Task đã lưu trữ',
+            'archived_at' => now(),
+        ]);
+
+        // Create a soft-deleted task
+        $deletedTask = Task::create([
+            'column_id' => $this->todoCol->id,
+            'created_by' => $this->owner->id,
+            'assignee_id' => $this->member->id,
+            'title' => 'Task đã xóa vào thùng rác',
+        ]);
+        $deletedTask->delete();
+
+        // Stats should still only count the 3 original tasks
+        $res = $this->actingAs($this->owner)->getJson("/api/boards/{$this->board->id}/review");
+        $res->assertStatus(200);
+        $this->assertEquals(3, $res->json('stats.total_tasks'));
+    }
+
+    /**
+     * Test 11: Validation rules reject invalid rating and status
+     */
+    public function test_validation_rules_reject_invalid_input(): void
+    {
+        // Rating > 5 rejected
+        $this->actingAs($this->owner)->postJson("/api/boards/{$this->board->id}/review", [
+            'overall_rating' => 6,
+        ])->assertStatus(422);
+
+        // Invalid status rejected
+        $this->actingAs($this->owner)->postJson("/api/boards/{$this->board->id}/review", [
+            'status' => 'invalid_status',
+        ])->assertStatus(422);
+    }
 }

@@ -20,6 +20,7 @@ export default defineConfig({
       "tests/department*.{ts,tsx}",
       "tests/telegram*.{ts,tsx}",
       "tests/multiAssignee*.{ts,tsx}",
+      "tests/boardReview*.{ts,tsx}",
     ],
     setupFiles: ["tests/setup.ts"],
   },
