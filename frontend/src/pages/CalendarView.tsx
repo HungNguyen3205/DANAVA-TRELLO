@@ -367,7 +367,7 @@ export function CalendarView() {
   // Render Custom Event
   const EventComponent = ({ event }: { event: TaskEvent }) => {
     const task = event.task;
-    const currentColumn = board?.columns.find(c => c.id === task.columnId);
+    const currentColumn = board?.columns?.find(c => c.id === task.columnId);
     const bgColor = resolveColumnColor(currentColumn);
     const textColor = getContrastTextColor(bgColor);
     
@@ -393,7 +393,7 @@ export function CalendarView() {
 
   const getEventPropGetter = (event: TaskEvent) => {
     const task = event.task;
-    const currentColumn = board?.columns.find(c => c.id === task.columnId);
+    const currentColumn = board?.columns?.find(c => c.id === task.columnId);
     const bgColor = resolveColumnColor(currentColumn);
     const textColor = getContrastTextColor(bgColor);
 
@@ -533,7 +533,7 @@ export function CalendarView() {
                 </div>
               ) : (
                 unscheduled.map(task => {
-                  const currentColumn = board.columns.find(c => c.id === task.columnId);
+                  const currentColumn = board?.columns?.find(c => c.id === task.columnId);
                   return (
                     <div 
                       key={task.id} 

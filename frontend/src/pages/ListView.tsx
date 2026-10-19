@@ -118,7 +118,7 @@ export function ListView() {
       if (!normalizedSearch) return true;
       if (t.title.toLowerCase().includes(normalizedSearch)) return true;
       if (t.description?.toLowerCase().includes(normalizedSearch)) return true;
-      const assignee = board.users.find((u) => u.id === t.assigneeId);
+      const assignee = board.users?.find((u) => u.id === t.assigneeId);
       if (assignee && assignee.name.toLowerCase().includes(normalizedSearch)) return true;
       return false;
     });
@@ -327,8 +327,8 @@ export function ListView() {
                         </div>
                       ) : (
                         group.tasks.map(task => {
-                          const assignee = board.users.find(u => u.id === task.assigneeId);
-                          const currentColumn = board.columns.find(c => c.id === task.columnId);
+                          const assignee = board.users?.find(u => u.id === task.assigneeId);
+                          const currentColumn = board.columns?.find(c => c.id === task.columnId);
                           
                           return (
                             <div 

@@ -173,6 +173,17 @@ export async function bulkTransferEmployees(
  * Minimal active department options for dropdowns
  */
 export async function getDepartmentOptions(): Promise<DepartmentOption[]> {
-  const res = await api.get('/departments/options');
-  return res.data;
+  try {
+    const res = await api.get('/departments/options');
+    if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    if (Array.isArray(res.data?.data)) {
+      return res.data.data;
+    }
+    return [];
+  } catch (err) {
+    console.warn('Could not load department options:', err);
+    return [];
+  }
 }

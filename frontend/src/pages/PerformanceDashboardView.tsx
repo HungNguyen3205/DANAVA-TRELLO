@@ -52,9 +52,10 @@ export const PerformanceDashboardView: React.FC = () => {
     async function loadDeptOptions() {
       try {
         const depts = await getDepartmentOptions();
-        if (isMounted) setDepartmentOptions(depts);
+        if (isMounted) setDepartmentOptions(Array.isArray(depts) ? depts : []);
       } catch (err) {
         console.error('Failed to load department options', err);
+        if (isMounted) setDepartmentOptions([]);
       }
     }
     loadDeptOptions();
@@ -69,13 +70,20 @@ export const PerformanceDashboardView: React.FC = () => {
         setLoading(true);
         const data = await getPerformancePeriods(boardCode || boardId);
         if (isMounted) {
-          setPeriods(data.periods);
-          if (data.periods.length > 0) {
-            setSelectedPeriodId(data.periods[0].id);
+          const list = Array.isArray(data?.periods) ? data.periods : [];
+          setPeriods(list);
+          if (list.length > 0) {
+            setSelectedPeriodId(list[0].id);
+          } else {
+            setSelectedPeriodId(null);
           }
         }
       } catch (err: any) {
         toast.error('Không thể tải danh sách kỳ đánh giá');
+        if (isMounted) {
+          setPeriods([]);
+          setSelectedPeriodId(null);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -250,11 +258,14 @@ export const PerformanceDashboardView: React.FC = () => {
     return true;
   });
 
-  const selectedPeriod = periodData?.period || periods.find(p => p.id === selectedPeriodId);
+  const safePeriods = Array.isArray(periods) ? periods : [];
+  const safeDeptOptions = Array.isArray(departmentOptions) ? departmentOptions : [];
+
+  const selectedPeriod = periodData?.period || safePeriods.find(p => p.id === selectedPeriodId);
   const canManage = periodData?.can_manage ?? false;
 
   // Department statistics when filtered
-  const selectedDeptInfo = departmentOptions.find(d => d.id === Number(departmentFilter));
+  const selectedDeptInfo = safeDeptOptions.find(d => d.id === Number(departmentFilter));
   const isDeptFiltered = departmentFilter !== 'ALL';
   const validScores = filteredScores.filter(s => !s.is_provisional);
   const deptAverageScore = validScores.length > 0
@@ -311,7 +322,7 @@ export const PerformanceDashboardView: React.FC = () => {
             <Calendar className="w-4 h-4 text-indigo-500" />
             Kỳ Đánh Giá:
           </span>
-          {periods.length === 0 ? (
+          {safePeriods.length === 0 ? (
             <span className="text-sm text-slate-500 italic">Chưa có kỳ đánh giá nào</span>
           ) : (
             <select
@@ -319,7 +330,7 @@ export const PerformanceDashboardView: React.FC = () => {
               onChange={(e) => setSelectedPeriodId(Number(e.target.value))}
               className="px-3.5 py-2 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
-              {periods.map(p => (
+              {safePeriods.map(p => (
                 <option key={p.id} value={p.id}>
                   {p.title} ({p.start_date} ~ {p.end_date}) [{p.status === 'locked' ? 'Đã khóa' : p.status === 'published' ? 'Đã công bố' : 'Bản nháp'}]
                 </option>
@@ -394,7 +405,7 @@ export const PerformanceDashboardView: React.FC = () => {
       </div>
 
       {/* KPI Summary Cards */}
-      {periodData && (
+      {periodData && periodData.analytics && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between">
@@ -407,12 +418,12 @@ export const PerformanceDashboardView: React.FC = () => {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
-                {periodData.analytics.board_average}
+                {periodData.analytics.board_average ?? 0}
               </span>
               <span className="text-sm font-semibold text-slate-400">/ 100đ</span>
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              Tổng số {periodData.analytics.total_members} thành viên tham gia đánh giá
+              Tổng số {periodData.analytics.total_members ?? 0} thành viên tham gia đánh giá
             </p>
           </div>
 
@@ -427,10 +438,10 @@ export const PerformanceDashboardView: React.FC = () => {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                {(periodData.analytics.rank_distribution['Xuất sắc'] || 0) + (periodData.analytics.rank_distribution['Tốt'] || 0)}
+                {(periodData.analytics.rank_distribution?.['Xuất sắc'] || 0) + (periodData.analytics.rank_distribution?.['Tốt'] || 0)}
               </span>
               <span className="text-sm font-semibold text-slate-400">
-                / {periodData.analytics.total_members} người
+                / {periodData.analytics.total_members ?? 0} người
               </span>
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
@@ -449,7 +460,7 @@ export const PerformanceDashboardView: React.FC = () => {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-orange-600 dark:text-orange-400">
-                {(periodData.analytics.rank_distribution['Cần cải thiện'] || 0) + (periodData.analytics.rank_distribution['Chưa đạt'] || 0)}
+                {(periodData.analytics.rank_distribution?.['Cần cải thiện'] || 0) + (periodData.analytics.rank_distribution?.['Chưa đạt'] || 0)}
               </span>
               <span className="text-sm font-semibold text-slate-400">người</span>
             </div>
@@ -469,7 +480,7 @@ export const PerformanceDashboardView: React.FC = () => {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-purple-600 dark:text-purple-400">
-                {periodData.analytics.rank_distribution['Tạm tính'] || 0}
+                {periodData.analytics.rank_distribution?.['Tạm tính'] || 0}
               </span>
               <span className="text-sm font-semibold text-slate-400">thành viên</span>
             </div>
@@ -520,7 +531,7 @@ export const PerformanceDashboardView: React.FC = () => {
               >
                 <option value="ALL">Tất cả phòng ban</option>
                 <option value="UNASSIGNED">Chưa phân phòng</option>
-                {departmentOptions.map(d => (
+                {safeDeptOptions.map(d => (
                   <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                 ))}
               </select>

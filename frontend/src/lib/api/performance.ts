@@ -1,20 +1,4 @@
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import api from '../axios';
 
 export interface PerformancePolicy {
   id: number;
@@ -178,7 +162,11 @@ export async function updatePerformancePolicy(
 
 export async function getPerformancePeriods(boardId: string | number): Promise<{ periods: PerformancePeriod[]; can_manage: boolean }> {
   const res = await api.get(`/boards/${boardId}/performance/periods`);
-  return res.data;
+  const data = res.data;
+  return {
+    periods: Array.isArray(data?.periods) ? data.periods : (Array.isArray(data) ? data : []),
+    can_manage: !!data?.can_manage,
+  };
 }
 
 export async function createPerformancePeriod(

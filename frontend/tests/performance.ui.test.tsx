@@ -3,7 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { PerformancePolicyView } from '../src/pages/PerformancePolicyView';
+import { PerformanceDashboardView } from '../src/pages/PerformanceDashboardView';
 import * as performanceApi from '../src/lib/api/performance';
+import * as departmentApi from '../src/lib/api/departments';
 import * as boardRouteContext from '../src/components/layout/BoardRouteContext';
 
 // Mock board route context
@@ -16,6 +18,19 @@ vi.mock('../src/lib/api/performance', () => ({
   getPerformancePolicy: vi.fn(),
   acknowledgePerformancePolicy: vi.fn(),
   updatePerformancePolicy: vi.fn(),
+  getPerformancePeriods: vi.fn(),
+  getPerformancePeriodDetails: vi.fn(),
+  createPerformancePeriod: vi.fn(),
+  recalculatePerformancePeriod: vi.fn(),
+  publishPerformancePeriod: vi.fn(),
+  lockPerformancePeriod: vi.fn(),
+  unlockPerformancePeriod: vi.fn(),
+  getMemberPerformanceLineage: vi.fn(),
+}));
+
+// Mock departments API
+vi.mock('../src/lib/api/departments', () => ({
+  getDepartmentOptions: vi.fn(),
 }));
 
 // Mock sonner toast
@@ -139,6 +154,105 @@ describe('PerformancePolicyView UI Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Ban hành phiên bản mới')).toBeTruthy();
+    });
+  });
+});
+
+describe('PerformanceDashboardView UI Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (boardRouteContext.useBoardRoute as any).mockReturnValue({
+      boardId: '1',
+      boardCode: 'kheklha3eogh',
+    });
+  });
+
+  it('renders gracefully without crashing when periods and departments are empty or undefined', async () => {
+    (performanceApi.getPerformancePeriods as any).mockResolvedValue({
+      periods: [],
+      can_manage: true,
+    });
+    (departmentApi.getDepartmentOptions as any).mockResolvedValue([]);
+
+    render(<PerformanceDashboardView />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Bảng Điểm Hiệu Suất Công Việc')).toBeTruthy();
+      expect(screen.getByText('Chưa có kỳ đánh giá nào')).toBeTruthy();
+      expect(screen.getByText('Tất cả phòng ban')).toBeTruthy();
+    });
+  });
+
+  it('renders correctly when period data is available', async () => {
+    (performanceApi.getPerformancePeriods as any).mockResolvedValue({
+      periods: [
+        {
+          id: 10,
+          board_id: 1,
+          title: 'Kỳ Tháng 10/2026',
+          period_type: 'monthly',
+          start_date: '2026-10-01',
+          end_date: '2026-10-31',
+          status: 'published',
+        },
+      ],
+      can_manage: true,
+    });
+
+    (departmentApi.getDepartmentOptions as any).mockResolvedValue([
+      { id: 1, name: 'Kỹ thuật', code: 'DEV', color: '#3b82f6' },
+    ]);
+
+    (performanceApi.getPerformancePeriodDetails as any).mockResolvedValue({
+      period: {
+        id: 10,
+        board_id: 1,
+        title: 'Kỳ Tháng 10/2026',
+        period_type: 'monthly',
+        start_date: '2026-10-01',
+        end_date: '2026-10-31',
+        status: 'published',
+      },
+      scores: [
+        {
+          user_id: 2,
+          user_name: 'Nguyễn Văn A',
+          user_username: 'vana',
+          user_email: 'vana@example.com',
+          role: 'member',
+          workload_score: 35.0,
+          on_time_score: 22.5,
+          quality_score: 20.0,
+          progress_score: 8.0,
+          total_points_earned: 85.5,
+          available_weight: 100,
+          final_score: 85.5,
+          is_provisional: false,
+          rank: 'Tốt',
+          metrics_breakdown: {
+            workload: { has_data: true, score: 35 },
+            on_time: { has_data: true, score: 22.5 },
+            quality: { has_data: true, score: 20 },
+            progress: { has_data: true, score: 8 },
+          },
+          task_details: [],
+        },
+      ],
+      analytics: {
+        total_members: 1,
+        board_average: 85.5,
+        rank_distribution: { 'Tốt': 1 },
+        top_performers: [],
+      },
+      can_manage: true,
+    });
+
+    render(<PerformanceDashboardView />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Bảng Điểm Hiệu Suất Công Việc')).toBeTruthy();
+      expect(screen.getByText(/Kỳ Tháng 10\/2026/)).toBeTruthy();
+      expect(screen.getByText('Nguyễn Văn A')).toBeTruthy();
     });
   });
 });
