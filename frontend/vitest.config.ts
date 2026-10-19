@@ -22,6 +22,7 @@ export default defineConfig({
       "tests/multiAssignee*.{ts,tsx}",
       "tests/boardReview*.{ts,tsx}",
       "tests/safeLinkifiedText*.{ts,tsx}",
+      "tests/employee*.{ts,tsx}",
     ],
     setupFiles: ["tests/setup.ts"],
   },

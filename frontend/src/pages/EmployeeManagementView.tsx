@@ -2,13 +2,57 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Users, Search, ShieldAlert,
   Lock, Unlock, KeyRound, UserPlus, Trash2, Edit2, Briefcase, Mail, Phone, Calendar,
-  Building2, ArrowRightLeft
+  Building2, ArrowRightLeft, Crown
 } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import { getAvatarUrl } from '../lib/avatar';
 import { getDepartmentOptions, type DepartmentOption } from '../lib/api/departments';
 import { EmployeeTransferModal } from '../components/department/EmployeeTransferModal';
+
+function getDepartmentTitleInfo(emp: any) {
+  let title = emp.department_title;
+  if (!title && emp.department) {
+    title = emp.department.manager_id === emp.id 
+      ? `Trưởng phòng ${emp.department.name}`
+      : `Nhân viên ${emp.department.name}`;
+  }
+
+  if (!title) {
+    return {
+      title: 'Chưa cập nhật',
+      isManager: false,
+      isUnassigned: true,
+    };
+  }
+
+  const lowerTitle = title.toLowerCase();
+  const isManager = lowerTitle.includes('trưởng phòng') || 
+                    lowerTitle.includes('lead') || 
+                    lowerTitle.includes('manager') || 
+                    emp.department?.manager_id === emp.id;
+
+  return {
+    title,
+    isManager,
+    isUnassigned: false,
+  };
+}
+
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return '—';
+  }
+}
 
 export function EmployeeManagementView() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -156,7 +200,7 @@ export function EmployeeManagementView() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto bg-card border border-border rounded-xl shadow-sm">
+      <div className="flex-1 overflow-x-auto overflow-y-auto bg-card border border-border rounded-xl shadow-sm">
         {isLoading ? (
           <div className="text-center p-8 text-muted-foreground animate-pulse">Đang tải...</div>
         ) : employees.length === 0 ? (
@@ -165,10 +209,10 @@ export function EmployeeManagementView() {
             <h3 className="text-lg font-medium text-foreground mb-1">Không tìm thấy tài khoản nào</h3>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[1050px]">
             <thead>
               <tr className="border-b border-border bg-muted/20 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                <th className="w-10 px-4 py-3.5 text-center">
+                <th className="w-10 px-4 py-3.5 text-center shrink-0">
                   <input
                     type="checkbox"
                     checked={employees.length > 0 && selectedEmployeeIds.length === employees.length}
@@ -176,21 +220,22 @@ export function EmployeeManagementView() {
                     className="rounded text-primary focus:ring-primary cursor-pointer"
                   />
                 </th>
-                <th className="px-6 py-3.5">Họ và tên & Tài khoản</th>
-                <th className="px-5 py-3.5">Phòng ban</th>
-                <th className="px-5 py-3.5">Chức vụ</th>
-                <th className="px-4 py-3.5">Vai trò</th>
-                <th className="px-4 py-3.5 text-center">Trạng thái</th>
-                <th className="px-4 py-3.5 text-center">Bảng tham gia</th>
-                <th className="px-6 py-3.5 text-center">Thao tác</th>
+                <th className="px-6 py-3.5 min-w-[220px]">Nhân viên</th>
+                <th className="px-5 py-3.5 min-w-[160px] max-w-[200px]">Phòng ban</th>
+                <th className="px-5 py-3.5 min-w-[180px] max-w-[240px] whitespace-nowrap">Chức vụ</th>
+                <th className="px-4 py-3.5 min-w-[140px] whitespace-nowrap">Vai trò hệ thống</th>
+                <th className="px-4 py-3.5 text-center min-w-[120px] whitespace-nowrap">Trạng thái</th>
+                <th className="px-4 py-3.5 text-center min-w-[120px] whitespace-nowrap">Ngày tham gia</th>
+                <th className="px-6 py-3.5 text-center min-w-[170px] whitespace-nowrap">Hành động</th>
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-border">
               {employees.map((emp) => {
                 const isSelected = selectedEmployeeIds.includes(String(emp.id));
+                const titleInfo = getDepartmentTitleInfo(emp);
                 return (
                   <tr key={emp.id} className={`hover:bg-muted/40 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
-                    <td className="w-10 px-4 py-4 text-center">
+                    <td className="w-10 px-4 py-4 text-center shrink-0">
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -198,7 +243,7 @@ export function EmployeeManagementView() {
                         className="rounded text-primary focus:ring-primary cursor-pointer"
                       />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 min-w-[220px]">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0 overflow-hidden">
                           {emp.avatar ? (
@@ -214,24 +259,25 @@ export function EmployeeManagementView() {
                             {emp.email && (
                               <>
                                 <span>•</span>
-                                <span className="font-sans text-muted-foreground/80">{emp.email}</span>
+                                <span className="font-sans text-muted-foreground/80 truncate max-w-[130px]" title={emp.email}>{emp.email}</span>
                               </>
                             )}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 min-w-[160px] max-w-[200px]">
                       {emp.department ? (
                         <span
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold max-w-full truncate"
                           style={{
                             backgroundColor: emp.department.color ? `${emp.department.color}18` : '#6366f118',
                             color: emp.department.color || '#6366f1',
                           }}
+                          title={emp.department.name}
                         >
-                          <Building2 size={13} />
-                          {emp.department.name}
+                          <Building2 size={13} className="shrink-0" />
+                          <span className="truncate">{emp.department.name}</span>
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground italic">
@@ -239,40 +285,59 @@ export function EmployeeManagementView() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs font-semibold text-foreground">
-                          {emp.department_title || (emp.department ? `Nhân viên ${emp.department.name}` : 'Chưa phân phòng')}
+                    <td className="px-5 py-4 min-w-[180px] max-w-[240px] whitespace-nowrap overflow-hidden">
+                      <div className="flex flex-col gap-1 max-w-[240px]">
+                        <span
+                          className={`inline-flex items-center gap-1.5 max-w-full rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap shadow-xs border ${
+                            titleInfo.isManager
+                              ? 'bg-purple-50 text-purple-700 border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60'
+                              : titleInfo.isUnassigned
+                              ? 'bg-muted/60 text-muted-foreground border-border/60'
+                              : 'bg-sky-50 text-sky-700 border-sky-200/80 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/60'
+                          }`}
+                          title={titleInfo.title}
+                        >
+                          {titleInfo.isManager ? (
+                            <Crown size={12} className="shrink-0 text-purple-600 dark:text-purple-400" />
+                          ) : (
+                            <Briefcase size={12} className={`shrink-0 ${titleInfo.isUnassigned ? 'opacity-50' : 'text-sky-600 dark:text-sky-400'}`} />
+                          )}
+                          <span className="truncate">{titleInfo.title}</span>
                         </span>
                         {emp.position && (
-                          <span className="text-[11px] text-muted-foreground">
+                          <span
+                            className="text-[11px] text-muted-foreground truncate px-1 max-w-full"
+                            title={`Chức danh chuyên môn: ${emp.position}`}
+                          >
                             {emp.position}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
-                        {emp.system_role === 'system_admin' ? <ShieldAlert size={13} /> : <Users size={13} />}
-                        {emp.system_role === 'system_admin' ? 'System Admin' : 'User'}
+                    <td className="px-4 py-4 min-w-[140px] whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap shadow-xs ${
+                        emp.system_role === 'system_admin' 
+                          ? 'bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30' 
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                      }`}>
+                        {emp.system_role === 'system_admin' ? <ShieldAlert size={13} className="shrink-0" /> : <Users size={13} className="shrink-0" />}
+                        <span>{emp.system_role === 'system_admin' ? 'System Admin' : 'User'}</span>
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-4 text-center min-w-[120px] whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shadow-xs ${
                         emp.account_status === 'active' 
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' 
                           : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${emp.account_status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                        {emp.account_status === 'active' ? 'Hoạt động' : 'Bị khóa'}
+                        <span>{emp.account_status === 'active' ? 'Hoạt động' : 'Bị khóa'}</span>
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20 whitespace-nowrap" title={`${emp.boards_count ?? 0} bảng công việc`}>
-                        {emp.boards_count ?? 0}
-                      </span>
+                    <td className="px-4 py-4 text-center min-w-[120px] whitespace-nowrap text-xs text-muted-foreground" title={emp.boards_count ? `${emp.boards_count} bảng công việc đã tham gia` : undefined}>
+                      {formatDate(emp.created_at)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 min-w-[170px] whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         {/* Transfer Department */}
                         <button
