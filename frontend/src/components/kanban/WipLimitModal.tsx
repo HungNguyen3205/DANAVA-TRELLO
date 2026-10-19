@@ -115,12 +115,12 @@ export function WipLimitModal({
 
             {/* Toggle Enable/Disable WIP limit */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <label className="flex flex-row items-center gap-2.5 cursor-pointer select-none !mb-0">
                 <input
                   type="checkbox"
                   checked={hasLimit}
                   onChange={(e) => setHasLimit(e.target.checked)}
-                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-background"
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-background shrink-0"
                 />
                 <span className="text-sm font-semibold text-foreground">
                   Bật giới hạn WIP cho cột này

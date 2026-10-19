@@ -772,7 +772,7 @@ function ResetPasswordModal({ userId, onClose }: { userId: string, onClose: () =
               onChange={e => setMustChangePassword(e.target.checked)} 
               className="rounded border-border text-primary focus:ring-primary/20 h-4 w-4 cursor-pointer"
             />
-            <label htmlFor="must_change_reset" className="text-xs text-muted-foreground cursor-pointer select-none">
+            <label htmlFor="must_change_reset" className="text-xs text-muted-foreground cursor-pointer select-none !mb-0">
               Bắt buộc nhân viên đổi mật khẩu ở lần đăng nhập tiếp theo
             </label>
           </div>

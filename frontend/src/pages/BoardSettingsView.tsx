@@ -218,10 +218,10 @@ export function BoardSettingsView() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5 flex items-center gap-2">
+                <div className="text-sm font-semibold text-foreground mb-2 flex flex-row items-center gap-2">
                   <Palette size={16} className="text-muted-foreground" />
                   Màu / Nền của bảng
-                </label>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {colorOptions.map((opt) => (
                     <button

@@ -305,9 +305,9 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
 
           {/* Màu nhận diện */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex flex-row items-center gap-1.5 mb-2">
               <Palette className="w-4 h-4 text-slate-400" /> Màu nhận diện phòng ban
-            </label>
+            </div>
             <div className="flex items-center gap-2.5 flex-wrap">
               {PRESET_COLORS.map((c) => (
                 <button
@@ -339,7 +339,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             
             {/* Trưởng phòng */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex flex-row items-center gap-1.5 mb-1.5">
                 <UserCheck className="w-4 h-4 text-slate-400" /> Trưởng phòng ban
               </label>
               <select

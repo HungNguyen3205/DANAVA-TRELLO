@@ -1014,7 +1014,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 <SidebarButton icon={<Tag size={16} />} label="Nhãn" onClick={() => setIsLabelsVisible(!isLabelsVisible)} />
                 <SidebarButton icon={<CheckSquare size={16} />} label="Việc cần làm" onClick={() => setIsChecklistVisible(true)} />
                 {/* <SidebarButton icon={<CalendarDays size={16} />} label="Ngày" onClick={() => setIsDatesVisible(!isDatesVisible)} /> */}
-                <label className="w-full">
+                <label className="block w-full !mb-0 cursor-pointer">
                   <input 
                     type="file" 
                     className="hidden" 

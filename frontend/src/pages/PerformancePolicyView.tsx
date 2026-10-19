@@ -207,14 +207,14 @@ export const PerformancePolicyView: React.FC = () => {
 
           {!isAcked && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 shrink-0">
-              <label className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer select-none">
+              <label className="flex flex-row items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 font-medium cursor-pointer select-none !mb-0">
                 <input
                   type="checkbox"
                   checked={agreeChecked}
                   onChange={(e) => setAgreeChecked(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
                 />
-                Tôi đã đọc, hiểu rõ và đồng thuận
+                <span>Tôi đã đọc, hiểu rõ và đồng thuận</span>
               </label>
 
               <button

@@ -217,12 +217,12 @@ export const TaskMemberPicker: React.FC<TaskMemberPickerProps> = ({
       {/* Bottom Option for Parent Tasks */}
       {isParentTask && (
         <div className="pt-2 border-t border-border/60">
-          <label className="flex items-center gap-2.5 p-2 bg-muted/20 hover:bg-muted/40 rounded-xl cursor-pointer transition-colors text-xs select-none">
+          <label className="flex flex-row items-center gap-2.5 p-2 bg-muted/20 hover:bg-muted/40 rounded-xl cursor-pointer transition-colors text-xs select-none !mb-0">
             <input
               type="checkbox"
               checked={applyToSubtasks}
               onChange={(e) => setApplyToSubtasks(e.target.checked)}
-              className="w-4 h-4 rounded border-border text-primary focus:ring-primary/40 cursor-pointer"
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary/40 cursor-pointer shrink-0"
             />
             <span className="font-medium text-foreground">
               Áp dụng thành viên mới cho các Task con

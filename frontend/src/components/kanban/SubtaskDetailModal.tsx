@@ -398,10 +398,10 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
           {/* Description */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-bold text-foreground flex items-center gap-2">
+              <div className="text-sm font-bold text-foreground flex flex-row items-center gap-2">
                 <AlignLeft size={16} className="text-muted-foreground" />
                 Mô tả chi tiết
-              </label>
+              </div>
               {!isEditingDesc && (
                 <button
                   type="button"
@@ -474,10 +474,10 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
           {/* Activity Logs (if any) */}
           {subtask?.activity_logs && subtask.activity_logs.length > 0 && (
             <div className="space-y-2 pt-2">
-              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <div className="text-xs font-bold text-foreground flex flex-row items-center gap-1.5">
                 <History size={14} className="text-muted-foreground" />
                 Lịch sử cập nhật
-              </label>
+              </div>
               <div className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1">
                 {subtask.activity_logs.map((log: any) => (
                   <div key={log.id} className="text-[11px] text-muted-foreground flex items-center justify-between p-2 rounded-lg bg-muted/20">

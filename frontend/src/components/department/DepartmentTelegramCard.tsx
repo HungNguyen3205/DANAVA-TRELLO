@@ -203,15 +203,15 @@ export const DepartmentTelegramCard: React.FC<DepartmentTelegramCardProps> = ({
         {/* Chat ID Input & Action Buttons */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
           <div className="lg:col-span-8 space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex flex-row items-center justify-between mb-1.5">
               <span>Chat ID nhóm Telegram của phòng ban:</span>
               {data?.chat_title && (
-                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex flex-row items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   Nhóm: <strong>{data.chat_title}</strong>
                 </span>
               )}
-            </label>
+            </div>
             <div className="relative">
               <input
                 type="text"
@@ -270,62 +270,62 @@ export const DepartmentTelegramCard: React.FC<DepartmentTelegramCardProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
-            <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+            <label className="flex flex-row items-center gap-2.5 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors !mb-0">
               <input
                 type="checkbox"
                 checked={eventSettings.employee_added}
                 onChange={() => toggleEvent('employee_added')}
-                className="rounded text-sky-600 focus:ring-sky-500"
+                className="rounded text-sky-600 focus:ring-sky-500 shrink-0"
               />
               <span className="font-medium text-slate-700 dark:text-slate-200">Có nhân viên mới vào phòng</span>
             </label>
 
-            <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+            <label className="flex flex-row items-center gap-2.5 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors !mb-0">
               <input
                 type="checkbox"
                 checked={eventSettings.employee_transferred}
                 onChange={() => toggleEvent('employee_transferred')}
-                className="rounded text-sky-600 focus:ring-sky-500"
+                className="rounded text-sky-600 focus:ring-sky-500 shrink-0"
               />
               <span className="font-medium text-slate-700 dark:text-slate-200">Nhân viên được điều chuyển</span>
             </label>
 
-            <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+            <label className="flex flex-row items-center gap-2.5 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors !mb-0">
               <input
                 type="checkbox"
                 checked={eventSettings.task_assigned}
                 onChange={() => toggleEvent('task_assigned')}
-                className="rounded text-sky-600 focus:ring-sky-500"
+                className="rounded text-sky-600 focus:ring-sky-500 shrink-0"
               />
               <span className="font-medium text-slate-700 dark:text-slate-200">Có task mới được giao</span>
             </label>
 
-            <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+            <label className="flex flex-row items-center gap-2.5 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors !mb-0">
               <input
                 type="checkbox"
                 checked={eventSettings.task_completed}
                 onChange={() => toggleEvent('task_completed')}
-                className="rounded text-sky-600 focus:ring-sky-500"
+                className="rounded text-sky-600 focus:ring-sky-500 shrink-0"
               />
               <span className="font-medium text-slate-700 dark:text-slate-200">Task được hoàn thành</span>
             </label>
 
-            <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+            <label className="flex flex-row items-center gap-2.5 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors !mb-0">
               <input
                 type="checkbox"
                 checked={eventSettings.task_overdue}
                 onChange={() => toggleEvent('task_overdue')}
-                className="rounded text-sky-600 focus:ring-sky-500"
+                className="rounded text-sky-600 focus:ring-sky-500 shrink-0"
               />
               <span className="font-medium text-slate-700 dark:text-slate-200">Task quá hạn hoàn thành</span>
             </label>
 
-            <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+            <label className="flex flex-row items-center gap-2.5 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors !mb-0">
               <input
                 type="checkbox"
                 checked={eventSettings.weekly_performance_summary}
                 onChange={() => toggleEvent('weekly_performance_summary')}
-                className="rounded text-sky-600 focus:ring-sky-500"
+                className="rounded text-sky-600 focus:ring-sky-500 shrink-0"
               />
               <span className="font-medium text-slate-700 dark:text-slate-200">Báo cáo hiệu suất hàng tuần</span>
             </label>

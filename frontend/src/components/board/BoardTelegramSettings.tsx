@@ -367,7 +367,7 @@ export const BoardTelegramSettings: React.FC<BoardTelegramSettingsProps> = ({
               Tự động gửi thông báo cập nhật công việc theo chế độ được thiết lập bên dưới.
             </span>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label className="relative inline-flex flex-row items-center cursor-pointer !mb-0">
             <input
               type="checkbox"
               checked={enabled}

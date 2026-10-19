@@ -541,14 +541,14 @@ export const PerformanceDashboardView: React.FC = () => {
             </select>
 
             {/* Exclude Locked Accounts Checkbox */}
-            <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none ml-1">
+            <label className="flex flex-row items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none ml-1 !mb-0">
               <input
                 type="checkbox"
                 checked={excludeLocked}
                 onChange={(e) => setExcludeLocked(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 shrink-0"
               />
-              Loại trừ tài khoản khóa
+              <span>Loại trừ tài khoản khóa</span>
             </label>
           </div>
         </div>
