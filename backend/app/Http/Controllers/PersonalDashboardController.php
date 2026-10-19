@@ -18,8 +18,13 @@ class PersonalDashboardController extends Controller
         $todayEnd = Carbon::now($tz)->endOfDay()->utc();
         $upcomingEnd = Carbon::now($tz)->addDays(7)->endOfDay()->utc();
 
-        $baseTaskQuery = Task::where('assignee_id', $user->id)
-                             ->with(['column.board.workspace', 'assignee'])
+        $baseTaskQuery = Task::where(function ($q) use ($user) {
+                                $q->where('tasks.assignee_id', $user->id)
+                                  ->orWhereHas('assignees', function ($sub) use ($user) {
+                                      $sub->where('users.id', $user->id);
+                                  });
+                             })
+                             ->with(['column.board.workspace', 'assignee', 'assignees'])
                              ->inUserWorkspaces($user->id);
 
         $cacheKey = "personal_dashboard_optimized_{$user->id}";

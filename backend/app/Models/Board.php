@@ -53,4 +53,14 @@ class Board extends Model
                     ->withPivot('role', 'is_starred')
                     ->withTimestamps();
     }
+
+    public function tasks()
+    {
+        return $this->hasManyThrough(Task::class, KanbanColumn::class, 'board_id', 'column_id');
+    }
+
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class)->orderBy('created_at', 'desc');
+    }
 }

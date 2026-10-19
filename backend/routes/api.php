@@ -16,6 +16,8 @@ use App\Http\Controllers\TaskAttachmentController;
 use App\Http\Controllers\MyTaskController;
 use App\Http\Controllers\PersonalDashboardController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SubtaskController;
+use App\Http\Controllers\BoardDashboardController;
 
 // ==========================================
 // PUBLIC ROUTES
@@ -127,6 +129,17 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::post('/tasks/{task}/comments', [TaskDetailController::class, 'addComment']);
     Route::put('/comments/{comment}', [TaskDetailController::class, 'updateComment']);
     Route::delete('/comments/{comment}', [TaskDetailController::class, 'deleteComment']);
+
+    // Subtasks
+    Route::get('/tasks/{task}/subtasks', [SubtaskController::class, 'index']);
+    Route::post('/tasks/{task}/subtasks', [SubtaskController::class, 'store']);
+    Route::get('/tasks/subtasks/{subtask}', [SubtaskController::class, 'show']);
+    Route::patch('/tasks/subtasks/{subtask}', [SubtaskController::class, 'update']);
+    Route::delete('/tasks/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
+    Route::patch('/tasks/{task}/subtasks/reorder', [SubtaskController::class, 'reorder']);
+
+    // Board Workload Dashboard
+    Route::get('/boards/{board}/dashboard/member-workload', [BoardDashboardController::class, 'memberWorkload']);
 
     // Sprints
     Route::post('/boards/{board}/sprints', [SprintController::class, 'store']);

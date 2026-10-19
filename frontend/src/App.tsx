@@ -37,6 +37,9 @@ const BoardSettingsView = lazy(() => import('./pages/BoardSettingsView').then((m
 const WorkspaceDashboard = lazy(() =>
   import('./pages/WorkspaceDashboard').then((module) => ({ default: module.WorkspaceDashboard })),
 );
+const BoardWorkloadDashboard = lazy(() =>
+  import('./pages/BoardWorkloadDashboard').then((module) => ({ default: module.BoardWorkloadDashboard })),
+);
 
 
 import { useUIStore } from './store/uiStore';
@@ -102,6 +105,7 @@ function App() {
                 <Route path="kanban" element={<BoardView />} />
                 <Route path="list" element={<ListView />} />
                 <Route path="calendar" element={<CalendarView />} />
+                <Route path="dashboard" element={<BoardWorkloadDashboard />} />
                 <Route path="members" element={<BoardMembersView />} />
                 <Route path="settings" element={<BoardSettingsView />} />
                 <Route index element={<Navigate to="kanban" replace />} />

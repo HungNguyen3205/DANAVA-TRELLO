@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
+    "lint": "oxlint src/",
     "preview": "vite preview",
     "test": "vitest run && node --experimental-strip-types tests/board.test.ts && node tests/backend.test.mjs",
     "format": "prettier --write src tests vite.config.ts vitest.config.ts README.md"

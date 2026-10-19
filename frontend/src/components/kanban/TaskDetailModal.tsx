@@ -13,6 +13,9 @@ import { getAvatarUrl } from '../../lib/avatar';
 import { PrioritySelect } from '../ui/PrioritySelect';
 import { StatusSelect } from '../ui/StatusSelect';
 import { TaskDatesModal } from './TaskDatesModal';
+import { SubtaskList } from './SubtaskList';
+import { SafeLinkifiedText } from '../common/SafeLinkifiedText';
+import { AssigneeSelect } from './AssigneeSelect';
 
 function formatDateDisplay(dateStr?: string): string {
   if (!dateStr) return '';
@@ -87,6 +90,9 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
       const t = res.data;
       const fullTask: Task = {
         ...draft,
+        subtasks: t.subtasks || [],
+        assignees: t.assignees || [],
+        assigneeId: t.assignee_id ? String(t.assignee_id) : (t.assignees?.[0]?.id ? String(t.assignees[0].id) : ''),
         checklists: (t.checklists || []).map((cl: any) => ({
           id: String(cl.id),
           title: cl.title,
@@ -125,14 +131,20 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const save = async (immediateUpdate?: Partial<Task>) => {
     setBusy(true);
     const payload = immediateUpdate ? { ...draft, ...immediateUpdate } : draft;
+    const selectedUserIds = payload.assignees?.map(u => Number(u.id)) || 
+      (payload.assigneeId ? [Number(payload.assigneeId)] : []);
+
     try {
       await api.put(`/tasks/${task.id}`, {
         title: payload.title,
         description: payload.description,
         column_id: payload.columnId,
         priority: payload.priority,
-        assignee_id: payload.assigneeId,
-        due_date: payload.dueDate
+        assignee_id: selectedUserIds[0] || null,
+        assignee_ids: selectedUserIds,
+        start_date: payload.startDate || null,
+        due_date: payload.dueDate || null,
+        completed_at: payload.completedAt || null,
       });
       // Do not close the modal here, so user can continue editing.
       // BoardView will refresh the board when the modal is finally closed.
@@ -251,17 +263,29 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
             {/* Metadata row (if labels/members/dates exist) */}
             {(draft.labels.length > 0 || draft.assigneeId || draft.dueDate || draft.startDate) && (
               <div className="flex flex-wrap gap-8 mb-8 ml-10">
-                {draft.assigneeId && (
+                {((draft.assignees && draft.assignees.length > 0) || draft.assigneeId) && (
                   <div>
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Thành viên</h3>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
-                        {assignedUser?.avatar ? (
-                          <img src={getAvatarUrl(assignedUser.avatar)} alt="Avatar" className="w-full h-full object-cover" />
-                        ) : (
-                          assignedUser?.initials || draft.assigneeId.charAt(0).toUpperCase()
-                        )}
-                      </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {(draft.assignees && draft.assignees.length > 0 
+                        ? draft.assignees 
+                        : (assignedUser ? [assignedUser] : [])
+                      ).map(u => (
+                        <div
+                          key={u.id}
+                          className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 bg-accent/40 rounded-full border border-border/60 shadow-2xs"
+                          title={u.name}
+                        >
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden shrink-0">
+                            {u.avatar ? (
+                              <img src={getAvatarUrl(u.avatar)} alt={u.name} className="w-full h-full object-cover" />
+                            ) : (
+                              u.initials || u.name?.charAt(0).toUpperCase() || 'U'
+                            )}
+                          </div>
+                          <span className="text-xs font-semibold text-foreground max-w-[120px] truncate">{u.name}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -348,15 +372,41 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                     className="p-4 bg-accent/30 hover:bg-accent/50 border border-transparent rounded-lg text-sm cursor-pointer min-h-[60px] transition-colors"
                   >
                     {draft.description ? (
-                      <div className="whitespace-pre-wrap text-foreground/90 leading-relaxed">
-                        {draft.description}
-                      </div>
+                      <SafeLinkifiedText text={draft.description} />
                     ) : (
-                      <span className="text-muted-foreground">Thêm mô tả chi tiết hơn...</span>
+                      <span className="text-muted-foreground italic">Thêm mô tả chi tiết hơn... (Liên kết URL sẽ tự động nhận diện)</span>
                     )}
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Subtasks (Công việc con) */}
+            <div className="mb-8">
+              <SubtaskList 
+                parentTask={draft} 
+                board={board} 
+                onSubtasksChanged={() => {
+                  api.get(`/tasks/${task.id}`).then(res => {
+                    if (res.data) {
+                      const updated = {
+                        ...draft,
+                        subtasks: res.data.subtasks || [],
+                        totalSubtasksCount: res.data.subtasks?.length || 0,
+                        doneSubtasksCount: res.data.subtasks?.filter((s: any) => s.completed_at).length || 0
+                      };
+                      setDraft(updated);
+                      useBoardStore.getState().setBoard(b => {
+                        if (!b) return b;
+                        return {
+                          ...b,
+                          tasks: b.tasks.map(bt => bt.id === task.id ? updated : bt)
+                        };
+                      });
+                    }
+                  });
+                }}
+              />
             </div>
 
             {/* Checklists */}
@@ -772,42 +822,27 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
 
               {isMembersVisible && (
                 <div className="mt-2 p-4 bg-card border border-border/80 rounded-2xl shadow-xl animate-in slide-in-from-top-2 duration-200">
-                  <h4 className="text-xs font-bold text-foreground mb-2 flex justify-between items-center">
-                    Thành viên
+                  <div className="flex justify-between items-center mb-2.5">
+                    <h4 className="text-xs font-bold text-foreground">Giao việc cho thành viên</h4>
                     <button onClick={() => setIsMembersVisible(false)} className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                       <X size={14} />
                     </button>
-                  </h4>
-                  <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-                    {board?.users?.map(user => {
-                      const isAssignee = draft.assigneeId === user.id;
-                      return (
-                        <button
-                          key={user.id}
-                          onClick={() => {
-                            const newAssignee = isAssignee ? '' : user.id;
-                            update({ assigneeId: newAssignee });
-                          }}
-                          className="w-full text-left px-2 py-1.5 rounded text-[13px] font-medium text-foreground hover:bg-accent flex items-center justify-between transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden">
-                              {user.avatar ? (
-                                <img src={getAvatarUrl(user.avatar)} alt="Avatar" className="w-full h-full object-cover" />
-                              ) : (
-                                user.initials
-                              )}
-                            </span>
-                            <span className="truncate">{user.name}</span>
-                          </div>
-                          {isAssignee && <Check size={14} className="text-primary shrink-0" />}
-                        </button>
-                      );
-                    })}
-                    {(!board?.users || board.users.length === 0) && (
-                      <p className="text-xs text-muted-foreground">Không có thành viên nào.</p>
-                    )}
                   </div>
+                  <AssigneeSelect
+                    boardUsers={board.users || []}
+                    selectedUserIds={draft.assignees?.map(u => String(u.id)) || (draft.assigneeId ? [String(draft.assigneeId)] : [])}
+                    onChange={(newUserIds) => {
+                      const newAssignees = board.users?.filter(u => newUserIds.includes(String(u.id))) || [];
+                      update({
+                        assignees: newAssignees,
+                        assigneeId: newUserIds[0] || ''
+                      });
+                      save({
+                        assignees: newAssignees,
+                        assigneeId: newUserIds[0] || ''
+                      });
+                    }}
+                  />
                 </div>
               )}
 

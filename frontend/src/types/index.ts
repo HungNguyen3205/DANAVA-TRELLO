@@ -47,22 +47,67 @@ export interface Attachment {
 }
 export interface Task {
   id: string;
+  parentTaskId?: string | null;
   columnId: string;
   title: string;
   description: string;
   priority: Priority;
   labels: Label[];
   assigneeId: string;
+  assignees?: User[];
   collaborators: string[];
   startDate?: string;
   dueDate: string;
+  completedAt?: string | null;
+  sortOrder?: number;
+  creator?: User;
+  subtasks?: Task[];
   checklists: Checklist[];
   comments: Comment[];
   attachments: Attachment[];
+  totalSubtasksCount?: number;
+  doneSubtasksCount?: number;
   totalChecklistsItems?: number;
   doneChecklistsItems?: number;
   commentsCount?: number;
   attachmentsCount?: number;
+}
+
+export interface MemberWorkloadSummary {
+  total_tasks: number;
+  completed_tasks: number;
+  incomplete_tasks: number;
+  overdue_tasks: number;
+  completion_rate: number;
+}
+
+export interface MemberWorkloadTask {
+  id: number | string;
+  parent_task_id: number | string | null;
+  title: string;
+  priority: string;
+  due_date: string | null;
+  is_completed: boolean;
+  is_overdue: boolean;
+}
+
+export interface MemberWorkloadItem {
+  id: number | string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  role: string;
+  assigned: number;
+  incomplete: number;
+  completed: number;
+  overdue: number;
+  completion_rate: number;
+  tasks?: MemberWorkloadTask[];
+}
+
+export interface BoardMemberWorkloadResponse {
+  summary: MemberWorkloadSummary;
+  members: MemberWorkloadItem[];
 }
 export interface Column {
   id: string;

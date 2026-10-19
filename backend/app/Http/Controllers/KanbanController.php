@@ -13,22 +13,26 @@ class KanbanController extends Controller
     public function index(Request $request, Board $board)
     {
         $userId = $request->user()->id;
-        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
 
         $inBoard = \Illuminate\Support\Facades\DB::table('board_members')
             ->where('board_id', $board->id)
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$inBoard && !$isSystemAdmin) {
+        if (!$inBoard) {
             return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 
         $columns = $board->columns()->with(['tasks' => function ($query) {
-            $query->with(['labels'])
+            $query->whereNull('tasks.parent_task_id')
+                  ->with(['labels', 'assignees'])
                   ->withCount([
                       'attachments', 
                       'comments',
+                      'subtasks as total_subtasks_count',
+                      'subtasks as done_subtasks_count' => function($q) {
+                          $q->whereNotNull('completed_at');
+                      },
                       'checklistItems as total_checklists_items',
                       'checklistItems as done_checklists_items' => function($q) {
                           $q->where('is_completed', true);
@@ -137,7 +141,7 @@ class KanbanController extends Controller
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$inBoard && !$isSystemAdmin) {
+        if (!$inBoard) {
             return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 

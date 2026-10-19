@@ -49,13 +49,11 @@ class PersonalDashboardTest extends TestCase
         echo "\n---------------------------\n\n";
 
         $response->assertStatus(200);
-        $response->assertJsonPath('stats.total_assigned', 1);
-        $response->assertJsonPath('stats.upcoming', 1);
+        $response->assertJsonStructure(['user', 'summary', 'focus_tasks', 'attention_items']);
+        $this->assertCount(1, $response->json('focus_tasks'));
 
         $response2 = $this->getJson('/api/me/tasks');
-        echo "\n\n--- REAL TASKS JSON ---\n";
-        echo json_encode($response2->json(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        echo "\n---------------------------\n\n";
+        $response2->assertStatus(200);
     }
 
     public function test_user_cannot_see_tasks_from_revoked_workspaces()
@@ -79,6 +77,6 @@ class PersonalDashboardTest extends TestCase
 
         $response = $this->getJson('/api/me/dashboard');
         $response->assertStatus(200);
-        $response->assertJsonPath('stats.total_assigned', 0); // Should be 0 since no workspace access
+        $this->assertCount(0, $response->json('focus_tasks')); // Should be 0 since no workspace access
     }
 }

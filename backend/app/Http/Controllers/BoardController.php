@@ -163,15 +163,14 @@ class BoardController extends Controller
     public function show(Request $request, Board $board)
     {
         $userId = $request->user()->id;
-        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
 
-        // Phải là thành viên của bảng hoặc Quản trị hệ thống
+        // Phải là thành viên của bảng
         $inBoard = \Illuminate\Support\Facades\DB::table('board_members')
             ->where('board_id', $board->id)
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$inBoard && !$isSystemAdmin) {
+        if (!$inBoard) {
             return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
         }
 
@@ -190,16 +189,15 @@ class BoardController extends Controller
     public function update(Request $request, Board $board)
     {
         $userId = $request->user()->id;
-        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
 
-        // Chỉ Quản trị viên (Chủ sở hữu) của bảng hoặc Admin hệ thống mới có quyền chỉnh sửa
+        // Chỉ Quản trị viên (Chủ sở hữu) của bảng mới có quyền chỉnh sửa
         $isBoardAdmin = \Illuminate\Support\Facades\DB::table('board_members')
             ->where('board_id', $board->id)
             ->where('user_id', $userId)
             ->where('role', 'admin')
             ->exists();
 
-        if (!$isBoardAdmin && !$isSystemAdmin) {
+        if (!$isBoardAdmin) {
             return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền chỉnh sửa bảng.'], 403);
         }
 
@@ -218,16 +216,15 @@ class BoardController extends Controller
     public function destroy(Request $request, Board $board)
     {
         $userId = $request->user()->id;
-        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['admin', 'system_admin']);
 
-        // Chỉ Quản trị viên (Chủ sở hữu) của bảng hoặc Admin hệ thống mới có quyền xóa
+        // Chỉ Quản trị viên (Chủ sở hữu) của bảng mới có quyền xóa
         $isBoardAdmin = \Illuminate\Support\Facades\DB::table('board_members')
             ->where('board_id', $board->id)
             ->where('user_id', $userId)
             ->where('role', 'admin')
             ->exists();
 
-        if (!$isBoardAdmin && !$isSystemAdmin) {
+        if (!$isBoardAdmin) {
             return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền xóa bảng.'], 403);
         }
 

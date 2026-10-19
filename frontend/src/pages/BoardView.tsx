@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
-import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus } from 'lucide-react';
+import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus, BarChart3 } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
@@ -198,6 +198,12 @@ export function BoardView() {
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
             >
               <LayoutDashboard size={16} /> Lịch
+            </Link>
+            <Link 
+              to={`${basePath}/dashboard`}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <BarChart3 size={16} /> Thống kê
             </Link>
           </div>
           

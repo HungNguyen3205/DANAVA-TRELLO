@@ -10,18 +10,50 @@ class Task extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'parent_task_id',
         'column_id', 
         'sprint_id', 
         'assignee_id', 
+        'created_by',
         'title', 
         'description', 
         'priority', 
         'order', 
+        'sort_order',
         'start_date',
         'due_date',
         'completed_at',
         'completed_by'
     ];
+
+    public function parent()
+    {
+        return $this->belongsTo(Task::class, 'parent_task_id');
+    }
+
+    public function subtasks()
+    {
+        return $this->hasMany(Task::class, 'parent_task_id')
+                    ->orderBy('sort_order', 'asc')
+                    ->orderBy('id', 'asc');
+    }
+
+    public function assignees()
+    {
+        return $this->belongsToMany(User::class, 'task_assignees', 'task_id', 'user_id')
+                    ->withPivot('assigned_by')
+                    ->withTimestamps();
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function board()
+    {
+        return $this->hasOneThrough(Board::class, KanbanColumn::class, 'id', 'id', 'column_id', 'board_id');
+    }
 
     public function column()
     {
@@ -66,6 +98,16 @@ class Task extends Model
     public function activityLogs()
     {
         return $this->hasMany(ActivityLog::class)->orderBy('created_at', 'desc');
+    }
+
+    public function scopeRootTasks($query)
+    {
+        return $query->whereNull('tasks.parent_task_id');
+    }
+
+    public function scopeSubtasks($query)
+    {
+        return $query->whereNotNull('tasks.parent_task_id');
     }
 
     // Scopes for Task completion status

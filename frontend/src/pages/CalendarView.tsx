@@ -13,7 +13,7 @@ import { PromptModal } from '../components/ui/PromptModal';
 import { 
   LayoutDashboard, ChevronRight, Share2, 
   Plus, List as ListIcon, Calendar as CalendarIcon,
-  LayoutGrid, Filter, Search, ChevronLeft
+  LayoutGrid, Filter, Search, ChevronLeft, BarChart3
 } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
@@ -44,7 +44,7 @@ interface TaskEvent extends Event {
 }
 
 // Tab Component for Header
-function BoardTabs({ basePath, activeTab }: { basePath: string, activeTab: 'kanban' | 'list' | 'calendar' }) {
+function BoardTabs({ basePath, activeTab }: { basePath: string, activeTab: 'kanban' | 'list' | 'calendar' | 'dashboard' }) {
   return (
     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
       <Link 
@@ -64,6 +64,12 @@ function BoardTabs({ basePath, activeTab }: { basePath: string, activeTab: 'kanb
         className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'calendar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
       >
         <CalendarIcon size={16} /> Lịch
+      </Link>
+      <Link 
+        to={`${basePath}/dashboard`}
+        className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'dashboard' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+      >
+        <BarChart3 size={16} /> Thống kê
       </Link>
     </div>
   );

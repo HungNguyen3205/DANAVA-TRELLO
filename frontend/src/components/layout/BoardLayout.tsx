@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { LayoutDashboard, Grid, Calendar, Users, Settings, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Grid, Calendar, Users, Settings, ArrowLeft, BarChart3 } from 'lucide-react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useBoardRoute } from './BoardRouteContext';
@@ -45,6 +45,7 @@ export function BoardLayout() {
           <SidebarItem icon={<Grid size={18} />} label="Kanban" to={`${basePath}/kanban`} active={location.pathname.includes('/kanban')} />
           <SidebarItem icon={<LayoutDashboard size={18} />} label="Danh sách" to={`${basePath}/list`} active={location.pathname.includes('/list')} />
           <SidebarItem icon={<Calendar size={18} />} label="Lịch" to={`${basePath}/calendar`} active={location.pathname.includes('/calendar')} />
+          <SidebarItem icon={<BarChart3 size={18} />} label="Thống kê" to={`${basePath}/dashboard`} active={location.pathname.includes('/dashboard')} />
           <SidebarItem icon={<Users size={18} />} label="Thành viên" to={`${basePath}/members`} active={location.pathname.includes('/members')} />
           <SidebarItem icon={<Settings size={18} />} label="Cài đặt bảng" to={`${basePath}/settings`} active={location.pathname.includes('/settings')} />
           

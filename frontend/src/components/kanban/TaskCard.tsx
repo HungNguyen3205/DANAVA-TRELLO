@@ -12,14 +12,17 @@ import { overdue } from "../../lib/board";
 import { getAvatarUrl } from "../../lib/avatar";
 
 export function CardContent({ task, board, theme }: { task: Task; board: Board; theme?: any }) {
-  const assignee = board.users.find((u) => u.id === task.assigneeId);
-  const totalChecklistsItems = task.totalChecklistsItems ?? (task.checklists?.reduce((acc, c) => acc + c.items.length, 0) || 0);
-  const doneChecklistsItems = task.doneChecklistsItems ?? (task.checklists?.reduce((acc, c) => acc + c.items.filter(i => i.done).length, 0) || 0);
-  const commentsCount = task.commentsCount ?? task.comments?.length ?? 0;
-  const attachmentsCount = task.attachmentsCount ?? task.attachments?.length ?? 0;
+  const totalSubtasks = (task as any).total_subtasks_count ?? task.totalSubtasksCount ?? (task.subtasks?.length || 0);
+  const doneSubtasks = (task as any).done_subtasks_count ?? task.doneSubtasksCount ?? (task.subtasks?.filter(s => !!s.completed_at || s.completedAt).length || 0);
+
+  const totalItems = totalSubtasks > 0 ? totalSubtasks : totalChecklistsItems;
+  const doneItems = totalSubtasks > 0 ? doneSubtasks : doneChecklistsItems;
   
-  const progress = totalChecklistsItems > 0 ? Math.round((doneChecklistsItems / totalChecklistsItems) * 100) : 0;
-  const isDone = doneChecklistsItems === totalChecklistsItems && totalChecklistsItems > 0;
+  const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+  const isDone = doneItems === totalItems && totalItems > 0;
+  const displayAssignees = (task.assignees && task.assignees.length > 0) 
+    ? task.assignees 
+    : (assignee ? [assignee] : []);
     
   return (
     <div className="flex flex-col relative w-full h-full">
@@ -57,10 +60,12 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
         
         <h4 className="text-[14px] font-semibold leading-snug mb-2 text-foreground group-hover:text-primary transition-colors text-left line-clamp-2 w-full">{task.title}</h4>
         
-        {totalChecklistsItems > 0 && (
+        {totalItems > 0 && (
           <div className="w-full mb-3">
             <div className="flex items-center justify-between gap-2 mb-1 text-[10px] font-medium text-muted-foreground">
-              <span className="flex items-center gap-1"><ListChecks size={12} /> Tiến độ</span>
+              <span className="flex items-center gap-1 font-semibold text-primary">
+                <ListChecks size={12} /> {totalSubtasks > 0 ? 'Việc con' : 'Tiến độ'} ({doneItems}/{totalItems})
+              </span>
               <span>{progress}%</span>
             </div>
             <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
@@ -73,7 +78,7 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
         )}
         
         <div className={`flex items-center justify-between gap-2 mt-auto pt-3 border-t w-full min-h-[36px] ${
-          (task.dueDate || commentsCount > 0 || attachmentsCount > 0 || task.assigneeId) 
+          (task.dueDate || commentsCount > 0 || attachmentsCount > 0 || displayAssignees.length > 0) 
           ? 'border-border/40' 
           : 'border-transparent'
         }`}>
@@ -98,17 +103,27 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
             )}
           </div>
           
-          {task.assigneeId && (
-            <span 
-              className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm ring-2 ring-white z-10 overflow-hidden" 
-              title={`User: ${assignee?.name || task.assigneeId}`}
-            >
-              {assignee?.avatar ? (
-                <img src={getAvatarUrl(assignee.avatar)} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                assignee?.initials || task.assigneeId.charAt(0).toUpperCase()
+          {displayAssignees.length > 0 && (
+            <div className="flex -space-x-1.5 overflow-hidden shrink-0">
+              {displayAssignees.slice(0, 3).map((u) => (
+                <span 
+                  key={u.id}
+                  className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold shadow-xs ring-2 ring-card z-10 overflow-hidden" 
+                  title={`Thành viên: ${u.name}`}
+                >
+                  {u.avatar ? (
+                    <img src={getAvatarUrl(u.avatar)} alt={u.name} className="w-full h-full object-cover" />
+                  ) : (
+                    u.initials || u.name?.charAt(0).toUpperCase() || 'U'
+                  )}
+                </span>
+              ))}
+              {displayAssignees.length > 3 && (
+                <span className="w-6 h-6 shrink-0 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[9px] font-bold ring-2 ring-card z-10">
+                  +{displayAssignees.length - 3}
+                </span>
               )}
-            </span>
+            </div>
           )}
         </div>
       </div>
