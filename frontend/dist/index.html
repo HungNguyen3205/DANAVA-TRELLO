@@ -11,6 +11,17 @@
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <meta name="theme-color" content="#f47624" />
     <title>DANAVA WORK – Bảng công việc</title>
+    <script>
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              regs[i].unregister();
+            }
+          });
+        }
+      }
+    </script>
     <script type="module" crossorigin src="/assets/index-BSoBmd-V.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-BPY2pbXk.js">
     <link rel="stylesheet" crossorigin href="/assets/index-ClrQ2vZk.css">

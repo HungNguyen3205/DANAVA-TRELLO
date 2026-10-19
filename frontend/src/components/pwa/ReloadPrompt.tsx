@@ -17,7 +17,9 @@ export function ReloadPrompt() {
   })
 
   useEffect(() => {
-    void updateServiceWorker(false)
+    if (!import.meta.env.DEV) {
+      void updateServiceWorker(false)
+    }
   }, [updateServiceWorker])
 
   return null
