@@ -73,16 +73,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/me', [AuthController::class, 'updateProfile']); // POST used for file uploads instead of PUT
-    Route::post('/auth/change-password', function(Request $request) {
-        $request->validate(['password' => 'required|string|min:8']);
-        $user = $request->user();
-        $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
-        $user->must_change_password = false;
-        $user->save();
-        return response()->json(['message' => 'Đổi mật khẩu thành công']);
-    });
-
-    Route::post('/account/change-password', [AuthController::class, 'changePassword']);
+    Route::post('/auth/change-password', [AuthController::class, 'initialChangePassword'])->middleware('throttle:10,1');
+    Route::post('/account/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:5,1');
     Route::post('/account/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
     Route::post('/account/logout-other-devices', [AuthController::class, 'logoutOtherDevices']);
 
@@ -112,16 +104,30 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     // Search active users to add to board
     Route::get('/users/search', function(\Illuminate\Http\Request $request) {
         $q = trim($request->query('q', ''));
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $boardId = $request->query('board_id');
+
         $query = \App\Models\User::where('account_status', 'active');
-        if (!empty($q)) {
-            $query->where(function($sub) use ($q) {
-                $sub->where('name', 'LIKE', "%{$q}%")
-                    ->orWhere('username', 'LIKE', "%{$q}%")
-                    ->orWhere('email', 'LIKE', "%{$q}%");
+        $query->where(function($sub) use ($q) {
+            $sub->where('name', 'LIKE', "%{$q}%")
+                ->orWhere('username', 'LIKE', "%{$q}%")
+                ->orWhere('email', 'LIKE', "%{$q}%");
+        });
+
+        if ($boardId) {
+            $query->whereNotExists(function($sub) use ($boardId) {
+                $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                    ->from('board_members')
+                    ->whereColumn('board_members.user_id', 'users.id')
+                    ->where('board_members.board_id', $boardId);
             });
         }
-        return response()->json($query->select('id', 'name', 'username', 'email', 'avatar')->limit(20)->get());
-    });
+
+        return response()->json($query->select('id', 'name', 'username', 'avatar')->limit(20)->get());
+    })->middleware('throttle:60,1');
 
     // Workspace Boards
     Route::get('/workspaces/{workspace}/boards', [BoardController::class, 'index']);
@@ -132,6 +138,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::delete('/boards/{board}', [BoardController::class, 'destroy']);
     Route::post('/boards/{board}/toggle-star', [BoardController::class, 'toggleStar']);
     Route::post('/boards/{board}/evaluation/publish', [BoardController::class, 'publishEvaluation']);
+    Route::post('/boards/{board}/transfer-ownership', [BoardController::class, 'transferOwnership']);
 
     // Board Telegram Management
     Route::get('/boards/{board}/telegram', [\App\Http\Controllers\BoardTelegramController::class, 'show']);

@@ -151,7 +151,7 @@ class MyTaskController extends Controller
                 'due_date' => $task->due_date ? Carbon::parse($task->due_date)->toIso8601String() : null,
                 'completed_at' => $task->completed_at ? Carbon::parse($task->completed_at)->toIso8601String() : null,
                 'status' => $task->column ? $task->column->title : null,
-                'workspace' => $workspace ? ['id' => $workspace->id, 'name' => $workspace->name] : null,
+                'workspace' => null,
                 'board' => $board ? ['id' => $board->id, 'public_id' => $board->public_id, 'name' => $board->name, 'color' => $board->color] : null,
                 'sprint' => $task->sprint ? ['id' => $task->sprint->id, 'name' => $task->sprint->name] : null,
                 'assignees' => $assignees,
@@ -159,8 +159,6 @@ class MyTaskController extends Controller
                 'my_contribution_percent' => $myContributionPercent,
             ];
         });
-
-        return response()->json($tasks);
 
         return response()->json($tasks);
     }

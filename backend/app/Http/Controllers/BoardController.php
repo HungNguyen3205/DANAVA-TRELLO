@@ -58,26 +58,29 @@ class BoardController extends Controller
 
         $userId = $request->user()->id;
 
-        $board = Board::create([
-            'owner_id' => $userId,
-            'name' => $request->name,
-            'description' => $request->description,
-            'color' => $request->color ?? 'bg-gradient-to-br from-blue-500 to-cyan-400',
-        ]);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $userId) {
+            $board = Board::create([
+                'owner_id' => $userId,
+                'workspace_id' => null,
+                'name' => $request->name,
+                'description' => $request->description,
+                'color' => $request->color ?? 'bg-gradient-to-br from-blue-500 to-cyan-400',
+            ]);
 
-        // Người tạo là Quản trị viên (Chủ sở hữu) của bảng
-        \Illuminate\Support\Facades\DB::table('board_members')->updateOrInsert(
-            ['board_id' => $board->id, 'user_id' => $userId],
-            ['role' => 'admin', 'is_starred' => false, 'created_at' => now(), 'updated_at' => now()]
-        );
+            // Người tạo là Quản trị viên (Chủ sở hữu) của bảng
+            \Illuminate\Support\Facades\DB::table('board_members')->updateOrInsert(
+                ['board_id' => $board->id, 'user_id' => $userId],
+                ['role' => 'admin', 'is_starred' => false, 'created_at' => now(), 'updated_at' => now()]
+            );
 
-        // Tự động tạo sẵn 4 cột mặc định có màu theo quy chuẩn làm việc
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'color' => 'violet', 'order' => 1000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'color' => 'blue', 'order' => 2000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chờ duyệt', 'color' => 'orange', 'order' => 3000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'color' => 'green', 'order' => 4000]);
+            // Tự động tạo sẵn 4 cột mặc định có màu theo quy chuẩn làm việc
+            \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'color' => 'violet', 'order' => 1000]);
+            \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'color' => 'blue', 'order' => 2000]);
+            \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chờ duyệt', 'color' => 'orange', 'order' => 3000]);
+            \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'color' => 'green', 'order' => 4000]);
 
-        return response()->json($board, 201);
+            return response()->json($board, 201);
+        });
     }
 
     // Lấy danh sách bảng trong một Không gian (Chỉ bảng mà tài khoản có tham gia)
@@ -118,38 +121,12 @@ class BoardController extends Controller
         return response()->json($boards);
     }
 
-    // Tạo bảng mới
+    // Tạo bảng qua Không gian làm việc cũ (Ngừng hỗ trợ - trả về 410 Gone)
     public function store(Request $request, Workspace $workspace)
     {
-        $userId = $request->user()->id;
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'color' => 'nullable|string|max:50',
-        ]);
-
-        $board = $workspace->boards()->create([
-            'name' => $request->name,
-            'color' => $request->color ?? 'bg-gradient-to-br from-blue-500 to-cyan-400',
-        ]);
-
-        // Người tạo bảng tự động trở thành Quản trị viên (Chủ sở hữu) của bảng đó
-        \Illuminate\Support\Facades\DB::table('board_members')->insert([
-            'board_id' => $board->id,
-            'user_id' => $userId,
-            'role' => 'admin',
-            'is_starred' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // Tạo sẵn 4 cột mặc định có màu theo quy chuẩn làm việc
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'color' => 'violet', 'order' => 1000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Đang thực hiện', 'color' => 'blue', 'order' => 2000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chờ duyệt', 'color' => 'orange', 'order' => 3000]);
-        \App\Models\KanbanColumn::create(['board_id' => $board->id, 'title' => 'Hoàn thành', 'color' => 'green', 'order' => 4000]);
-
-        return response()->json($board, 201);
+        return response()->json([
+            'message' => 'Tạo bảng qua Không gian làm việc đã ngừng hỗ trợ. Vui lòng sử dụng POST /api/boards.'
+        ], 410);
     }
 
     // Xem chi tiết một bảng
@@ -265,6 +242,91 @@ class BoardController extends Controller
         return response()->json([
             'message' => 'Đã công bố kỳ đánh giá thành công',
             'period_title' => $periodTitle,
+        ]);
+    }
+
+    /**
+     * POST /api/boards/{board}/transfer-ownership
+     * Transfer board ownership to an active member with password confirmation.
+     */
+    public function transferOwnership(Request $request, Board $board)
+    {
+        $user = $request->user();
+
+        // Only current board owner can transfer ownership
+        if ((int)$board->owner_id !== (int)$user->id) {
+            abort(403, 'Chỉ Chủ sở hữu hiện tại mới có quyền chuyển giao quyền sở hữu bảng.');
+        }
+
+        $request->validate([
+            'new_owner_id' => 'required|integer|exists:users,id',
+            'password' => 'required|string',
+        ]);
+
+        if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'password' => ['Mật khẩu xác nhận không chính xác.'],
+            ]);
+        }
+
+        $newOwnerId = (int)$request->new_owner_id;
+
+        if ($newOwnerId === (int)$user->id) {
+            return response()->json([
+                'message' => 'Bạn đã là Chủ sở hữu của bảng này.',
+            ], 422);
+        }
+
+        // Target user must be an active member of this board
+        $isMember = \Illuminate\Support\Facades\DB::table('board_members')
+            ->where('board_id', $board->id)
+            ->where('user_id', $newOwnerId)
+            ->exists();
+
+        if (!$isMember) {
+            return response()->json([
+                'message' => 'Người nhận chuyển giao phải là thành viên hiện tại của bảng.',
+            ], 422);
+        }
+
+        $newOwner = \App\Models\User::findOrFail($newOwnerId);
+        if ($newOwner->account_status !== 'active') {
+            return response()->json([
+                'message' => 'Tài khoản người nhận đang bị khóa hoặc không hoạt động.',
+            ], 422);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($board, $user, $newOwnerId) {
+            // Update board owner
+            $board->update(['owner_id' => $newOwnerId]);
+
+            // Ensure new owner has admin role in board_members
+            \Illuminate\Support\Facades\DB::table('board_members')->updateOrInsert(
+                ['board_id' => $board->id, 'user_id' => $newOwnerId],
+                ['role' => 'admin', 'updated_at' => now()]
+            );
+
+            // Previous owner remains an admin in board_members
+            \Illuminate\Support\Facades\DB::table('board_members')->updateOrInsert(
+                ['board_id' => $board->id, 'user_id' => $user->id],
+                ['role' => 'admin', 'updated_at' => now()]
+            );
+
+            \App\Models\ActivityLog::create([
+                'board_id' => $board->id,
+                'user_id' => $user->id,
+                'action' => 'transfer_board_ownership',
+                'old_value' => (string)$user->id,
+                'new_value' => (string)$newOwnerId,
+            ]);
+        });
+
+        \Illuminate\Support\Facades\Cache::forget("personal_dashboard_optimized_{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("personal_dashboard_optimized_{$newOwnerId}");
+
+        return response()->json([
+            'message' => 'Chuyển giao quyền sở hữu bảng thành công.',
+            'owner_id' => $newOwnerId,
         ]);
     }
 }
