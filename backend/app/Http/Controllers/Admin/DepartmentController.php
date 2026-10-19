@@ -25,7 +25,7 @@ class DepartmentController extends Controller
     {
         $query = Department::query()
             ->withCount('employees')
-            ->with(['manager:id,name,username,email,avatar,position,account_status']);
+            ->with(['manager:id,name,username,email,avatar,position,department_title,account_status']);
 
         // Search by name or code
         if ($search = $request->input('search')) {
@@ -107,35 +107,21 @@ class DepartmentController extends Controller
                 'code' => $code,
                 'description' => $validated['description'] ?? null,
                 'color' => $validated['color'] ?? '#6366f1',
-                'manager_id' => $manager?->id,
+                'manager_id' => null,
                 'status' => $validated['status'] ?? 'active',
                 'created_by' => $request->user()->id,
             ]);
 
-            // If manager selected, ensure manager belongs to this department
+            $membershipService = app(\App\Services\DepartmentMembershipService::class);
+
+            // If manager selected, assign manager and give manager title
             if ($manager) {
-                $oldDept = $manager->department;
-                $manager->department_id = $department->id;
-                $manager->save();
-
-                // Send manager assigned notification
-                $manager->notify(new DepartmentManagerAssignedNotification($department, $request->user()));
-
-                if ($oldDept && $oldDept->id !== $department->id) {
-                    $manager->notify(new DepartmentTransferNotification($oldDept->name, $department->name, $request->user()));
-                }
+                $membershipService->assignManager($department, $manager, $request->user());
             }
 
             // Assign initial employees if provided
             if (!empty($validated['employee_ids'])) {
-                $employees = User::whereIn('id', $validated['employee_ids'])->get();
-                foreach ($employees as $emp) {
-                    $oldDept = $emp->department;
-                    $emp->department_id = $department->id;
-                    $emp->save();
-
-                    $emp->notify(new DepartmentTransferNotification($oldDept?->name, $department->name, $request->user()));
-                }
+                $membershipService->addEmployees($department, $validated['employee_ids'], $request->user());
             }
 
             // Activity Log
@@ -151,7 +137,7 @@ class DepartmentController extends Controller
 
             return response()->json([
                 'message' => 'Tạo phòng ban thành công.',
-                'department' => $department->load(['manager:id,name,username,email,avatar']),
+                'department' => $department->load(['manager:id,name,username,email,avatar,position,department_title']),
             ], 201);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -167,14 +153,14 @@ class DepartmentController extends Controller
     {
         try {
             $department->load([
-                'manager:id,name,username,email,avatar,position,account_status',
+                'manager:id,name,username,email,avatar,position,department_title,account_status',
                 'creator:id,name,username',
             ]);
 
             // Employees list in this department
             $employees = User::where('department_id', $department->id)
                 ->withCount('boards')
-                ->select('id', 'name', 'username', 'email', 'avatar', 'position', 'account_status', 'phone', 'join_date')
+                ->select('id', 'name', 'username', 'email', 'avatar', 'position', 'department_title', 'account_status', 'phone', 'join_date')
                 ->get();
 
             $employeeIds = $employees->pluck('id')->toArray();
@@ -355,20 +341,18 @@ class DepartmentController extends Controller
             if (array_key_exists('status', $validated)) {
                 $department->status = $validated['status'];
             }
-            $department->manager_id = $newManager?->id;
             $department->save();
 
-            // If manager changed, assign new manager to this department and notify
-            if ($newManager && (int)$oldManagerId !== (int)$newManager->id) {
-                $oldDept = $newManager->department;
-                $newManager->department_id = $department->id;
-                $newManager->save();
+            $membershipService = app(\App\Services\DepartmentMembershipService::class);
 
-                $newManager->notify(new DepartmentManagerAssignedNotification($department, $request->user()));
+            // If department was renamed, sync titles for all members cleanly
+            if ($oldName !== $department->name) {
+                $membershipService->handleDepartmentRename($department, $oldName, $request->user());
+            }
 
-                if ($oldDept && $oldDept->id !== $department->id) {
-                    $newManager->notify(new DepartmentTransferNotification($oldDept->name, $department->name, $request->user()));
-                }
+            // If manager changed or cleared
+            if ((int)$oldManagerId !== (int)($newManager?->id)) {
+                $membershipService->assignManager($department, $newManager, $request->user());
             }
 
             // Record Activity Log
@@ -395,7 +379,7 @@ class DepartmentController extends Controller
 
             return response()->json([
                 'message' => 'Cập nhật phòng ban thành công.',
-                'department' => $department->load(['manager:id,name,username,email,avatar']),
+                'department' => $department->load(['manager:id,name,username,email,avatar,position,department_title']),
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -498,40 +482,16 @@ class DepartmentController extends Controller
         $userIds = $request->input('user_ids');
         $users = User::whereIn('id', $userIds)->get();
 
-        DB::beginTransaction();
         try {
-            $transferredCount = 0;
-            foreach ($users as $user) {
-                if ((int)$user->department_id === (int)$department->id) {
-                    continue;
-                }
-
-                $oldDept = $user->department;
-                $user->department_id = $department->id;
-                $user->save();
-
-                $user->notify(new DepartmentTransferNotification($oldDept?->name, $department->name, $request->user()));
-
-                ActivityLog::create([
-                    'department_id' => $department->id,
-                    'user_id' => $request->user()->id,
-                    'action' => 'thêm nhân viên vào phòng ban',
-                    'old_value' => $oldDept ? "Từ {$oldDept->name}" : 'Chưa phân phòng',
-                    'new_value' => "Gán {$user->name} vào {$department->name}",
-                ]);
-
-                $transferredCount++;
-            }
-
-            DB::commit();
+            $membershipService = app(\App\Services\DepartmentMembershipService::class);
+            $added = $membershipService->addEmployees($department, $request->input('user_ids'), $request->user());
 
             return response()->json([
-                'message' => "Đã thêm {$transferredCount} nhân viên vào phòng ban '{$department->name}'.",
-                'transferred_count' => $transferredCount,
+                'message' => "Đã thêm " . count($added) . " nhân viên vào phòng ban '{$department->name}'.",
+                'transferred_count' => count($added),
             ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Lỗi gán nhân viên: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Lỗi gán nhân viên: ' . $e->getMessage()], 422);
         }
     }
 
@@ -545,35 +505,15 @@ class DepartmentController extends Controller
             return response()->json(['message' => 'Nhân viên này không thuộc phòng ban đã chọn.'], 422);
         }
 
-        DB::beginTransaction();
         try {
-            $user->department_id = null;
-            $user->save();
-
-            // If user was manager, clear manager_id
-            if ((int)$department->manager_id === (int)$user->id) {
-                $department->manager_id = null;
-                $department->save();
-            }
-
-            $user->notify(new DepartmentTransferNotification($department->name, null, $request->user()));
-
-            ActivityLog::create([
-                'department_id' => $department->id,
-                'user_id' => $request->user()->id,
-                'action' => 'gỡ nhân viên khỏi phòng ban',
-                'old_value' => "Thuộc {$department->name}",
-                'new_value' => "Đưa {$user->name} về Chưa phân phòng",
-            ]);
-
-            DB::commit();
+            $membershipService = app(\App\Services\DepartmentMembershipService::class);
+            $membershipService->removeEmployee($department, $user, $request->user());
 
             return response()->json([
                 'message' => "Đã gỡ nhân viên '{$user->name}' khỏi phòng ban '{$department->name}'.",
             ]);
         } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Lỗi gỡ nhân viên: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Lỗi gỡ nhân viên: ' . $e->getMessage()], 422);
         }
     }
 
@@ -585,6 +525,7 @@ class DepartmentController extends Controller
     {
         $request->validate([
             'department_id' => 'nullable|exists:departments,id',
+            'replacement_manager_id' => 'nullable|exists:users,id',
         ]);
 
         $newDeptId = $request->input('department_id');
@@ -596,49 +537,18 @@ class DepartmentController extends Controller
 
         $oldDept = $user->department;
 
-        if ($oldDept && (int)$oldDept->id === (int)$newDeptId) {
+        if ($oldDept && $newDeptId && (int)$oldDept->id === (int)$newDeptId) {
             return response()->json(['message' => 'Nhân viên đã thuộc phòng ban này.'], 422);
         }
 
-        DB::beginTransaction();
         try {
-            // If user was manager of old department, clear manager_id
-            if ($oldDept && (int)$oldDept->manager_id === (int)$user->id) {
-                $oldDept->manager_id = null;
-                $oldDept->save();
-            }
-
-            $user->department_id = $newDeptId;
-            $user->save();
-
-            // Send notification
-            $user->notify(new DepartmentTransferNotification($oldDept?->name, $targetDept?->name, $request->user()));
-
-            // Activity Log
-            $actionLog = $targetDept
-                ? "Điều chuyển {$user->name} từ " . ($oldDept ? $oldDept->name : 'Chưa phân phòng') . " sang {$targetDept->name}"
-                : "Gỡ {$user->name} khỏi " . ($oldDept ? $oldDept->name : 'phòng ban');
-
-            if ($targetDept) {
-                ActivityLog::create([
-                    'department_id' => $targetDept->id,
-                    'user_id' => $request->user()->id,
-                    'action' => 'điều chuyển nhân viên',
-                    'old_value' => $oldDept?->name ?? 'Chưa phân phòng',
-                    'new_value' => $actionLog,
-                ]);
-            }
-            if ($oldDept) {
-                ActivityLog::create([
-                    'department_id' => $oldDept->id,
-                    'user_id' => $request->user()->id,
-                    'action' => 'điều chuyển nhân viên đi',
-                    'old_value' => $oldDept->name,
-                    'new_value' => $actionLog,
-                ]);
-            }
-
-            DB::commit();
+            $membershipService = app(\App\Services\DepartmentMembershipService::class);
+            $membershipService->transferEmployee(
+                $user,
+                $targetDept,
+                $request->input('replacement_manager_id'),
+                $request->user()
+            );
 
             // Dispatch Telegram notifications for department employee transfer
             try {
@@ -713,25 +623,18 @@ class DepartmentController extends Controller
 
         DB::beginTransaction();
         try {
+            $membershipService = app(\App\Services\DepartmentMembershipService::class);
             $count = 0;
             foreach ($users as $user) {
                 if ((int)$user->department_id === (int)$newDeptId) {
                     continue;
                 }
 
-                $oldDept = $user->department;
-                if ($oldDept && (int)$oldDept->manager_id === (int)$user->id) {
-                    $oldDept->manager_id = null;
-                    $oldDept->save();
-                }
-
-                $user->department_id = $newDeptId;
-                $user->save();
-
-                $user->notify(new DepartmentTransferNotification($oldDept?->name, $targetDept?->name, $request->user()));
-
+                $membershipService->transferEmployee($user, $targetDept, null, $request->user());
                 $count++;
             }
+
+            DB::commit();
 
             if ($targetDept) {
                 ActivityLog::create([

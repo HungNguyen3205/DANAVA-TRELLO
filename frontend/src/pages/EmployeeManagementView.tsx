@@ -240,9 +240,16 @@ export function EmployeeManagementView() {
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <span className="text-xs font-medium text-foreground bg-accent/60 px-2.5 py-1 rounded-md">
-                        {emp.position || 'Chưa cập nhật'}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-semibold text-foreground">
+                          {emp.department_title || (emp.department ? `Nhân viên ${emp.department.name}` : 'Chưa phân phòng')}
+                        </span>
+                        {emp.position && (
+                          <span className="text-[11px] text-muted-foreground">
+                            {emp.position}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${emp.system_role === 'system_admin' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>

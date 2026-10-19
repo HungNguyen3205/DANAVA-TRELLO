@@ -20,6 +20,7 @@ export interface User {
   must_change_password?: boolean;
   notification_preferences?: any;
   department_id?: number | null;
+  department_title?: string | null;
   department?: Department | null;
 }
 export interface Department {

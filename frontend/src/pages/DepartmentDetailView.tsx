@@ -428,7 +428,14 @@ export const DepartmentDetailView: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-slate-600 dark:text-slate-300 font-medium">
-                              {emp.position || '--'}
+                              <div className="font-semibold text-slate-800 dark:text-slate-200">
+                                {emp.department_title || (isManager ? `Trưởng phòng ${department.name}` : `Nhân viên ${department.name}`)}
+                              </div>
+                              {emp.position && (
+                                <div className="text-[11px] text-slate-400 font-normal">
+                                  {emp.position}
+                                </div>
+                              )}
                             </td>
                             <td className="px-3 py-3 text-center font-bold text-slate-700 dark:text-slate-300">
                               {emp.boards_count || 0}

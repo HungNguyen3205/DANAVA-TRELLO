@@ -20,7 +20,8 @@ class EmployeeController extends Controller
                 $q->where('name', 'like', $search)
                   ->orWhere('username', 'like', $search)
                   ->orWhere('email', 'like', $search)
-                  ->orWhere('position', 'like', $search);
+                  ->orWhere('position', 'like', $search)
+                  ->orWhere('department_title', 'like', $search);
             });
         }
 
@@ -85,6 +86,12 @@ class EmployeeController extends Controller
 
         DB::beginTransaction();
         try {
+            $departmentTitle = null;
+            if ($department) {
+                $membershipService = app(\App\Services\DepartmentMembershipService::class);
+                $departmentTitle = $membershipService->getEmployeeTitle($department->name);
+            }
+
             $user = User::create([
                 'username' => $finalUsername,
                 'email' => $email,
@@ -96,6 +103,7 @@ class EmployeeController extends Controller
                 'created_by' => $request->user()->id,
                 'system_role' => $role,
                 'department_id' => $department?->id,
+                'department_title' => $departmentTitle,
             ]);
 
             DB::table('user_profiles')->insert([
@@ -176,24 +184,10 @@ class EmployeeController extends Controller
 
         if ($request->has('department_id')) {
             $newDeptId = $request->department_id;
-            if ($newDeptId && (int)$employee->department_id !== (int)$newDeptId) {
-                $targetDept = \App\Models\Department::find($newDeptId);
-                if ($targetDept && $targetDept->status !== 'active') {
-                    return response()->json(['message' => 'Không thể chuyển nhân viên vào phòng ban đang ngừng hoạt động.'], 422);
-                }
-            }
-
             if ((int)$employee->department_id !== (int)$newDeptId) {
-                $oldDept = $employee->department;
                 $targetDept = $newDeptId ? \App\Models\Department::find($newDeptId) : null;
-
-                if ($oldDept && (int)$oldDept->manager_id === (int)$employee->id) {
-                    $oldDept->manager_id = null;
-                    $oldDept->save();
-                }
-
-                $employee->department_id = $newDeptId;
-                $employee->notify(new \App\Notifications\DepartmentTransferNotification($oldDept?->name, $targetDept?->name, $request->user()));
+                $membershipService = app(\App\Services\DepartmentMembershipService::class);
+                $membershipService->transferEmployee($employee, $targetDept, null, $request->user());
             }
         }
 

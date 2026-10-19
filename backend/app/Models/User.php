@@ -31,6 +31,7 @@ class User extends Authenticatable
         'contact_email',
         'notification_preferences',
         'department_id',
+        'department_title',
     ];
 
     protected $hidden = [
