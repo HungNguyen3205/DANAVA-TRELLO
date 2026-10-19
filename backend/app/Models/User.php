@@ -86,11 +86,21 @@ class User extends Authenticatable
         if (!$boardId) return false;
         $isOwner = Board::where('id', $boardId)->where('owner_id', $this->id)->exists();
         if ($isOwner) return true;
-        return \Illuminate\Support\Facades\DB::table('board_members')
+
+        $member = \Illuminate\Support\Facades\DB::table('board_members')
             ->where('board_id', $boardId)
             ->where('user_id', $this->id)
-            ->whereIn('role', ['admin', 'owner'])
-            ->exists();
+            ->first();
+
+        if (!$member) {
+            return false;
+        }
+
+        if (in_array($this->system_role, ['system_admin', 'admin'], true)) {
+            return true;
+        }
+
+        return in_array($member->role, ['admin', 'owner'], true);
     }
 
     public function department()

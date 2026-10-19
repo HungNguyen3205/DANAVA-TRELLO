@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileText, CheckCircle2, Clock, AlertTriangle, Printer, Lock, Unlock, 
   Send, Edit3, Save, X, Star, DollarSign, TrendingUp, Users, ShieldAlert, 
-  Paperclip, Plus, Trash2, Award, Check
+  Paperclip, Plus, Trash2, Award, Check, Sparkles
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
 import { 
   getBoardReview, saveBoardReview, publishBoardReview, lockBoardReview, 
@@ -13,7 +14,7 @@ import { getAvatarUrl } from '../lib/avatar';
 import { toast } from 'sonner';
 
 export const BoardReviewView = () => {
-  const { boardId, boardCode } = useBoardRoute();
+  const { boardId, boardCode, basePath } = useBoardRoute();
   const [data, setData] = useState<BoardReviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -212,6 +213,20 @@ export const BoardReviewView = () => {
         <p className="text-sm text-muted-foreground max-w-md mb-6 leading-relaxed">
           {error || 'Bản tổng kết chưa được công bố hoặc bạn không có quyền xem.'}
         </p>
+        <div className="flex items-center gap-3">
+          <Link
+            to={basePath ? `${basePath}/kanban` : '/boards'}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground transition-all"
+          >
+            Quay lại bảng Kanban
+          </Link>
+          <button
+            onClick={fetchReview}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition-all cursor-pointer"
+          >
+            Thử tải lại
+          </button>
+        </div>
       </div>
     );
   }
@@ -331,6 +346,27 @@ export const BoardReviewView = () => {
             )}
           </div>
         </div>
+
+        {/* Banner: Review not yet created */}
+        {!review && canManage && !isEditing && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-foreground">Bản tổng kết chưa được tạo nội dung</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">Số liệu công việc đã được tự động tổng hợp bên dưới. Bạn có thể bấm nút bắt đầu để ghi nhận kết quả và đánh giá dự án.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary/90 transition-all shadow-xs shrink-0 cursor-pointer"
+            >
+              <Edit3 size={14} /> Bắt đầu ghi nhận
+            </button>
+          </div>
+        )}
 
         {/* Formal Report Header for Print */}
         <div className="hidden print:block text-center border-b-2 border-black pb-4 mb-6">

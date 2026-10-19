@@ -36,10 +36,11 @@ class BoardController extends Controller
             ->groupBy('board_id')
             ->pluck('count', 'board_id');
 
-        $boards = $boards->map(function ($board) use ($userId, $memberships, $membersCount) {
+        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['system_admin', 'admin'], true);
+        $boards = $boards->map(function ($board) use ($userId, $memberships, $membersCount, $isSystemAdmin) {
             $member = $memberships->get($board->id);
             $board->is_starred = $member ? (bool)$member->is_starred : false;
-            $board->my_role = ($board->owner_id === $userId || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
+            $board->my_role = ($board->owner_id === $userId || ($member && (in_array($member->role, ['owner', 'admin']) || $isSystemAdmin))) ? 'admin' : 'member';
             $board->members_count = $membersCount[$board->id] ?? 1;
             return $board;
         });
@@ -184,9 +185,10 @@ class BoardController extends Controller
             ->where('user_id', $userId)
             ->first();
 
+        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['system_admin', 'admin'], true);
         $boardData->is_starred = $member ? (bool)$member->is_starred : false;
-        $boardData->my_role = ($board->owner_id === $userId || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
-        $boardData->is_owner = ($board->owner_id === $userId || ($member && $member->role === 'owner'));
+        $boardData->my_role = ($board->owner_id === $userId || ($member && (in_array($member->role, ['owner', 'admin']) || $isSystemAdmin))) ? 'admin' : 'member';
+        $boardData->is_owner = ($board->owner_id === $userId || ($member && ($member->role === 'owner' || $isSystemAdmin)));
 
         return response()->json($boardData);
     }

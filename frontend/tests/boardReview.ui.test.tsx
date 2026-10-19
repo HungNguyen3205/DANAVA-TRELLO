@@ -2,8 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { BoardReviewView } from '../src/pages/BoardReviewView';
 import api from '../src/lib/axios';
+
+const renderComponent = () => render(
+  <MemoryRouter>
+    <BoardReviewView />
+  </MemoryRouter>
+);
 
 // Mock BoardRouteContext
 vi.mock('../src/components/layout/BoardRouteContext', () => ({
@@ -97,7 +104,7 @@ describe('BoardReviewView UI Component', () => {
   it('renders published board review with accurate KPI metrics and narrative sections', async () => {
     (api.get as any).mockResolvedValueOnce({ data: mockPublishedResponse });
 
-    render(<BoardReviewView />);
+    renderComponent();
 
     // Wait for data load
     await waitFor(() => {
@@ -134,7 +141,7 @@ describe('BoardReviewView UI Component', () => {
     });
 
     const user = userEvent.setup();
-    render(<BoardReviewView />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText('Chỉnh sửa')).toBeDefined();
@@ -181,7 +188,7 @@ describe('BoardReviewView UI Component', () => {
     });
 
     const user = userEvent.setup();
-    render(<BoardReviewView />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText('Khóa')).toBeDefined();
@@ -204,7 +211,7 @@ describe('BoardReviewView UI Component', () => {
       },
     });
 
-    render(<BoardReviewView />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText('Không thể xem bản tổng kết')).toBeDefined();
@@ -217,7 +224,7 @@ describe('BoardReviewView UI Component', () => {
     (api.get as any).mockResolvedValueOnce({ data: mockPublishedResponse });
 
     const user = userEvent.setup();
-    render(<BoardReviewView />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText('In / Xuất PDF')).toBeDefined();
