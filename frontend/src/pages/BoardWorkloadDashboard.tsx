@@ -354,22 +354,68 @@ export function BoardWorkloadDashboard() {
             </div>
           </div>
 
-          {/* Include parent tasks checkbox with explanation */}
-          <div className="pt-2 border-t border-border/60 flex items-center justify-between flex-wrap gap-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
-              <input
-                type="checkbox"
-                checked={includeParentTasks}
-                onChange={(e) => setIncludeParentTasks(e.target.checked)}
-                className="rounded border-border text-primary focus:ring-primary h-4 w-4"
-              />
-              <span className="font-medium text-foreground">Bao gồm công việc cha đã phân việc con</span>
-              <span className="text-muted-foreground hidden sm:inline">
-                (Mặc định đã loại trừ để tránh tính trùng 2 lần khối lượng)
+          {/* Include parent tasks toggle & real-time sync status */}
+          <div className="pt-3 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setIncludeParentTasks(!includeParentTasks)}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                  e.preventDefault();
+                  setIncludeParentTasks(!includeParentTasks);
+                }
+              }}
+              className="group inline-flex flex-row items-center gap-3 cursor-pointer select-none rounded-xl py-1 px-1.5 -ml-1.5 hover:bg-accent/40 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30"
+              title="Nhấn để bật/tắt bao gồm công việc cha"
+            >
+              {/* Custom iOS/SaaS Toggle Switch */}
+              <div
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  includeParentTasks ? 'bg-primary shadow-xs' : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/40'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    includeParentTasks ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+
+              {/* Title & Status Badge */}
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                  Bao gồm công việc cha đã phân việc con
+                </span>
+
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all ${
+                    includeParentTasks
+                      ? 'bg-primary/10 text-primary border-primary/30'
+                      : 'bg-muted text-muted-foreground border-border/70'
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      includeParentTasks ? 'bg-primary' : 'bg-muted-foreground/50'
+                    }`}
+                  />
+                  {includeParentTasks ? 'Đang bật' : 'Mặc định: Tắt'}
+                </span>
+
+                <span className="text-[11px] text-muted-foreground hidden lg:inline">
+                  (Khuyên dùng: Tắt để tránh tính lặp 2 lần khối lượng)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground shrink-0 self-start sm:self-auto pl-1 sm:pl-0">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-            </label>
-            <div className="text-[11px] text-muted-foreground">
-              Cập nhật tự động theo thời gian thực
+              <span>Cập nhật tự động theo thời gian thực</span>
             </div>
           </div>
         </div>
