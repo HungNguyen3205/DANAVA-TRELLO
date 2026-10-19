@@ -544,13 +544,23 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                   </div>
                 ) : (
                   <div 
-                    onClick={() => setIsEditingDesc(true)}
-                    className="p-4 bg-accent/30 hover:bg-accent/50 border border-transparent rounded-lg text-sm cursor-pointer min-h-[60px] transition-colors"
+                    onClick={() => {
+                      if (!draft.description) {
+                        setIsEditingDesc(true);
+                      }
+                    }}
+                    onDoubleClick={() => setIsEditingDesc(true)}
+                    className="p-4 bg-accent/20 hover:bg-accent/30 border border-border/40 rounded-xl text-sm min-h-[60px] transition-colors"
                   >
                     {draft.description ? (
                       <SafeLinkifiedText text={draft.description} />
                     ) : (
-                      <span className="text-muted-foreground italic">Thêm mô tả chi tiết hơn... (Liên kết URL sẽ tự động nhận diện)</span>
+                      <span 
+                        onClick={() => setIsEditingDesc(true)} 
+                        className="text-muted-foreground italic cursor-pointer block"
+                      >
+                        Thêm mô tả chi tiết hơn... (Liên kết URL sẽ tự động nhận diện)
+                      </span>
                     )}
                   </div>
                 )}
@@ -738,8 +748,8 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                                 </div>
                               </div>
                             ) : (
-                              <div className="bg-card border border-border/50 p-3 rounded-lg rounded-tl-none text-sm shadow-sm leading-relaxed text-foreground break-words whitespace-pre-wrap">
-                                {c.content}
+                              <div className="bg-card border border-border/50 p-3 rounded-lg rounded-tl-none text-sm shadow-sm leading-relaxed text-foreground">
+                                <SafeLinkifiedText text={c.content} />
                               </div>
                             )}
 

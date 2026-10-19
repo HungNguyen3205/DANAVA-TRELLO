@@ -435,13 +435,21 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
               </div>
             ) : (
               <div
-                onClick={() => setIsEditingDesc(true)}
-                className="p-3.5 bg-muted/20 hover:bg-muted/40 border border-transparent rounded-xl text-sm min-h-[64px] cursor-pointer transition-colors"
+                onClick={() => {
+                  if (!description) setIsEditingDesc(true);
+                }}
+                onDoubleClick={() => setIsEditingDesc(true)}
+                className="p-3.5 bg-muted/20 border border-border/40 rounded-xl text-sm min-h-[64px] transition-colors"
               >
                 {description ? (
                   <SafeLinkifiedText text={description} />
                 ) : (
-                  <span className="text-xs text-muted-foreground italic">Nhấp để thêm mô tả cho công việc con...</span>
+                  <span 
+                    onClick={() => setIsEditingDesc(true)}
+                    className="text-xs text-muted-foreground italic cursor-pointer block"
+                  >
+                    Nhấp để thêm mô tả cho công việc con...
+                  </span>
                 )}
               </div>
             )}

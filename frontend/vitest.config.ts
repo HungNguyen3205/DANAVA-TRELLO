@@ -21,6 +21,7 @@ export default defineConfig({
       "tests/telegram*.{ts,tsx}",
       "tests/multiAssignee*.{ts,tsx}",
       "tests/boardReview*.{ts,tsx}",
+      "tests/safeLinkifiedText*.{ts,tsx}",
     ],
     setupFiles: ["tests/setup.ts"],
   },
