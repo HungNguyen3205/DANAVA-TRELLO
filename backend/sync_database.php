@@ -102,9 +102,15 @@ try {
         }
     }
 
-    // Làm sạch cache Laravel
+    // Làm sạch và tối ưu hóa cache Laravel
     Artisan::call('optimize:clear');
-    echo "\n🧹 Đã làm sạch toàn bộ cache Laravel!\n";
+    Artisan::call('config:cache');
+    Artisan::call('route:cache');
+    Artisan::call('view:cache');
+    try {
+        Artisan::call('queue:restart');
+    } catch (\Throwable $e) {}
+    echo "\n🧹 Đã làm sạch và tối ưu hóa toàn bộ cache Laravel!\n";
 
     echo "\n========================================================\n";
     echo "🎉 ĐỒNG BỘ DATABASE VÀ CODE THÀNH CÔNG 100%!\n";
