@@ -1,0 +1,1 @@
+import{u as e}from"./index-RvEXREU4.js";function t(t){return+e(t)<Date.now()}export{t};

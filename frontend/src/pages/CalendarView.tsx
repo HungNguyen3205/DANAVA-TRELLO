@@ -146,6 +146,48 @@ const CustomToolbar = (toolbar: any) => {
   );
 };
 
+const DEFAULT_COLUMN_COLORS: Record<string, string> = {
+  'chưa bắt đầu': '#7C5CFC',
+  'cần làm': '#7C5CFC',
+  'todo': '#7C5CFC',
+  'đang thực hiện': '#2563EB',
+  'đang làm': '#2563EB',
+  'in progress': '#2563EB',
+  'doing': '#2563EB',
+  'chờ duyệt': '#D97706',
+  'review': '#D97706',
+  'hoàn thành': '#059669',
+  'done': '#059669',
+  'completed': '#059669',
+};
+
+function resolveColumnColor(column?: Column): string {
+  if (column?.color && column.color.trim()) return column.color.trim();
+  if (!column?.title) return '#2563EB';
+  const lower = column.title.toLowerCase().trim();
+  for (const [key, color] of Object.entries(DEFAULT_COLUMN_COLORS)) {
+    if (lower.includes(key)) return color;
+  }
+  return '#2563EB';
+}
+
+function getContrastTextColor(hexColor: string): string {
+  if (!hexColor || !hexColor.startsWith('#')) return '#FFFFFF';
+  const c = hexColor.replace('#', '');
+  if (c.length === 3) {
+    const r = parseInt(c[0] + c[0], 16) || 0;
+    const g = parseInt(c[1] + c[1], 16) || 0;
+    const b = parseInt(c[2] + c[2], 16) || 0;
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 180 ? '#0F172A' : '#FFFFFF';
+  }
+  const r = parseInt(c.substring(0, 2), 16) || 0;
+  const g = parseInt(c.substring(2, 4), 16) || 0;
+  const b = parseInt(c.substring(4, 6), 16) || 0;
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 180 ? '#0F172A' : '#FFFFFF';
+}
+
 import { useBoardStore } from '../store/boardStore';
 
 export function CalendarView() {
@@ -172,11 +214,16 @@ export function CalendarView() {
       .rbc-day-bg + .rbc-day-bg { border-left: 1px solid #f1f5f9; }
       .rbc-month-row + .rbc-month-row { border-top: 1px solid #f1f5f9; }
       .rbc-today { background-color: #f8fafc; }
-      .rbc-event { padding: 4px 6px; border-radius: 6px; font-size: 12px; font-weight: 500; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-      .rbc-event-content { font-weight: 500; }
+      .rbc-event { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 1px solid rgba(0,0,0,0.12); box-shadow: 0 1px 2px rgba(0,0,0,0.08); transition: all 0.15s ease; }
+      .rbc-event:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.12); }
+      .rbc-event-content { font-weight: 600; font-size: 12px; line-height: 1.3; }
+      .rbc-day-has-tasks { background-color: #f8fafc; }
+      .rbc-day-has-tasks > .rbc-date-cell { font-weight: 700; color: #0f172a; }
       .rbc-off-range-bg { background: #f8fafc; }
       .rbc-date-cell { padding: 8px; font-weight: 500; font-size: 13px; color: #334155; }
       .rbc-off-range .rbc-date-cell { color: #cbd5e1; }
+      .rbc-show-more { color: #4f46e5 !important; font-weight: 700 !important; font-size: 11px !important; padding: 2px 4px; border-radius: 4px; }
+      .rbc-show-more:hover { background-color: #e0e7ff; }
       .rbc-btn-group button { border-color: #e2e8f0; color: #475569; font-weight: 500; transition: all 0.2s; }
       .rbc-btn-group button:hover { background: #f1f5f9; }
       .rbc-btn-group button.rbc-active { background: #e0e7ff; color: #4f46e5; border-color: #c7d2fe; box-shadow: none; }
@@ -293,18 +340,53 @@ export function CalendarView() {
     return { events: scheduledEvents, unscheduled: unscheduledTasks };
   }, [board, searchQuery]);
 
+  const daysWithTasksSet = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach(e => {
+      if (e.start) {
+        const d = new Date(e.start);
+        const end = e.end ? new Date(e.end) : d;
+        const curr = new Date(d);
+        while (curr <= end) {
+          set.add(format(curr, 'yyyy-MM-dd'));
+          curr.setDate(curr.getDate() + 1);
+        }
+      }
+    });
+    return set;
+  }, [events]);
+
+  const customDayPropGetter = (date: Date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const hasTasks = daysWithTasksSet.has(dateKey);
+    return {
+      className: hasTasks ? 'rbc-day-has-tasks' : '',
+    };
+  };
+
   // Render Custom Event
   const EventComponent = ({ event }: { event: TaskEvent }) => {
     const task = event.task;
     const currentColumn = board?.columns.find(c => c.id === task.columnId);
+    const bgColor = resolveColumnColor(currentColumn);
+    const textColor = getContrastTextColor(bgColor);
     
     return (
-      <div className="flex items-center gap-1.5 w-full truncate h-full" title={task.title}>
-        <div 
-          className="w-2 h-2 rounded-full shrink-0" 
-          style={{ backgroundColor: currentColumn?.color || '#94A3B8' }}
+      <div 
+        className="flex items-center gap-1.5 w-full truncate h-full select-none" 
+        title={`${task.title}${currentColumn ? ` • ${currentColumn.title}` : ''}`}
+        style={{ color: textColor }}
+      >
+        <span 
+          className="w-1.5 h-1.5 rounded-full shrink-0 shadow-xs" 
+          style={{ backgroundColor: textColor === '#FFFFFF' ? '#FFFFFF' : 'rgba(15, 23, 42, 0.8)' }}
         />
-        <span className="truncate flex-1">{task.title}</span>
+        <span 
+          className="truncate flex-1 text-[12px] font-semibold tracking-tight leading-tight"
+          style={{ color: textColor }}
+        >
+          {task.title}
+        </span>
       </div>
     );
   };
@@ -312,11 +394,15 @@ export function CalendarView() {
   const getEventPropGetter = (event: TaskEvent) => {
     const task = event.task;
     const currentColumn = board?.columns.find(c => c.id === task.columnId);
+    const bgColor = resolveColumnColor(currentColumn);
+    const textColor = getContrastTextColor(bgColor);
+
     return {
       style: {
-        backgroundColor: currentColumn?.color ? `${currentColumn.color}15` : '#f1f5f9',
-        color: currentColumn?.color || '#334155',
-        borderColor: currentColumn?.color ? `${currentColumn.color}30` : '#e2e8f0',
+        backgroundColor: bgColor,
+        color: textColor,
+        borderColor: 'rgba(0, 0, 0, 0.15)',
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
       }
     };
   };
@@ -428,6 +514,7 @@ export function CalendarView() {
                 event: EventComponent as any
               }}
               eventPropGetter={getEventPropGetter as any}
+              dayPropGetter={customDayPropGetter as any}
               popup
             />
           </div>
