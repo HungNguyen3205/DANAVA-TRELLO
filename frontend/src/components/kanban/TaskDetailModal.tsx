@@ -45,7 +45,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const [newComment, setNewComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [isChecklistVisible, setIsChecklistVisible] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isLabelsVisible, setIsLabelsVisible] = useState(false);
   const [isMembersVisible, setIsMembersVisible] = useState(false);
   const [isContributionModalOpen, setIsContributionModalOpen] = useState(false);
@@ -557,17 +557,20 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               </div>
             </div>
 
-            {/* Subtasks (Công việc con) */}
+            {/* Unified Việc cần làm (Task Groups & Subtasks) */}
             <div className="mb-8">
               <SubtaskList 
                 parentTask={draft} 
                 board={board} 
+                isCreateGroupOpen={isCreateGroupOpen}
+                onCloseCreateGroup={() => setIsCreateGroupOpen(false)}
                 onSubtasksChanged={() => {
                   api.get(`/tasks/${task.id}`).then(res => {
                     if (res.data) {
                       const updated = {
                         ...draft,
                         subtasks: res.data.subtasks || [],
+                        task_groups: res.data.taskGroups || res.data.task_groups || [],
                         totalSubtasksCount: res.data.subtasks?.length || 0,
                         doneSubtasksCount: res.data.subtasks?.filter((s: any) => s.completed_at).length || 0
                       };
@@ -584,166 +587,6 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 }}
               />
             </div>
-
-            {/* Checklists */}
-            {draft.checklists?.map((checklist) => (
-              <div key={checklist.id} className="flex gap-4 items-start mb-10 group/checklist">
-                <CheckSquare className="text-muted-foreground shrink-0 mt-1" size={24} />
-                <div className="w-full">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-bold text-foreground">{checklist.title}</h3>
-                    <button 
-                      onClick={async () => {
-                        try {
-                          await api.delete(`/checklists/${checklist.id}`);
-                          update({ checklists: draft.checklists.filter(c => c.id !== checklist.id) });
-                          toast.success('Đã xóa danh sách');
-                        } catch(e) {
-                          toast.error('Lỗi khi xóa');
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-accent/50 hover:bg-accent text-sm font-medium rounded-md transition-colors opacity-0 group-hover/checklist:opacity-100"
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  {checklist.items.length > 0 && (
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-xs font-bold text-muted-foreground w-8">
-                        {Math.round((checklist.items.filter(i => i.done).length / checklist.items.length) * 100)}%
-                      </span>
-                      <div className="flex-1 h-2 bg-accent rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all duration-300"
-                          style={{ width: `${(checklist.items.filter(i => i.done).length / checklist.items.length) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Items */}
-                  <div className="space-y-2 mb-3">
-                    {checklist.items.map((item) => (
-                      <div key={item.id} className="flex items-start gap-3 group/item">
-                        <input 
-                          type="checkbox" 
-                          className="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary/50"
-                          checked={item.done}
-                          onChange={async (e) => {
-                            const isDone = e.target.checked;
-                            // Optimistic update
-                            const updatedChecklists = draft.checklists.map(c => 
-                              c.id === checklist.id 
-                                ? { ...c, items: c.items.map(i => i.id === item.id ? { ...i, done: isDone } : i) }
-                                : c
-                            );
-                            update({ checklists: updatedChecklists });
-                            try {
-                              await api.put(`/checklist-items/${item.id}`, { is_completed: isDone });
-                            } catch (err) {
-                              toast.error('Không thể cập nhật mục này');
-                              // Revert
-                              update({ checklists: draft.checklists });
-                            }
-                          }}
-                        />
-                        <div className={`flex-1 text-sm ${item.done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                          {item.text}
-                        </div>
-                        <button 
-                          onClick={async () => {
-                            try {
-                              await api.delete(`/checklist-items/${item.id}`);
-                              const updatedChecklists = draft.checklists.map(c => 
-                                c.id === checklist.id 
-                                  ? { ...c, items: c.items.filter(i => i.id !== item.id) }
-                                  : c
-                              );
-                              update({ checklists: updatedChecklists });
-                            } catch(e) {
-                              toast.error('Lỗi khi xóa mục');
-                            }
-                          }}
-                          className="text-muted-foreground hover:text-red-400 opacity-0 group-hover/item:opacity-100"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    const input = e.currentTarget.elements.namedItem('newItem') as HTMLInputElement;
-                    const val = input.value.trim();
-                    if (!val) return;
-                    input.value = '';
-                    
-                    try {
-                      const res = await api.post(`/checklists/${checklist.id}/items`, { content: val });
-                      const newItem = { id: String(res.data.id), text: res.data.content, done: !!res.data.is_completed };
-                      const updatedChecklists = draft.checklists.map(c => 
-                        c.id === checklist.id ? { ...c, items: [...c.items, newItem] } : c
-                      );
-                      update({ checklists: updatedChecklists });
-                    } catch (err) {
-                      toast.error('Không thể thêm mục mới');
-                    }
-                  }}>
-                    <input 
-                      name="newItem"
-                      type="text" 
-                      placeholder="Thêm một mục..."
-                      className="w-full bg-accent/30 border border-transparent hover:border-border/50 focus:border-primary/50 focus:bg-background rounded-md px-3 py-2 text-sm transition-colors outline-none"
-                    />
-                  </form>
-                </div>
-              </div>
-            ))}
-
-            {isChecklistVisible && (
-              <div className="flex gap-4 items-start mb-10">
-                <CheckSquare className="text-muted-foreground shrink-0 mt-1" size={24} />
-                <div className="w-full">
-                  <h3 className="text-lg font-bold text-foreground mb-3">Thêm danh sách công việc</h3>
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    const input = e.currentTarget.elements.namedItem('newChecklist') as HTMLInputElement;
-                    const val = input.value.trim();
-                    if (!val) {
-                      setIsChecklistVisible(false);
-                      return;
-                    }
-                    try {
-                      const res = await api.post(`/tasks/${task.id}/checklists`, { title: val });
-                      const newChecklist = { id: String(res.data.id), title: res.data.title, items: [] };
-                      update({ checklists: [...(draft.checklists || []), newChecklist] });
-                      setIsChecklistVisible(false);
-                    } catch (err) {
-                      toast.error('Không thể tạo danh sách mới');
-                    }
-                  }}>
-                    <input 
-                      name="newChecklist"
-                      type="text" 
-                      placeholder="Nhập tên danh sách... (VD: Việc cần làm)"
-                      autoFocus
-                      className="w-full bg-background border border-input focus:border-primary/50 focus:ring-2 focus:ring-primary/50 rounded-md px-3 py-2 text-sm transition-colors outline-none mb-2"
-                    />
-                    <div className="flex gap-2">
-                      <button type="submit" className="px-3 py-1.5 bg-primary text-white text-sm font-medium rounded-md hover:bg-orange-600 transition-colors">
-                        Thêm
-                      </button>
-                      <button type="button" onClick={() => setIsChecklistVisible(false)} className="px-3 py-1.5 hover:bg-accent text-muted-foreground text-sm font-medium rounded-md transition-colors">
-                        Hủy
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
 
             {/* Attachments */}
             {draft.attachments && draft.attachments.length > 0 && (
@@ -1012,7 +855,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               <div className="space-y-2">
                 <SidebarButton icon={<UserPlus size={16} />} label="Thành viên" onClick={() => setIsMembersVisible(!isMembersVisible)} />
                 <SidebarButton icon={<Tag size={16} />} label="Nhãn" onClick={() => setIsLabelsVisible(!isLabelsVisible)} />
-                <SidebarButton icon={<CheckSquare size={16} />} label="Việc cần làm" onClick={() => setIsChecklistVisible(true)} />
+                <SidebarButton icon={<CheckSquare size={16} />} label="Việc cần làm" onClick={() => setIsCreateGroupOpen(true)} />
                 {/* <SidebarButton icon={<CalendarDays size={16} />} label="Ngày" onClick={() => setIsDatesVisible(!isDatesVisible)} /> */}
                 <label className="block w-full !mb-0 cursor-pointer">
                   <input 

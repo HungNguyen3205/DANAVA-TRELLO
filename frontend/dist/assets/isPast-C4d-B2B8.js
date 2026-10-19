@@ -1,1 +1,0 @@
-import{p as e}from"./index-irXLBwvW.js";function t(t){return+e(t)<Date.now()}export{t};

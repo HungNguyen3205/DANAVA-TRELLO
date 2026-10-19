@@ -22,6 +22,7 @@ class StoreSubtaskRequest extends FormRequest
             'due_date' => 'nullable|date',
             'assignee_ids' => 'nullable|array',
             'assignee_ids.*' => 'integer|exists:users,id',
+            'task_group_id' => 'nullable|integer',
             'copy_parent_assignees' => 'sometimes|boolean',
             'sort_order' => 'nullable|integer',
         ];

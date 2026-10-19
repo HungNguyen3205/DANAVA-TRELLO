@@ -24,6 +24,7 @@ class UpdateSubtaskRequest extends FormRequest
             'due_date' => 'sometimes|nullable|date',
             'assignee_ids' => 'sometimes|nullable|array',
             'assignee_ids.*' => 'integer|exists:users,id',
+            'task_group_id' => 'sometimes|nullable|integer',
             'sort_order' => 'sometimes|nullable|integer',
         ];
     }

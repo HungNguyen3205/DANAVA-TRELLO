@@ -47,6 +47,17 @@ export interface Checklist {
   title: string;
   items: ChecklistItem[];
 }
+export interface TaskGroup {
+  id: number | string;
+  task_id: number | string;
+  title: string;
+  position: number;
+  created_by?: number | string | null;
+  created_at?: string;
+  updated_at?: string;
+  subtasks: Task[];
+  creator?: User;
+}
 export interface Comment {
   id: string;
   author: string;
@@ -81,6 +92,8 @@ export interface Task {
   id: string;
   parentTaskId?: string | null;
   parent_task_id?: string | number | null;
+  task_group_id?: number | string | null;
+  taskGroupId?: number | string | null;
   columnId: string;
   title: string;
   description: string;
@@ -98,6 +111,8 @@ export interface Task {
   sortOrder?: number;
   creator?: User;
   subtasks?: Task[];
+  task_groups?: TaskGroup[];
+  taskGroups?: TaskGroup[];
   qualityRating?: number | null;
   qualityReviewNote?: string | null;
   checklists: Checklist[];

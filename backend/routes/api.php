@@ -214,6 +214,14 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::post('/tasks/{task}/copy-assignees-to-subtasks', [\App\Http\Controllers\TaskAssigneeController::class, 'copyAssigneesToSubtasks']);
     Route::put('/tasks/{task}/contribution-percents', [\App\Http\Controllers\TaskAssigneeController::class, 'updateContributionPercents']);
 
+    // Task Groups (Nhóm việc cần làm)
+    Route::get('/tasks/{task}/groups', [\App\Http\Controllers\TaskGroupController::class, 'index']);
+    Route::post('/tasks/{task}/groups', [\App\Http\Controllers\TaskGroupController::class, 'store']);
+    Route::patch('/tasks/{task}/groups/reorder', [\App\Http\Controllers\TaskGroupController::class, 'reorder']);
+    Route::put('/tasks/{task}/groups/{group}', [\App\Http\Controllers\TaskGroupController::class, 'update']);
+    Route::patch('/tasks/{task}/groups/{group}', [\App\Http\Controllers\TaskGroupController::class, 'update']);
+    Route::delete('/tasks/{task}/groups/{group}', [\App\Http\Controllers\TaskGroupController::class, 'destroy']);
+
     // Subtasks
     Route::get('/tasks/{task}/subtasks', [SubtaskController::class, 'index']);
     Route::post('/tasks/{task}/subtasks', [SubtaskController::class, 'store']);

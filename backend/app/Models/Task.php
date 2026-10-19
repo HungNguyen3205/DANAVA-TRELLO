@@ -20,6 +20,7 @@ class Task extends Model
     protected $fillable = [
         'external_key',
         'parent_task_id',
+        'task_group_id',
         'column_id', 
         'sprint_id', 
         'assignee_id', 
@@ -59,6 +60,18 @@ class Task extends Model
     public function parent()
     {
         return $this->belongsTo(Task::class, 'parent_task_id');
+    }
+
+    public function taskGroup()
+    {
+        return $this->belongsTo(TaskGroup::class, 'task_group_id');
+    }
+
+    public function taskGroups()
+    {
+        return $this->hasMany(TaskGroup::class, 'task_id')
+                    ->orderBy('position', 'asc')
+                    ->orderBy('id', 'asc');
     }
 
     public function subtasks()

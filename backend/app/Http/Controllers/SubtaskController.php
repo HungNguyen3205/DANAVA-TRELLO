@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateSubtaskRequest;
 use App\Http\Requests\ReorderSubtasksRequest;
 use App\Models\ActivityLog;
 use App\Models\Task;
+use App\Models\TaskGroup;
 use App\Models\User;
 use App\Notifications\TaskMemberAssignedNotification;
 use App\Services\NotificationService;
@@ -62,11 +63,44 @@ class SubtaskController extends Controller
         $task = ($rawTask instanceof Task) ? $rawTask : Task::findOrFail($rawTask);
         Gate::authorize('createSubtask', $task);
 
+        if ($task->parent_task_id !== null) {
+            return response()->json([
+                'message' => 'Không thể tạo công việc con cho một công việc con khác. Chỉ hỗ trợ tối đa 1 cấp công việc con.',
+            ], 422);
+        }
+
         $currentUser = $request->user();
         $board = $this->resolveBoard($task);
 
         if (!$board) {
             return response()->json(['message' => 'Không tìm thấy bảng cho công việc này.'], 404);
+        }
+
+        // Resolve target task group
+        $rawGroup = $args[1] ?? null;
+        $targetGroupId = $rawGroup 
+            ? (($rawGroup instanceof TaskGroup) ? $rawGroup->id : (int) $rawGroup)
+            : $request->input('task_group_id');
+
+        $taskGroup = null;
+        if ($targetGroupId) {
+            $taskGroup = TaskGroup::find($targetGroupId);
+            if (!$taskGroup) {
+                return response()->json(['message' => 'Không tìm thấy nhóm việc cần làm.'], 404);
+            }
+            if ((int) $taskGroup->task_id !== (int) $task->id) {
+                return response()->json(['message' => 'Nhóm việc cần làm không thuộc công việc này.'], 422);
+            }
+        } else {
+            // Default to first group or create a default "Việc cần làm" group
+            $taskGroup = $task->taskGroups()->first();
+            if (!$taskGroup) {
+                $taskGroup = $task->taskGroups()->create([
+                    'title' => 'Việc cần làm',
+                    'position' => 0,
+                    'created_by' => $currentUser->id,
+                ]);
+            }
         }
 
         $validMemberIds = $this->getValidBoardMemberIds($board->id);
@@ -90,9 +124,10 @@ class SubtaskController extends Controller
         $maxSortOrder = $task->subtasks()->max('sort_order') ?? 0;
         $sortOrder = $request->input('sort_order', $maxSortOrder + 1);
 
-        $subtask = DB::transaction(function () use ($request, $task, $currentUser, $sortOrder, $assigneeIds, $board) {
+        $subtask = DB::transaction(function () use ($request, $task, $taskGroup, $currentUser, $sortOrder, $assigneeIds, $board) {
             $created = Task::create([
                 'parent_task_id' => $task->id,
+                'task_group_id' => $taskGroup->id,
                 'column_id' => $task->column_id,
                 'sprint_id' => $task->sprint_id,
                 'assignee_id' => $assigneeIds[0] ?? null,
@@ -141,7 +176,7 @@ class SubtaskController extends Controller
             }
         }
 
-        return response()->json($subtask->load(['assignees', 'creator']), 201);
+        return response()->json($subtask->load(['assignees', 'creator', 'taskGroup']), 201);
     }
 
     /**
@@ -283,6 +318,21 @@ class SubtaskController extends Controller
             $updates['sort_order'] = $request->input('sort_order');
         }
 
+        // Task Group change
+        if ($request->has('task_group_id')) {
+            $newGroupId = $request->input('task_group_id');
+            if ($newGroupId !== null) {
+                $targetGroup = TaskGroup::find($newGroupId);
+                if (!$targetGroup) {
+                    return response()->json(['message' => 'Không tìm thấy nhóm việc cần làm.'], 404);
+                }
+                if ((int) $targetGroup->task_id !== (int) $subtask->parent_task_id) {
+                    return response()->json(['message' => 'Nhóm việc cần làm không thuộc công việc cha này.'], 422);
+                }
+                $updates['task_group_id'] = $targetGroup->id;
+            }
+        }
+
         // Assignees change detection
         $newAssigneeIds = null;
         $addedAssignees = [];
@@ -389,7 +439,7 @@ class SubtaskController extends Controller
             }
         }
 
-        return response()->json($subtask->fresh(['assignees', 'creator', 'activityLogs.user']));
+        return response()->json($subtask->fresh(['assignees', 'creator', 'activityLogs.user', 'taskGroup']));
     }
 
     /**

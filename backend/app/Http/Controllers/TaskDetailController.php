@@ -24,6 +24,14 @@ class TaskDetailController extends Controller
             'subtasks' => function ($q) {
                 $q->with(['assignees', 'creator', 'labels'])->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
             },
+            'taskGroups' => function ($q) {
+                $q->with([
+                    'subtasks' => function ($sq) {
+                        $sq->with(['assignees', 'creator', 'labels'])->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
+                    },
+                    'creator'
+                ])->orderBy('position', 'asc')->orderBy('id', 'asc');
+            },
             'assignees',
             'creator',
             'checklists.items',
