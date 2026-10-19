@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   backend-ci:
-    name: Backend CI (PHP 8.2 & Laravel)
+    name: Backend CI (PHP 8.2 & SQLite)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,6 +33,9 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite3, curl, zip, pcntl, bcmath
           coverage: none
 
+      - name: Validate composer.json
+        run: composer validate --strict
+
       - name: Get Composer Cache Directory
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
@@ -48,16 +51,73 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader
 
       - name: Copy Testing Environment (.env.testing)
-        run: |
-          cp .env.testing .env
+        run: cp .env.testing .env
 
       - name: Generate Application Key
         run: php artisan key:generate --env=testing
 
-      - name: Run Migrations on Isolated Test Database
+      - name: Run Migrations on Isolated SQLite Database
         run: php artisan migrate --env=testing --force
 
       - name: Run Backend Tests
+        run: php artisan test
+
+  backend-mysql8-ci:
+    name: Backend CI (PHP 8.2 & MySQL 8.0)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: danava_testing
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, curl, zip, pcntl, bcmath
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader
+
+      - name: Copy Testing Environment (.env.testing)
+        run: cp .env.testing .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate --env=testing
+
+      - name: Run Migrations on MySQL 8.0
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: danava_testing
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: |
+          php artisan config:clear
+          php artisan migrate:fresh --force
+
+      - name: Run Backend Tests on MySQL 8.0
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: danava_testing
+          DB_USERNAME: root
+          DB_PASSWORD: root
         run: php artisan test
 
   frontend-ci:
@@ -84,6 +144,9 @@ jobs:
       - name: Run Frontend Lint
         run: npm run lint
 
+      - name: Run TypeScript Compile Check
+        run: npx tsc --noEmit
+
       - name: Run Frontend Tests (Vitest)
         run: npm run test
 
@@ -92,14 +155,14 @@ jobs:
 
   deploy-gate:
     name: Pre-deployment Quality Gate
-    needs: [backend-ci, frontend-ci]
+    needs: [backend-ci, backend-mysql8-ci, frontend-ci]
     runs-on: ubuntu-latest
     steps:
       - name: Verify All Tests and Builds Passed
         run: |
           echo "=========================================================="
           echo "All automated tests, static analysis, and builds passed."
-          echo "Backend: PHP 8.2 tests and SQLite migrations PASSED."
-          echo "Frontend: Node 20 lint, vitest suites, and Vite build PASSED."
+          echo "Backend: PHP 8.2 tests on SQLite and MySQL 8.0 PASSED."
+          echo "Frontend: Node 22 lint, tsc, vitest suites, and Vite build PASSED."
           echo "Release candidate is verified safe for production deployment."
           echo "=========================================================="

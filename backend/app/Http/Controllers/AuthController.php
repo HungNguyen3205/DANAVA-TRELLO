@@ -114,6 +114,29 @@ class AuthController extends Controller
         return response()->json($user);
     }
 
+    public function initialChangePassword(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->must_change_password) {
+            return response()->json([
+                'message' => 'Chức năng này chỉ dành cho tài khoản cần đổi mật khẩu lần đầu. Vui lòng sử dụng chức năng đổi mật khẩu thông thường.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user->password = Hash::make($validated['password']);
+        $user->must_change_password = false;
+        $user->save();
+
+        \Illuminate\Support\Facades\Log::info("Security Event: User #{$user->id} ({$user->username}) changed forced initial password.");
+
+        return response()->json(['message' => 'Đổi mật khẩu thành công']);
+    }
+
     public function changePassword(Request $request)
     {
         $request->validate([
@@ -132,6 +155,8 @@ class AuthController extends Controller
         $user->password = Hash::make($request->new_password);
         $user->must_change_password = false;
         $user->save();
+
+        \Illuminate\Support\Facades\Log::info("Security Event: User #{$user->id} ({$user->username}) changed account password.");
 
         return response()->json(['message' => 'Đổi mật khẩu thành công']);
     }

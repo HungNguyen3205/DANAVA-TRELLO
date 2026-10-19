@@ -671,4 +671,201 @@ class BoardIsolationAcceptanceTest extends TestCase
         $resC->assertStatus(200);
         $this->assertEquals('nam_pub_67890', $resC->json('public_id'));
     }
+
+    /**
+     * TEST 21: Owner không thể bị xóa hoặc hạ quyền bởi bất kỳ ai.
+     */
+    public function test_21_owner_cannot_be_removed_or_demoted(): void
+    {
+        // Add member admin to board Hùng
+        $this->actingAs($this->hungB)->postJson("/api/boards/{$this->boardHung->id}/members", [
+            'user_id' => $this->namC->id,
+            'role' => 'admin',
+        ])->assertStatus(201);
+
+        // Nam (board admin) tries demoting Hùng (owner) -> blocked
+        $this->actingAs($this->namC)->patchJson("/api/boards/{$this->boardHung->id}/members/{$this->hungB->id}", [
+            'role' => 'member',
+        ])->assertStatus(422);
+
+        // Nam (board admin) tries removing Hùng (owner) -> blocked
+        $this->actingAs($this->namC)->deleteJson("/api/boards/{$this->boardHung->id}/members/{$this->hungB->id}")
+            ->assertStatus(422);
+    }
+
+    /**
+     * TEST 22: Luồng Transfer Ownership có transaction và xác nhận mật khẩu.
+     */
+    public function test_22_transfer_board_ownership_flow(): void
+    {
+        // Add Nam as member to Board Hùng
+        $this->actingAs($this->hungB)->postJson("/api/boards/{$this->boardHung->id}/members", [
+            'user_id' => $this->namC->id,
+            'role' => 'member',
+        ])->assertStatus(201);
+
+        // Wrong password -> fails validation
+        $this->actingAs($this->hungB)->postJson("/api/boards/{$this->boardHung->id}/transfer-ownership", [
+            'new_owner_id' => $this->namC->id,
+            'password' => 'wrong_password',
+        ])->assertStatus(422);
+
+        // Non-owner cannot transfer ownership
+        $this->actingAs($this->namC)->postJson("/api/boards/{$this->boardHung->id}/transfer-ownership", [
+            'new_owner_id' => $this->adminA->id,
+            'password' => 'password123',
+        ])->assertStatus(403);
+
+        // Cannot transfer to non-member
+        $this->actingAs($this->hungB)->postJson("/api/boards/{$this->boardHung->id}/transfer-ownership", [
+            'new_owner_id' => $this->adminA->id,
+            'password' => 'password123',
+        ])->assertStatus(422);
+
+        // Valid transfer ownership
+        $res = $this->actingAs($this->hungB)->postJson("/api/boards/{$this->boardHung->id}/transfer-ownership", [
+            'new_owner_id' => $this->namC->id,
+            'password' => 'password123',
+        ]);
+        $res->assertStatus(200);
+
+        // Verify database state: Nam is now owner
+        $this->boardHung->refresh();
+        $this->assertEquals($this->namC->id, $this->boardHung->owner_id);
+
+        // Both Nam and Hùng are now admins in board_members
+        $namRole = DB::table('board_members')->where('board_id', $this->boardHung->id)->where('user_id', $this->namC->id)->value('role');
+        $hungRole = DB::table('board_members')->where('board_id', $this->boardHung->id)->where('user_id', $this->hungB->id)->value('role');
+        $this->assertEquals('admin', $namRole);
+        $this->assertEquals('admin', $hungRole);
+    }
+
+    /**
+     * TEST 23: Legacy Workspace board creation returns 410 Gone.
+     */
+    public function test_23_legacy_workspace_board_creation_returns_410_gone(): void
+    {
+        $res = $this->actingAs($this->hungB)->postJson("/api/workspaces/{$this->legacyWorkspace->id}/boards", [
+            'name' => 'Bảng Workspace Cũ',
+        ]);
+        $res->assertStatus(410);
+    }
+
+    /**
+     * TEST 24: Xóa thành viên khỏi Board chỉ dọn dẹp task assignment trong Board đó.
+     */
+    public function test_24_removing_member_cleans_up_assignments_in_target_board_only(): void
+    {
+        // Add Nam to Board Hùng
+        $this->actingAs($this->hungB)->postJson("/api/boards/{$this->boardHung->id}/members", [
+            'user_id' => $this->namC->id,
+            'role' => 'member',
+        ])->assertStatus(201);
+
+        // Assign Nam to Task Hùng
+        $this->taskHung->assignees()->syncWithoutDetaching([$this->namC->id]);
+        $this->assertTrue($this->taskHung->assignees()->where('users.id', $this->namC->id)->exists());
+
+        // Assign Nam to Task Nam (in Board Nam)
+        $this->taskNam->assignees()->syncWithoutDetaching([$this->namC->id]);
+        $this->assertTrue($this->taskNam->assignees()->where('users.id', $this->namC->id)->exists());
+
+        // Remove Nam from Board Hùng
+        $this->actingAs($this->hungB)->deleteJson("/api/boards/{$this->boardHung->id}/members/{$this->namC->id}")
+            ->assertStatus(200);
+
+        // Nam assignment removed from Task Hùng
+        $this->taskHung->refresh();
+        $this->assertFalse($this->taskHung->assignees()->where('users.id', $this->namC->id)->exists());
+
+        // Nam assignment in Board Nam remains unaffected!
+        $this->taskNam->refresh();
+        $this->assertTrue($this->taskNam->assignees()->where('users.id', $this->namC->id)->exists());
+    }
+
+    /**
+     * TEST 25: Đổi mật khẩu lần đầu vs thông thường.
+     */
+    public function test_25_initial_change_password_blocks_normal_users_and_requires_confirmation(): void
+    {
+        // User with must_change_password = false calling /api/auth/change-password gets 403
+        $this->assertFalse((bool)$this->hungB->must_change_password);
+        $this->actingAs($this->hungB)->postJson('/api/auth/change-password', [
+            'password' => 'newpassword123',
+            'password_confirmation' => 'newpassword123',
+        ])->assertStatus(403);
+
+        // User with must_change_password = true
+        $forceUser = User::create([
+            'name' => 'Force User',
+            'username' => 'force_user',
+            'email' => 'force@danava.vn',
+            'password' => bcrypt('temp12345'),
+            'system_role' => 'user',
+            'must_change_password' => true,
+            'account_status' => 'active',
+        ]);
+
+        // Missing confirmation fails validation
+        $this->actingAs($forceUser)->postJson('/api/auth/change-password', [
+            'password' => 'newpassword123',
+        ])->assertStatus(422);
+
+        // Successful initial password change sets must_change_password = false
+        $this->actingAs($forceUser)->postJson('/api/auth/change-password', [
+            'password' => 'newpassword123',
+            'password_confirmation' => 'newpassword123',
+        ])->assertStatus(200);
+
+        $forceUser->refresh();
+        $this->assertFalse((bool)$forceUser->must_change_password);
+
+        // Normal change password requires current password
+        $this->actingAs($this->hungB)->postJson('/api/account/change-password', [
+            'current_password' => 'wrong_pass',
+            'new_password' => 'newsecret123',
+            'new_password_confirmation' => 'newsecret123',
+        ])->assertStatus(422);
+
+        $this->actingAs($this->hungB)->postJson('/api/account/change-password', [
+            'current_password' => 'password123',
+            'new_password' => 'newsecret123',
+            'new_password_confirmation' => 'newsecret123',
+        ])->assertStatus(200);
+    }
+
+    /**
+     * TEST 26: Public register luôn trả về 403 Forbidden.
+     */
+    public function test_26_public_register_always_returns_403(): void
+    {
+        $this->postJson('/api/register', [
+            'name' => 'Attacker',
+            'email' => 'attacker@evil.com',
+            'password' => 'password123',
+        ])->assertStatus(403);
+    }
+
+    /**
+     * TEST 27: Tìm kiếm User yêu cầu tối thiểu 2 ký tự và loại trừ thành viên đã có trong board.
+     */
+    public function test_27_user_search_minimum_length_and_excludes_existing_board_members(): void
+    {
+        // 1 char query returns empty array
+        $resShort = $this->actingAs($this->hungB)->getJson('/api/users/search?q=a');
+        $resShort->assertStatus(200);
+        $this->assertCount(0, $resShort->json());
+
+        // Searching "nam" returns nam_c
+        $resNam = $this->actingAs($this->hungB)->getJson('/api/users/search?q=nam');
+        $resNam->assertStatus(200);
+        $usernames = collect($resNam->json())->pluck('username')->toArray();
+        $this->assertContains('nam_c', $usernames);
+
+        // Searching with board_id where Nam is already a member excludes Nam
+        $resExcluded = $this->actingAs($this->hungB)->getJson("/api/users/search?q=nam&board_id={$this->boardNam->id}");
+        $resExcluded->assertStatus(200);
+        $excludedUsernames = collect($resExcluded->json())->pluck('username')->toArray();
+        $this->assertNotContains('nam_c', $excludedUsernames);
+    }
 }

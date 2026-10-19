@@ -23,10 +23,13 @@ class SearchController extends Controller
             ]);
         }
 
-        $results = [];
+        $results = [
+            'boards' => [],
+            'tasks' => [],
+        ];
 
-        // Search Workspaces
-        if (in_array($type, ['all', 'workspaces'])) {
+        // Search Workspaces (Only if explicitly requested)
+        if ($type === 'workspaces') {
             $workspaces = Workspace::whereHas('members', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })->where(function ($query) use ($q) {
@@ -100,7 +103,7 @@ class SearchController extends Controller
                     'due_date' => $task->due_date,
                     'completed_at' => $task->completed_at,
                     'status' => $task->column ? $task->column->title : null,
-                    'workspace' => $workspace ? ['id' => $workspace->id, 'name' => $workspace->name] : null,
+                    'workspace' => null,
                     'board' => $board ? ['id' => $board->id, 'public_id' => $board->public_id, 'name' => $board->name] : null,
                     'assignee' => $task->assignee ? ['id' => $task->assignee->id, 'name' => $task->assignee->name, 'avatar' => $task->assignee->avatar] : null,
                 ];

@@ -1,0 +1,1 @@
+import{t as e}from"./startOfDay-CY7UmwfQ.js";import{d as t,o as n,s as r}from"./index-nSX3615u.js";function i(t,n,i){let[a,o]=r(i?.in,t,n);return+e(a)==+e(o)}function a(e,r){return i(t(r?.in||e,e),n(r?.in||e))}export{i as n,a as t};

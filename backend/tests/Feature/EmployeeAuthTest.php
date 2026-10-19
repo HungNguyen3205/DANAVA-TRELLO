@@ -179,10 +179,10 @@ class EmployeeAuthTest extends TestCase
 
         $response->assertStatus(403)->assertJson(['code' => 'MUST_CHANGE_PASSWORD']);
 
-        // User can change password
         $changePassResponse = $this->withHeaders(['Authorization' => "Bearer $token"])
                                    ->postJson('/api/auth/change-password', [
-                                       'password' => 'NewSecurePassword@123'
+                                       'password' => 'NewSecurePassword@123',
+                                       'password_confirmation' => 'NewSecurePassword@123',
                                    ]);
         $changePassResponse->assertStatus(200);
 
