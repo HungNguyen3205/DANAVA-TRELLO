@@ -21,19 +21,7 @@ export function WorkspaceHome() {
       const res = await api.get('/me/boards');
       setBoards(res.data || []);
     } catch (e) {
-      // Fallback nếu api /me/boards có trục trặc
-      try {
-        const { getWorkspaces } = await import('../lib/workspace');
-        const wsList = await getWorkspaces(true);
-        if (wsList && wsList.length > 0) {
-          const bRes = await api.get(`/workspaces/${wsList[0].id}/boards`);
-          setBoards(bRes.data || []);
-        } else {
-          setBoards([]);
-        }
-      } catch {
-        setBoards([]);
-      }
+      setBoards([]);
     } finally {
       setLoading(false);
     }

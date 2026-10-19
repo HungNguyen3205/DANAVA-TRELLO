@@ -23,6 +23,7 @@ export default defineConfig({
       "tests/boardReview*.{ts,tsx}",
       "tests/safeLinkifiedText*.{ts,tsx}",
       "tests/employee*.{ts,tsx}",
+      "tests/boardIsolation*.{ts,tsx}",
     ],
     setupFiles: ["tests/setup.ts"],
   },

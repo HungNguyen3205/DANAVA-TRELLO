@@ -305,7 +305,7 @@ class TrashController extends Controller
     {
         $board = Board::onlyTrashed()->findOrFail($id);
 
-        if ((int)$board->owner_id !== (int)$user->id && $user->system_role !== 'admin') {
+        if ((int)$board->owner_id !== (int)$user->id) {
             abort(403, 'Chỉ Chủ sở hữu bảng mới có quyền khôi phục bảng này.');
         }
 
@@ -467,8 +467,8 @@ class TrashController extends Controller
     {
         $board = Board::onlyTrashed()->findOrFail($id);
 
-        // Only Board Owner or System Admin can permanently force delete a board
-        if ((int)$board->owner_id !== (int)$user->id && $user->system_role !== 'admin') {
+        // Only Board Owner can permanently force delete a board
+        if ((int)$board->owner_id !== (int)$user->id) {
             abort(403, 'Chỉ Chủ sở hữu bảng mới có quyền xóa vĩnh viễn bảng này.');
         }
 

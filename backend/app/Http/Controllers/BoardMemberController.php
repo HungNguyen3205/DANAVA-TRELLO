@@ -158,6 +158,14 @@ class BoardMemberController extends Controller
             return response()->json(['message' => 'Thành viên không thuộc bảng này.'], 404);
         }
 
+        // Prevent demoting the board owner
+        if ((int)$userId === (int)$board->owner_id && $request->role !== 'admin') {
+            return response()->json([
+                'message' => 'Không thể hạ quyền Chủ sở hữu (Owner) của bảng.',
+                'errors' => ['role' => ['Không thể hạ quyền Chủ sở hữu của bảng.']]
+            ], 422);
+        }
+
         // Prevent demoting the last admin
         $adminCount = DB::table('board_members')
             ->where('board_id', $board->id)
@@ -178,6 +186,8 @@ class BoardMemberController extends Controller
                 'role' => $request->role,
                 'updated_at' => now(),
             ]);
+
+        \Illuminate\Support\Facades\Cache::forget("personal_dashboard_optimized_{$userId}");
 
         return response()->json(['message' => 'Đã cập nhật vai trò']);
     }
@@ -209,6 +219,14 @@ class BoardMemberController extends Controller
 
         if (!$isBoardAdmin && !$isSelf) {
             return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền xóa thành viên khác.'], 403);
+        }
+
+        // Prevent removing the board owner
+        if ((int)$userId === (int)$board->owner_id) {
+            return response()->json([
+                'message' => 'Không thể xóa Chủ sở hữu (Owner) khỏi bảng công việc.',
+                'errors' => ['user_id' => ['Không thể xóa Chủ sở hữu khỏi bảng công việc.']]
+            ], 422);
         }
 
         // Prevent removing the last admin
@@ -253,6 +271,9 @@ class BoardMemberController extends Controller
                 }
             }
         });
+
+        \Illuminate\Support\Facades\Cache::forget("personal_dashboard_optimized_{$userId}");
+        \Illuminate\Support\Facades\Cache::forget("personal_dashboard_optimized_{$currentUserId}");
 
         return response()->json(['message' => 'Đã gỡ thành viên khỏi bảng']);
     }

@@ -130,10 +130,10 @@ export function HomePage() {
   const recentBoards = data?.recent_boards || [];
   const recentActivities = data?.recent_activities || [];
 
-  // Ưu tiên hiển thị Bảng công việc trong mục "Tiếp tục công việc". Nếu chưa có bảng nào mới fallback sang Không gian
+  // VI.B: Chỉ hiển thị Bảng công việc trong mục "Tiếp tục công việc", không fallback sang Workspace
   const continueItems = (recentBoards && recentBoards.length > 0)
     ? recentBoards.map((b: any) => ({ type: 'board', ...b })).slice(0, 4)
-    : recentWorkspaces.map((w: any) => ({ type: 'workspace', ...w })).slice(0, 4);
+    : [];
 
   return (
     <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar">
@@ -230,8 +230,25 @@ export function HomePage() {
               </div>
 
               {continueItems.length === 0 ? (
-                <div className="bg-card border border-border p-8 rounded-2xl text-center text-sm text-muted-foreground shadow-xs">
-                  Hoạt động của bạn sẽ xuất hiện tại đây khi bạn tương tác với các Bảng công việc.
+                <div className="bg-card border border-dashed border-border p-8 rounded-2xl text-center space-y-3 shadow-xs">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                    <Columns size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-foreground">Bạn chưa có Bảng công việc nào</h3>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                      Hãy tạo bảng công việc đầu tiên để bắt đầu quản lý dự án cá nhân hoặc cộng tác với thành viên trong nhóm.
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <button
+                      onClick={() => navigate('/boards')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-xl shadow-xs transition-colors"
+                    >
+                      <Plus size={14} />
+                      <span>Tạo Bảng công việc</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

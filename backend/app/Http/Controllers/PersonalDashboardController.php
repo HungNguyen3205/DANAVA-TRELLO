@@ -181,8 +181,22 @@ class PersonalDashboardController extends Controller
 
         $activitiesList = collect();
 
-        // 1. Lấy từ ActivityLog thực tế
+        // Get board IDs user currently has access to
+        $userBoardIds = \DB::table('boards')
+            ->leftJoin('board_members', 'boards.id', '=', 'board_members.board_id')
+            ->where(function($q) use ($user) {
+                $q->where('boards.owner_id', $user->id)
+                  ->orWhere('board_members.user_id', $user->id);
+            })
+            ->pluck('boards.id')
+            ->unique()
+            ->toArray();
+
+        // 1. Lấy từ ActivityLog thực tế (chỉ thuộc board người dùng đang có quyền)
         $logs = ActivityLog::where('user_id', $user->id)
+            ->whereHas('task.column', function($q) use ($userBoardIds) {
+                $q->whereIn('board_id', $userBoardIds);
+            })
             ->with(['task.column.board.workspace'])
             ->orderBy('created_at', 'desc')
             ->limit(8)
@@ -204,6 +218,9 @@ class PersonalDashboardController extends Controller
         // 2. Nếu activity_logs còn ít, lấy thêm từ bình luận thực tế của người dùng
         if ($activitiesList->count() < 6) {
             $comments = \App\Models\TaskComment::where('user_id', $user->id)
+                ->whereHas('task.column', function($q) use ($userBoardIds) {
+                    $q->whereIn('board_id', $userBoardIds);
+                })
                 ->with(['task.column.board.workspace'])
                 ->orderBy('created_at', 'desc')
                 ->limit(6)
@@ -228,6 +245,7 @@ class PersonalDashboardController extends Controller
         // 3. Nếu vẫn còn ít, bổ sung từ các công việc gần nhất người dùng tham gia / được giao
         if ($activitiesList->count() < 6) {
             $tasks = \App\Models\Task::where('assignee_id', $user->id)
+                ->inUserBoards($user->id)
                 ->with(['column.board.workspace'])
                 ->orderBy('updated_at', 'desc')
                 ->limit(6)

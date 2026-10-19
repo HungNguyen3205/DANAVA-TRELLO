@@ -74,34 +74,17 @@ class User extends Authenticatable
     public function isBoardMember(int|string|null $boardId): bool
     {
         if (!$boardId) return false;
-        $isOwner = Board::where('id', $boardId)->where('owner_id', $this->id)->exists();
-        if ($isOwner) return true;
-        return \Illuminate\Support\Facades\DB::table('board_members')
-            ->where('board_id', $boardId)
-            ->where('user_id', $this->id)
-            ->exists();
+        $board = Board::find($boardId);
+        if (!$board) return false;
+        return app(\App\Services\BoardAccessService::class)->canView($this, $board);
     }
 
     public function isBoardAdmin(int|string|null $boardId): bool
     {
         if (!$boardId) return false;
-        $isOwner = Board::where('id', $boardId)->where('owner_id', $this->id)->exists();
-        if ($isOwner) return true;
-
-        $member = \Illuminate\Support\Facades\DB::table('board_members')
-            ->where('board_id', $boardId)
-            ->where('user_id', $this->id)
-            ->first();
-
-        if (!$member) {
-            return false;
-        }
-
-        if (in_array($this->system_role, ['system_admin', 'admin'], true)) {
-            return true;
-        }
-
-        return in_array($member->role, ['admin', 'owner'], true);
+        $board = Board::find($boardId);
+        if (!$board) return false;
+        return app(\App\Services\BoardAccessService::class)->canManage($this, $board);
     }
 
     public function department()

@@ -36,11 +36,10 @@ class BoardController extends Controller
             ->groupBy('board_id')
             ->pluck('count', 'board_id');
 
-        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['system_admin', 'admin'], true);
-        $boards = $boards->map(function ($board) use ($userId, $memberships, $membersCount, $isSystemAdmin) {
+        $boards = $boards->map(function ($board) use ($userId, $memberships, $membersCount) {
             $member = $memberships->get($board->id);
             $board->is_starred = $member ? (bool)$member->is_starred : false;
-            $board->my_role = ($board->owner_id === $userId || ($member && (in_array($member->role, ['owner', 'admin']) || $isSystemAdmin))) ? 'admin' : 'member';
+            $board->my_role = ($board->owner_id === $userId || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
             $board->members_count = $membersCount[$board->id] ?? 1;
             return $board;
         });
@@ -156,12 +155,9 @@ class BoardController extends Controller
     // Xem chi tiết một bảng
     public function show(Request $request, Board $board)
     {
-        $userId = $request->user()->id;
+        abort_if(!Gate::check('view', $board), 403, 'Bạn không phải là thành viên của bảng này');
 
-        // Phải là chủ sở hữu hoặc thành viên của bảng
-        if (!$request->user()->isBoardMember($board->id)) {
-            return response()->json(['message' => 'Bạn không phải là thành viên của bảng này'], 403);
-        }
+        $userId = $request->user()->id;
 
         $relations = [
             'owner', 
@@ -185,10 +181,9 @@ class BoardController extends Controller
             ->where('user_id', $userId)
             ->first();
 
-        $isSystemAdmin = in_array($request->user()->system_role ?? '', ['system_admin', 'admin'], true);
         $boardData->is_starred = $member ? (bool)$member->is_starred : false;
-        $boardData->my_role = ($board->owner_id === $userId || ($member && (in_array($member->role, ['owner', 'admin']) || $isSystemAdmin))) ? 'admin' : 'member';
-        $boardData->is_owner = ($board->owner_id === $userId || ($member && ($member->role === 'owner' || $isSystemAdmin)));
+        $boardData->my_role = ($board->owner_id === $userId || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
+        $boardData->is_owner = ($board->owner_id === $userId || ($member && $member->role === 'owner'));
 
         return response()->json($boardData);
     }
@@ -204,18 +199,7 @@ class BoardController extends Controller
     // Cập nhật bảng
     public function update(Request $request, Board $board)
     {
-        $userId = $request->user()->id;
-
-        // Chỉ Quản trị viên (Chủ sở hữu) của bảng mới có quyền chỉnh sửa
-        $isBoardAdmin = \Illuminate\Support\Facades\DB::table('board_members')
-            ->where('board_id', $board->id)
-            ->where('user_id', $userId)
-            ->where('role', 'admin')
-            ->exists();
-
-        if (!$isBoardAdmin) {
-            return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền chỉnh sửa bảng.'], 403);
-        }
+        Gate::authorize('update', $board);
 
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -231,19 +215,9 @@ class BoardController extends Controller
     // Xóa bảng
     public function destroy(Request $request, Board $board)
     {
+        Gate::authorize('delete', $board);
+
         $userId = $request->user()->id;
-
-        // Chỉ Quản trị viên (Chủ sở hữu) của bảng mới có quyền xóa
-        $isBoardAdmin = ((int)$board->owner_id === (int)$userId) || \Illuminate\Support\Facades\DB::table('board_members')
-            ->where('board_id', $board->id)
-            ->where('user_id', $userId)
-            ->whereIn('role', ['admin', 'owner'])
-            ->exists();
-
-        if (!$isBoardAdmin) {
-            return response()->json(['message' => 'Chỉ Quản trị viên của bảng mới có quyền xóa bảng.'], 403);
-        }
-
         $board->update(['deleted_by' => $userId]);
         $board->delete();
         return response()->json(['message' => 'Board deleted successfully']);

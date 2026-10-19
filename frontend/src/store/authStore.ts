@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '../types';
 import api from '../lib/axios';
+import { useBoardStore } from './boardStore';
+import { clearWorkspaceCache } from '../lib/workspace';
+import { clearPersonalDashboardCache } from '../lib/personalDashboard';
 
 interface AuthState {
   user: User | null;
@@ -27,10 +30,10 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem('auth_token');
         set({ user: null, token: null, isAuthenticated: false });
         
-        // Clear all memory caches securely
-        import('../lib/personalDashboard').then(m => m.clearPersonalDashboardCache());
-        import('../lib/workspace').then(m => m.clearWorkspaceCache());
-        import('./boardStore').then(m => m.useBoardStore.getState().clearCache());
+        // Clear all memory caches securely and synchronously
+        clearPersonalDashboardCache();
+        clearWorkspaceCache();
+        useBoardStore.getState().clearCache();
       },
       updateUser: (user) => {
         set({ user });

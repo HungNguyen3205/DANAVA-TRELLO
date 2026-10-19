@@ -117,21 +117,16 @@ class Board extends Model
 
     public function hasMember(int $userId): bool
     {
-        if ((int)$this->owner_id === $userId) {
-            return true;
+        $user = User::find($userId);
+        if (!$user) {
+            return false;
         }
-        return $this->members()->where('users.id', $userId)->exists();
+        return app(\App\Services\BoardAccessService::class)->canView($user, $this);
     }
 
     public function canManage(User $user): bool
     {
-        if ($user->system_role === 'admin' || (int)$this->owner_id === (int)$user->id) {
-            return true;
-        }
-        return $this->members()
-            ->where('users.id', $user->id)
-            ->whereIn('board_members.role', ['admin', 'owner'])
-            ->exists();
+        return app(\App\Services\BoardAccessService::class)->canManage($user, $this);
     }
 
     public function deletedBy()
