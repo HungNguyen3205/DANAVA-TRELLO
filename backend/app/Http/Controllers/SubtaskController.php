@@ -56,8 +56,10 @@ class SubtaskController extends Controller
      * POST /api/tasks/{task}/subtasks
      * Create a new subtask under a parent task.
      */
-    public function store(StoreSubtaskRequest $request, Task $task): JsonResponse
+    public function store(StoreSubtaskRequest $request, ...$args): JsonResponse
     {
+        $rawTask = $args[0] ?? null;
+        $task = ($rawTask instanceof Task) ? $rawTask : Task::findOrFail($rawTask);
         Gate::authorize('createSubtask', $task);
 
         $currentUser = $request->user();
@@ -69,8 +71,12 @@ class SubtaskController extends Controller
 
         $validMemberIds = $this->getValidBoardMemberIds($board->id);
 
-        // Validate assignees belong to board
+        // Validate assignees belong to board or copy from parent
         $assigneeIds = $request->input('assignee_ids', []);
+        if ($request->boolean('copy_parent_assignees') && empty($assigneeIds)) {
+            $assigneeIds = $task->assignees()->pluck('users.id')->map(fn($id) => (int)$id)->toArray();
+        }
+
         if (!empty($assigneeIds)) {
             $invalidUsers = array_diff($assigneeIds, $validMemberIds);
             if (!empty($invalidUsers)) {
@@ -102,14 +108,8 @@ class SubtaskController extends Controller
                 'completed_at' => null,
             ]);
 
-            // Sync assignees
-            if (!empty($assigneeIds)) {
-                $syncData = [];
-                foreach ($assigneeIds as $uid) {
-                    $syncData[$uid] = ['assigned_by' => $currentUser->id];
-                }
-                $created->assignees()->sync($syncData);
-            }
+            // Sync assignees with auto-split contribution
+            $created->syncAssigneesWithAutoSplit($assigneeIds, $currentUser->id);
 
             // Log activity
             ActivityLog::create([
@@ -148,12 +148,22 @@ class SubtaskController extends Controller
      * GET /api/tasks/subtasks/{subtask}
      * Get single subtask details.
      */
-    public function show(Request $request, Task $subtask): JsonResponse
+    public function show(Request $request, ...$args): JsonResponse
     {
+        $rawSubtask = end($args);
+        $subtask = ($rawSubtask instanceof Task) ? $rawSubtask : Task::findOrFail($rawSubtask);
+        if (count($args) > 1) {
+            $rawParent = $args[0];
+            $parentTask = ($rawParent instanceof Task) ? $rawParent : Task::find($rawParent);
+            if ($parentTask && (int)$subtask->parent_task_id !== (int)$parentTask->id) {
+                return response()->json(['message' => 'Công việc con không thuộc công việc cha này.'], 404);
+            }
+        }
+
         Gate::authorize('view', $subtask);
 
         return response()->json($subtask->load([
-            'parent',
+            'parent.assignees',
             'assignees',
             'creator',
             'labels',
@@ -165,8 +175,18 @@ class SubtaskController extends Controller
      * PATCH /api/tasks/subtasks/{subtask}
      * Full edit of a subtask.
      */
-    public function update(UpdateSubtaskRequest $request, Task $subtask): JsonResponse
+    public function update(UpdateSubtaskRequest $request, ...$args): JsonResponse
     {
+        $rawSubtask = end($args);
+        $subtask = ($rawSubtask instanceof Task) ? $rawSubtask : Task::findOrFail($rawSubtask);
+        if (count($args) > 1) {
+            $rawParent = $args[0];
+            $parentTask = ($rawParent instanceof Task) ? $rawParent : Task::find($rawParent);
+            if ($parentTask && (int)$subtask->parent_task_id !== (int)$parentTask->id) {
+                return response()->json(['message' => 'Công việc con không thuộc công việc cha này.'], 404);
+            }
+        }
+
         Gate::authorize('update', $subtask);
 
         $currentUser = $request->user();
@@ -306,11 +326,7 @@ class SubtaskController extends Controller
             }
 
             if ($newAssigneeIds !== null) {
-                $syncData = [];
-                foreach ($newAssigneeIds as $uid) {
-                    $syncData[$uid] = ['assigned_by' => $currentUser->id];
-                }
-                $subtask->assignees()->sync($syncData);
+                $subtask->syncAssigneesWithAutoSplit($newAssigneeIds, $currentUser->id);
             }
 
             foreach ($logs as $log) {
@@ -380,8 +396,18 @@ class SubtaskController extends Controller
      * DELETE /api/tasks/subtasks/{subtask}
      * Delete a subtask.
      */
-    public function destroy(Request $request, Task $subtask): JsonResponse
+    public function destroy(Request $request, ...$args): JsonResponse
     {
+        $rawSubtask = end($args);
+        $subtask = ($rawSubtask instanceof Task) ? $rawSubtask : Task::findOrFail($rawSubtask);
+        if (count($args) > 1) {
+            $rawParent = $args[0];
+            $parentTask = ($rawParent instanceof Task) ? $rawParent : Task::find($rawParent);
+            if ($parentTask && (int)$subtask->parent_task_id !== (int)$parentTask->id) {
+                return response()->json(['message' => 'Công việc con không thuộc công việc cha này.'], 404);
+            }
+        }
+
         Gate::authorize('delete', $subtask);
 
         $currentUser = $request->user();

@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Check, CheckSquare, Clock, Filter, AlertCircle, CheckCircle2, ChevronRight, LayoutDashboard, Search, Star, MoreHorizontal, MessageSquare, Paperclip, CheckSquare as CheckIcon, Briefcase } from 'lucide-react';
+import { 
+  Check, CheckSquare, Clock, Filter, AlertCircle, 
+  CheckCircle2, ChevronRight, LayoutDashboard, Search, 
+  Star, MoreHorizontal, MessageSquare, Paperclip, 
+  CheckSquare as CheckIcon, Briefcase, GitBranch, Users, PieChart 
+} from 'lucide-react';
 import api from '../lib/axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { format, isPast, isToday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { getAvatarUrl } from '../lib/avatar';
 
 interface Task {
   id: number;
+  parent_task_id?: number | null;
+  is_subtask?: boolean;
+  type?: string;
+  parent_task?: { id: number; title: string } | null;
   title: string;
   priority: string;
   due_date: string | null;
@@ -16,12 +26,17 @@ interface Task {
   workspace: { id: number; name: string } | null;
   board: { id: number; public_id?: string; name: string; color: string } | null;
   sprint: { id: number; name: string } | null;
+  assignees?: { id: number; name: string; username?: string; avatar?: string; contribution_percent?: number }[];
+  co_assignees_count?: number;
+  my_contribution_percent?: number | null;
 }
 
 export const MyTasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'todo' | 'in_progress' | 'overdue' | 'upcoming' | 'completed' | 'all'>('todo');
+  const [taskTypeFilter, setTaskTypeFilter] = useState<'all' | 'root' | 'subtask'>('all');
+  const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'solo' | 'shared'>('all');
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
@@ -37,6 +52,9 @@ export const MyTasksPage = () => {
       }
       else if (filter === 'completed') params.append('due', 'completed');
       else if (filter === 'all') params.append('status_type', 'pending_all');
+
+      if (taskTypeFilter !== 'all') params.append('task_type', taskTypeFilter);
+      if (assignmentFilter !== 'all') params.append('assignment_type', assignmentFilter);
 
       if (search) {
         params.append('search', search);
@@ -64,7 +82,7 @@ export const MyTasksPage = () => {
 
   useEffect(() => {
     fetchTasks();
-  }, [filter]); 
+  }, [filter, taskTypeFilter, assignmentFilter]); 
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -190,6 +208,53 @@ export const MyTasksPage = () => {
           })}
         </div>
 
+        {/* Sub Filters: Task Type & Assignment Type */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-card/50 border border-border/70 p-3 rounded-2xl shadow-2xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">Phân loại:</span>
+            {[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'root', label: 'Task chính' },
+              { id: 'subtask', label: 'Task con' },
+            ].map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTaskTypeFilter(t.id as any)}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+                  taskTypeFilter === t.id
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">Hình thức:</span>
+            {[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'solo', label: 'Được giao riêng' },
+              { id: 'shared', label: 'Tôi cùng thực hiện' },
+            ].map(a => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAssignmentFilter(a.id as any)}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+                  assignmentFilter === a.id
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Task List */}
         <div className="flex-1">
           {loading ? (
@@ -223,11 +288,31 @@ export const MyTasksPage = () => {
                         <Check size={14} className={isCompleted ? 'opacity-100' : 'opacity-0 group-hover:opacity-50 hover:!opacity-100 text-primary'} />
                       </div>
                       
-                      <div className="min-w-0">
-                        <h4 className={`text-[15px] font-semibold text-foreground truncate mb-2 ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                          {task.title}
-                        </h4>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          {task.is_subtask || task.type === 'Task con' ? (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-200/40 dark:border-purple-900/40">
+                              Task con
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-200/40 dark:border-blue-900/40">
+                              Task chính
+                            </span>
+                          )}
+
+                          <h4 className={`text-[15px] font-semibold text-foreground truncate ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                            {task.title}
+                          </h4>
+                        </div>
+
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
+                          {task.is_subtask && task.parent_task && (
+                            <div className="flex items-center gap-1 font-medium text-foreground bg-muted/60 px-2 py-0.5 rounded-md text-[11px]" title={`Thuộc Task cha: ${task.parent_task.title}`}>
+                              <GitBranch size={11} className="opacity-70 text-purple-500 shrink-0" />
+                              <span className="truncate max-w-[140px]">Thuộc: {task.parent_task.title}</span>
+                            </div>
+                          )}
+
                           {task.workspace && (
                             <div className="flex items-center gap-1.5 font-medium bg-primary/10 text-primary px-2.5 py-0.5 rounded-md" title={`Không gian: ${task.workspace.name}`}>
                               <Briefcase size={12} className="opacity-80 shrink-0" />
@@ -260,6 +345,37 @@ export const MyTasksPage = () => {
                               <span>{formatDateText(task.due_date)}</span>
                               {isOverdue && !isCompleted && <span className="uppercase text-[10px] ml-0.5 font-bold">Quá hạn</span>}
                               {isDueToday && !isCompleted && <span className="uppercase text-[10px] ml-0.5 font-bold">Hôm nay</span>}
+                            </div>
+                          )}
+
+                          {/* Co-assignees and contribution */}
+                          {task.assignees && task.assignees.length > 0 && (
+                            <div className="flex items-center gap-1.5 pl-1">
+                              <div className="flex -space-x-1.5 overflow-hidden">
+                                {task.assignees.slice(0, 3).map(u => (
+                                  <span
+                                    key={u.id}
+                                    title={u.name}
+                                    className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[9px] font-bold ring-2 ring-card overflow-hidden shrink-0 shadow-2xs"
+                                  >
+                                    {u.avatar ? (
+                                      <img src={getAvatarUrl(u.avatar)} alt={u.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      u.username?.charAt(0).toUpperCase() || u.name?.charAt(0).toUpperCase() || 'U'
+                                    )}
+                                  </span>
+                                ))}
+                                {task.assignees.length > 3 && (
+                                  <span className="w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[9px] font-bold ring-2 ring-card">
+                                    +{task.assignees.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                              {task.my_contribution_percent !== undefined && task.my_contribution_percent !== null && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20" title="Tỷ lệ đóng góp của bạn">
+                                  {task.my_contribution_percent}%
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>

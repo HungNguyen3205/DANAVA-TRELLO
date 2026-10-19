@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Board;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -223,10 +224,35 @@ class BoardMemberController extends Controller
             ], 422);
         }
 
-        DB::table('board_members')
-            ->where('board_id', $board->id)
-            ->where('user_id', $userId)
-            ->delete();
+        DB::transaction(function () use ($board, $userId) {
+            DB::table('board_members')
+                ->where('board_id', $board->id)
+                ->where('user_id', $userId)
+                ->delete();
+
+            // Find all tasks on this board where user is assigned
+            $affectedTaskIds = DB::table('tasks')
+                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
+                ->join('task_assignees', 'tasks.id', '=', 'task_assignees.task_id')
+                ->where('kanban_columns.board_id', $board->id)
+                ->where('task_assignees.user_id', $userId)
+                ->pluck('tasks.id')
+                ->toArray();
+
+            if (!empty($affectedTaskIds)) {
+                DB::table('task_assignees')
+                    ->whereIn('task_id', $affectedTaskIds)
+                    ->where('user_id', $userId)
+                    ->delete();
+
+                // Rebalance remaining assignees for affected tasks
+                $tasks = Task::whereIn('id', $affectedTaskIds)->get();
+                foreach ($tasks as $t) {
+                    $remainingUserIds = $t->assignees()->pluck('users.id')->map(fn($id) => (int)$id)->toArray();
+                    $t->syncAssigneesWithAutoSplit($remainingUserIds);
+                }
+            }
+        });
 
         return response()->json(['message' => 'Đã gỡ thành viên khỏi bảng']);
     }

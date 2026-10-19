@@ -58,6 +58,18 @@ class User extends Authenticatable
         return $this->belongsToMany(Board::class, 'board_members')->withPivot('role', 'is_starred')->withTimestamps();
     }
 
+    public function assignedTasks()
+    {
+        return $this->belongsToMany(Task::class, 'task_assignees')
+                    ->withPivot([
+                        'assigned_by',
+                        'assigned_at',
+                        'contribution_percent',
+                        'responsibility_role',
+                    ])
+                    ->withTimestamps();
+    }
+
     public function isBoardMember(int|string|null $boardId): bool
     {
         if (!$boardId) return false;

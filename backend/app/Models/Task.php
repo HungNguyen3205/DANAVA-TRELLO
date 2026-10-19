@@ -71,8 +71,88 @@ class Task extends Model
     public function assignees()
     {
         return $this->belongsToMany(User::class, 'task_assignees', 'task_id', 'user_id')
-                    ->withPivot(['assigned_by', 'contribution_percent'])
+                    ->withPivot(['assigned_by', 'assigned_at', 'contribution_percent', 'responsibility_role'])
                     ->withTimestamps();
+    }
+
+    /**
+     * Calculate balanced contribution percentages summing to exactly 100%.
+     */
+    public static function calculateEqualContributionPercents(array $userIds): array
+    {
+        $count = count($userIds);
+        if ($count === 0) {
+            return [];
+        }
+
+        if ($count === 1) {
+            return [$userIds[0] => 100.0];
+        }
+
+        $basePercent = round(100.0 / $count, 2);
+        $result = [];
+        $accumulated = 0.0;
+
+        foreach ($userIds as $idx => $uid) {
+            if ($idx === $count - 1) {
+                // Ensure exact 100% total
+                $result[$uid] = round(100.0 - $accumulated, 2);
+            } else {
+                $result[$uid] = $basePercent;
+                $accumulated += $basePercent;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Sync task assignees with auto-split or custom contribution percent.
+     */
+    public function syncAssigneesWithAutoSplit(array $userIds, ?int $assignedBy = null, ?array $customPercents = null): void
+    {
+        $uniqueUserIds = array_values(array_unique(array_filter(array_map('intval', $userIds))));
+        $count = count($uniqueUserIds);
+
+        if ($count === 0) {
+            $this->assignees()->sync([]);
+            $this->update(['assignee_id' => null]);
+            return;
+        }
+
+        $percents = [];
+        if (!empty($customPercents)) {
+            $sum = 0.0;
+            foreach ($uniqueUserIds as $uid) {
+                $p = isset($customPercents[$uid]) ? (float) $customPercents[$uid] : 0.0;
+                $percents[$uid] = $p;
+                $sum += $p;
+            }
+            // If custom percents provided don't sum to 100%, rebalance
+            if (abs($sum - 100.0) >= 0.1) {
+                $percents = self::calculateEqualContributionPercents($uniqueUserIds);
+            }
+        } else {
+            $percents = self::calculateEqualContributionPercents($uniqueUserIds);
+        }
+
+        $syncData = [];
+        $existingAssignees = $this->assignees()->get()->keyBy('id');
+
+        foreach ($uniqueUserIds as $uid) {
+            $existing = $existingAssignees->get($uid);
+            $syncData[$uid] = [
+                'assigned_by' => $existing?->pivot->assigned_by ?: $assignedBy,
+                'assigned_at' => $existing?->pivot->assigned_at ?: now(),
+                'contribution_percent' => $percents[$uid] ?? round(100.0 / $count, 2),
+                'responsibility_role' => $existing?->pivot->responsibility_role ?: null,
+            ];
+        }
+
+        $this->assignees()->sync($syncData);
+
+        // Keep legacy assignee_id in sync with first assignee
+        $this->update(['assignee_id' => $uniqueUserIds[0] ?? null]);
     }
 
     public function qualityReviewer()

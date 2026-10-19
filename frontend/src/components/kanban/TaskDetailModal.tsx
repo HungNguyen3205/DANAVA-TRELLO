@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Trash2, Check, AlignLeft, CheckSquare, 
   MessageSquare, UserPlus, Tag, Paperclip, 
-  CalendarDays, CreditCard, Clock, Send, Eye, Share2
+  CalendarDays, CreditCard, Clock, Send, Eye, Share2,
+  PieChart
 } from 'lucide-react';
 import type { Task, Board } from '../../types';
 import api from '../../lib/axios';
@@ -17,6 +18,9 @@ import { TaskDatesModal } from './TaskDatesModal';
 import { SubtaskList } from './SubtaskList';
 import { SafeLinkifiedText } from '../common/SafeLinkifiedText';
 import { AssigneeSelect } from './AssigneeSelect';
+import { TaskMemberPicker } from './TaskMemberPicker';
+import { TaskContributionModal } from './TaskContributionModal';
+import { RemoveAssigneeWarningModal } from './RemoveAssigneeWarningModal';
 
 function formatDateDisplay(dateStr?: string): string {
   if (!dateStr) return '';
@@ -44,6 +48,9 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const [isChecklistVisible, setIsChecklistVisible] = useState(false);
   const [isLabelsVisible, setIsLabelsVisible] = useState(false);
   const [isMembersVisible, setIsMembersVisible] = useState(false);
+  const [isContributionModalOpen, setIsContributionModalOpen] = useState(false);
+  const [memberToRemoveWarning, setMemberToRemoveWarning] = useState<{ user: any; affectedSubtasks: Task[] } | null>(null);
+  const [pendingAssigneeIds, setPendingAssigneeIds] = useState<(string | number)[] | null>(null);
   const [isDatesVisible, setIsDatesVisible] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
@@ -52,6 +59,90 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
     (board as any).role === 'admin' ||
     (board as any).role === 'owner' ||
     (board.owner_id && currentUser?.id && String(board.owner_id) === String(currentUser.id));
+
+  const executeAssigneeUpdate = async (selectedIds: (string | number)[], applyToSubtasks = false) => {
+    try {
+      setBusy(true);
+      const res = await api.put(`/tasks/${task.id}/assignees`, {
+        assignee_ids: selectedIds.map(Number),
+        apply_to_subtasks: applyToSubtasks,
+      });
+
+      const updatedTask = res.data.task;
+      if (updatedTask) {
+        update({
+          assignees: updatedTask.assignees,
+          assigneeId: updatedTask.assignees?.[0]?.id ? String(updatedTask.assignees[0].id) : '',
+          subtasks: updatedTask.subtasks || draft.subtasks,
+        });
+
+        useBoardStore.getState().setBoard(b => {
+          if (!b) return b;
+          return {
+            ...b,
+            tasks: b.tasks.map(t => t.id === task.id ? { ...t, assignees: updatedTask.assignees } : t),
+          };
+        });
+      }
+      setIsMembersVisible(false);
+      toast.success('Đã cập nhật thành viên thành công');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi khi cập nhật thành viên');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleApplyAssignees = async (selectedIds: (string | number)[], applyToSubtasks?: boolean) => {
+    const currentAssignees = draft.assignees || [];
+    const removedUsers = currentAssignees.filter(u => !selectedIds.map(String).includes(String(u.id)));
+
+    // Check if any removed user is in subtasks
+    if (removedUsers.length > 0 && draft.subtasks && draft.subtasks.length > 0) {
+      for (const removedUser of removedUsers) {
+        const affected = draft.subtasks.filter(sub => 
+          sub.assignees?.some(a => String(a.id) === String(removedUser.id)) ||
+          String(sub.assigneeId) === String(removedUser.id)
+        );
+        if (affected.length > 0) {
+          setPendingAssigneeIds(selectedIds);
+          setMemberToRemoveWarning({ user: removedUser, affectedSubtasks: affected });
+          return;
+        }
+      }
+    }
+
+    await executeAssigneeUpdate(selectedIds, applyToSubtasks);
+  };
+
+  const handleConfirmRemoveFromSubtasks = async (subtaskIds: (string | number)[]) => {
+    if (!memberToRemoveWarning) return;
+    try {
+      setBusy(true);
+      await api.delete(`/tasks/${task.id}/assignees/${memberToRemoveWarning.user.id}`, {
+        data: {
+          remove_from_subtasks: true,
+          subtask_ids: subtaskIds.map(Number),
+        }
+      });
+      const res = await api.get(`/tasks/${task.id}`);
+      update(res.data);
+      useBoardStore.getState().setBoard(b => {
+        if (!b) return b;
+        return {
+          ...b,
+          tasks: b.tasks.map(t => t.id === task.id ? { ...t, assignees: res.data.assignees } : t),
+        };
+      });
+      setMemberToRemoveWarning(null);
+      setIsMembersVisible(false);
+      toast.success(`Đã xóa ${memberToRemoveWarning.user.name} khỏi Task cha và các Task con`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSaveQualityReview = async (rating: number, note: string) => {
     try {
@@ -306,27 +397,71 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               <div className="flex flex-wrap gap-8 mb-8 ml-10">
                 {((draft.assignees && draft.assignees.length > 0) || draft.assigneeId) && (
                   <div>
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Thành viên</h3>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {(draft.assignees && draft.assignees.length > 0 
-                        ? draft.assignees 
-                        : (assignedUser ? [assignedUser] : [])
-                      ).map(u => (
-                        <div
-                          key={u.id}
-                          className="flex items-center gap-1.5 pl-1 pr-2.5 py-1 bg-accent/40 rounded-full border border-border/60 shadow-2xs"
-                          title={u.name}
-                        >
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden shrink-0">
-                            {u.avatar ? (
-                              <img src={getAvatarUrl(u.avatar)} alt={u.name} className="w-full h-full object-cover" />
-                            ) : (
-                              u.initials || u.name?.charAt(0).toUpperCase() || 'U'
-                            )}
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Thành viên</h3>
+                      <button
+                        type="button"
+                        onClick={() => setIsContributionModalOpen(true)}
+                        className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-bold transition-colors"
+                        title="Xem và điều chỉnh tỷ lệ đóng góp"
+                      >
+                        <PieChart size={12} />
+                        <span>Phân bổ đóng góp</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div
+                        onClick={() => setIsMembersVisible(true)}
+                        className="flex items-center -space-x-2 cursor-pointer p-1 rounded-full hover:bg-accent/60 transition-colors"
+                        title="Bấm để chỉnh sửa phân công thành viên"
+                      >
+                        {(draft.assignees && draft.assignees.length > 0 
+                          ? draft.assignees 
+                          : (assignedUser ? [assignedUser] : [])
+                        ).slice(0, 4).map(u => (
+                          <div key={u.id} className="relative group/avatar">
+                            <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-card overflow-hidden shadow-2xs block">
+                              {u.avatar ? (
+                                <img src={getAvatarUrl(u.avatar)} alt={u.name} className="w-full h-full object-cover" />
+                              ) : (
+                                u.initials || u.name?.charAt(0).toUpperCase() || 'U'
+                              )}
+                            </span>
+
+                            {/* Hover Tooltip */}
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover/avatar:flex flex-col items-center z-50 pointer-events-none">
+                              <div className="bg-popover text-popover-foreground border border-border shadow-xl px-2.5 py-1.5 rounded-xl text-[11px] whitespace-nowrap min-w-[120px] text-center">
+                                <p className="font-bold">{u.name}</p>
+                                {u.department?.name && (
+                                  <p className="text-[10px] text-muted-foreground">{u.department.name}</p>
+                                )}
+                                <p className="text-[10px] text-primary font-semibold">
+                                  {(u as any).pivot?.contribution_percent !== undefined
+                                    ? `Đóng góp: ${(u as any).pivot.contribution_percent}%`
+                                    : (u.role || 'Thành viên')}
+                                </p>
+                              </div>
+                              <div className="w-2 h-2 bg-popover border-b border-r border-border rotate-45 -mt-1" />
+                            </div>
                           </div>
-                          <span className="text-xs font-semibold text-foreground max-w-[120px] truncate">{u.name}</span>
-                        </div>
-                      ))}
+                        ))}
+
+                        {(draft.assignees && draft.assignees.length > 4) && (
+                          <span className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold ring-2 ring-card shadow-2xs">
+                            +{draft.assignees.length - 4}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsMembersVisible(true)}
+                        className="w-8 h-8 rounded-full border border-dashed border-border/80 hover:border-primary flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                        title="Thêm thành viên"
+                      >
+                        <UserPlus size={15} />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -918,27 +1053,18 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
 
 
               {isMembersVisible && (
-                <div className="mt-2 p-4 bg-card border border-border/80 rounded-2xl shadow-xl animate-in slide-in-from-top-2 duration-200">
-                  <div className="flex justify-between items-center mb-2.5">
-                    <h4 className="text-xs font-bold text-foreground">Giao việc cho thành viên</h4>
-                    <button onClick={() => setIsMembersVisible(false)} className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                      <X size={14} />
-                    </button>
-                  </div>
-                  <AssigneeSelect
+                <div className="mt-2">
+                  <TaskMemberPicker
                     boardUsers={board.users || []}
-                    selectedUserIds={draft.assignees?.map(u => String(u.id)) || (draft.assigneeId ? [String(draft.assigneeId)] : [])}
-                    onChange={(newUserIds) => {
-                      const newAssignees = board.users?.filter(u => newUserIds.includes(String(u.id))) || [];
-                      update({
-                        assignees: newAssignees,
-                        assigneeId: newUserIds[0] || ''
-                      });
-                      save({
-                        assignees: newAssignees,
-                        assigneeId: newUserIds[0] || ''
-                      });
-                    }}
+                    initialSelectedUserIds={
+                      draft.assignees && draft.assignees.length > 0
+                        ? draft.assignees.map(u => String(u.id))
+                        : (draft.assigneeId ? [String(draft.assigneeId)] : [])
+                    }
+                    isParentTask={true}
+                    onApply={handleApplyAssignees}
+                    onCancel={() => setIsMembersVisible(false)}
+                    canManageBoard={canManageBoard}
                   />
                 </div>
               )}
@@ -1231,6 +1357,43 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
             </div>
           </div>
         </div>
+      )}
+
+      {isContributionModalOpen && (
+        <TaskContributionModal
+          task={draft}
+          onClose={() => setIsContributionModalOpen(false)}
+          onUpdated={(updatedTask) => {
+            update({ assignees: updatedTask.assignees });
+            useBoardStore.getState().setBoard(b => {
+              if (!b) return b;
+              return {
+                ...b,
+                tasks: b.tasks.map(t => t.id === task.id ? { ...t, assignees: updatedTask.assignees } : t),
+              };
+            });
+          }}
+        />
+      )}
+
+      {memberToRemoveWarning && (
+        <RemoveAssigneeWarningModal
+          user={memberToRemoveWarning.user}
+          parentTask={draft}
+          affectedSubtasks={memberToRemoveWarning.affectedSubtasks}
+          onCancel={() => {
+            setMemberToRemoveWarning(null);
+            setPendingAssigneeIds(null);
+          }}
+          onRemoveOnlyParent={() => {
+            if (pendingAssigneeIds) {
+              executeAssigneeUpdate(pendingAssigneeIds, false);
+            }
+            setMemberToRemoveWarning(null);
+            setPendingAssigneeIds(null);
+          }}
+          onConfirm={handleConfirmRemoveFromSubtasks}
+        />
       )}
     </div>
   );

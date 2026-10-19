@@ -16,7 +16,7 @@ class MyTaskController extends Controller
         $todayEnd = Carbon::now($tz)->endOfDay()->utc();
         $upcomingEnd = Carbon::now($tz)->addDays(7)->endOfDay()->utc();
 
-        $query = Task::with(['column.board', 'sprint', 'assignees'])
+        $query = Task::with(['parent', 'column.board', 'sprint', 'assignees'])
             ->where(function ($q) use ($user) {
                 $q->where('tasks.assignee_id', $user->id)
                   ->orWhereHas('assignees', function ($sub) use ($user) {
@@ -26,6 +26,20 @@ class MyTaskController extends Controller
             ->inUserBoards($user->id);
 
         // Filters
+        $taskType = $request->query('task_type'); // 'root', 'subtask', 'all'
+        if ($taskType === 'root') {
+            $query->whereNull('tasks.parent_task_id');
+        } elseif ($taskType === 'subtask') {
+            $query->whereNotNull('tasks.parent_task_id');
+        }
+
+        $assignmentType = $request->query('assignment_type'); // 'solo', 'shared', 'all'
+        if ($assignmentType === 'solo') {
+            $query->has('assignees', '=', 1);
+        } elseif ($assignmentType === 'shared') {
+            $query->has('assignees', '>', 1);
+        }
+
         $due = $request->query('due');
         if ($due === 'today') {
             $query->pending()->whereNotNull('due_date')->whereBetween('due_date', [$todayStart, $todayEnd]);
@@ -105,12 +119,33 @@ class MyTaskController extends Controller
         $tasks = $query->paginate($perPage);
 
         // Transform response
-        $tasks->getCollection()->transform(function ($task) {
+        $tasks->getCollection()->transform(function ($task) use ($user) {
             $board = $task->column ? $task->column->board : null;
             $workspace = $board ? $board->workspace : null;
+            $isSubtask = !empty($task->parent_task_id);
+
+            $assignees = $task->assignees->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'username' => $u->username,
+                    'avatar' => $u->avatar,
+                    'contribution_percent' => $u->pivot->contribution_percent ?? null,
+                ];
+            });
+
+            $myAssigneePivot = $task->assignees->firstWhere('id', $user->id);
+            $myContributionPercent = $myAssigneePivot?->pivot->contribution_percent ?? null;
             
             return [
                 'id' => $task->id,
+                'parent_task_id' => $task->parent_task_id,
+                'is_subtask' => $isSubtask,
+                'type' => $isSubtask ? 'Task con' : 'Task chính',
+                'parent_task' => $task->parent ? [
+                    'id' => $task->parent->id,
+                    'title' => $task->parent->title,
+                ] : null,
                 'title' => $task->title,
                 'priority' => $task->priority,
                 'due_date' => $task->due_date ? Carbon::parse($task->due_date)->toIso8601String() : null,
@@ -119,8 +154,13 @@ class MyTaskController extends Controller
                 'workspace' => $workspace ? ['id' => $workspace->id, 'name' => $workspace->name] : null,
                 'board' => $board ? ['id' => $board->id, 'public_id' => $board->public_id, 'name' => $board->name, 'color' => $board->color] : null,
                 'sprint' => $task->sprint ? ['id' => $task->sprint->id, 'name' => $task->sprint->name] : null,
+                'assignees' => $assignees,
+                'co_assignees_count' => max(0, $assignees->count() - 1),
+                'my_contribution_percent' => $myContributionPercent,
             ];
         });
+
+        return response()->json($tasks);
 
         return response()->json($tasks);
     }

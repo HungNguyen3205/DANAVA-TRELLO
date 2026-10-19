@@ -207,12 +207,23 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::put('/comments/{comment}', [TaskDetailController::class, 'updateComment']);
     Route::delete('/comments/{comment}', [TaskDetailController::class, 'deleteComment']);
 
+    // Task Multi-Assignees Management
+    Route::put('/tasks/{task}/assignees', [\App\Http\Controllers\TaskAssigneeController::class, 'update']);
+    Route::post('/tasks/{task}/assignees/{user}', [\App\Http\Controllers\TaskAssigneeController::class, 'addAssignee']);
+    Route::delete('/tasks/{task}/assignees/{user}', [\App\Http\Controllers\TaskAssigneeController::class, 'removeAssignee']);
+    Route::post('/tasks/{task}/copy-assignees-to-subtasks', [\App\Http\Controllers\TaskAssigneeController::class, 'copyAssigneesToSubtasks']);
+    Route::put('/tasks/{task}/contribution-percents', [\App\Http\Controllers\TaskAssigneeController::class, 'updateContributionPercents']);
+
     // Subtasks
     Route::get('/tasks/{task}/subtasks', [SubtaskController::class, 'index']);
     Route::post('/tasks/{task}/subtasks', [SubtaskController::class, 'store']);
+    Route::post('/tasks/{task}/groups/{group}/subtasks', [SubtaskController::class, 'store']);
     Route::get('/tasks/subtasks/{subtask}', [SubtaskController::class, 'show']);
+    Route::get('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'show']);
     Route::patch('/tasks/subtasks/{subtask}', [SubtaskController::class, 'update']);
+    Route::patch('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'update']);
     Route::delete('/tasks/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
+    Route::delete('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
     Route::patch('/tasks/{task}/subtasks/reorder', [SubtaskController::class, 'reorder']);
 
     // Board Workload Dashboard

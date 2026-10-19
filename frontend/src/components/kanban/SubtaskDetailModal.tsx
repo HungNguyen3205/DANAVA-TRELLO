@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Trash2, Check, AlignLeft, CalendarDays, 
-  Clock, User, Tag, History, CheckSquare, AlertCircle, Save 
+  Clock, User, Tag, History, CheckSquare, AlertCircle, Save,
+  Copy, PieChart, UserPlus
 } from 'lucide-react';
 import type { Task, Board, User as UserType, Priority } from '../../types';
 import api from '../../lib/axios';
@@ -10,6 +11,8 @@ import { getAvatarUrl } from '../../lib/avatar';
 import { PrioritySelect } from '../ui/PrioritySelect';
 import { AssigneeSelect } from './AssigneeSelect';
 import { SafeLinkifiedText } from '../common/SafeLinkifiedText';
+import { TaskMemberPicker } from './TaskMemberPicker';
+import { TaskContributionModal } from './TaskContributionModal';
 
 interface SubtaskDetailModalProps {
   subtaskId: string | number;
@@ -33,6 +36,8 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
   const [busy, setBusy] = useState(false);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isContributionOpen, setIsContributionOpen] = useState(false);
 
   // Form draft state
   const [title, setTitle] = useState('');
@@ -255,16 +260,106 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
             </div>
 
             {/* Assignees */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
-                Người thực hiện
-              </label>
-              <AssigneeSelect
-                boardUsers={board.users || []}
-                selectedUserIds={selectedUserIds}
-                onChange={setSelectedUserIds}
-                disabled={busy}
-              />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Người thực hiện ({selectedUserIds.length})
+                </label>
+                <div className="flex items-center gap-2">
+                  {selectedUserIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsContributionOpen(true)}
+                      className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-bold transition-colors"
+                      title="Xem và điều chỉnh tỷ lệ đóng góp"
+                    >
+                      <PieChart size={12} />
+                      <span>Phân bổ</span>
+                    </button>
+                  )}
+                  {subtask?.parent?.assignees && subtask.parent.assignees.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const parentIds = subtask.parent!.assignees!.map((u: any) => String(u.id));
+                        const merged = Array.from(new Set([...selectedUserIds, ...parentIds]));
+                        setSelectedUserIds(merged);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 font-bold transition-colors"
+                      title="Sao chép từ Task cha"
+                    >
+                      <Copy size={12} />
+                      <span>Sao chép Task cha</span>
+                    </button>
+                  )}
+                  {selectedUserIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserIds([])}
+                      className="text-[11px] text-muted-foreground hover:text-red-500 font-semibold transition-colors"
+                    >
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Selected Assignees Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 p-2 bg-background border border-input rounded-xl min-h-[42px]">
+                {selectedUserIds.length === 0 ? (
+                  <span className="text-xs text-muted-foreground px-1">Chưa phân công thành viên nào</span>
+                ) : (
+                  board.users?.filter(u => selectedUserIds.includes(String(u.id))).map(u => (
+                    <span
+                      key={u.id}
+                      className="inline-flex items-center gap-1.5 pl-1 pr-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-semibold"
+                    >
+                      <span className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold overflow-hidden shrink-0">
+                        {u.avatar ? (
+                          <img src={getAvatarUrl(u.avatar)} alt={u.name} className="w-full h-full object-cover" />
+                        ) : (
+                          u.initials || u.name?.charAt(0).toUpperCase() || 'U'
+                        )}
+                      </span>
+                      <span className="max-w-[110px] truncate">{u.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUserIds(selectedUserIds.filter(id => id !== String(u.id)))}
+                        className="text-primary/70 hover:text-red-500 transition-colors rounded-full p-0.5"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))
+                )}
+
+                <div className="relative ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setIsPickerOpen(!isPickerOpen)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-accent hover:bg-accent/80 text-foreground rounded-lg transition-colors border border-border/60"
+                  >
+                    <UserPlus size={12} className="text-primary" />
+                    <span>Chọn thành viên</span>
+                  </button>
+
+                  {isPickerOpen && (
+                    <div className="absolute right-0 top-full mt-2 z-50">
+                      <TaskMemberPicker
+                        boardUsers={board.users || []}
+                        initialSelectedUserIds={selectedUserIds}
+                        isSubtask={true}
+                        parentTaskAssignees={subtask?.parent?.assignees || []}
+                        onApply={(ids) => {
+                          setSelectedUserIds(ids.map(String));
+                          setIsPickerOpen(false);
+                        }}
+                        onCancel={() => setIsPickerOpen(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Start Date */}
@@ -464,6 +559,21 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
           </div>
         </div>
       </div>
+      {isContributionOpen && subtask && (
+        <TaskContributionModal
+          task={{
+            ...subtask,
+            assignees: board.users?.filter(u => selectedUserIds.includes(String(u.id))) || [],
+          }}
+          onClose={() => setIsContributionOpen(false)}
+          onUpdated={(updated) => {
+            setSubtask(updated);
+            if (updated.assignees) {
+              setSelectedUserIds(updated.assignees.map(u => String(u.id)));
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
