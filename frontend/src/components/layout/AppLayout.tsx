@@ -193,7 +193,7 @@ export function AppLayout() {
                 </div>
 
                 <div className="p-2 border-t border-border/50">
-                  <button onClick={() => { navigate('/workspaces'); setWsDropdownOpen(false); }} className="w-full text-center text-sm text-primary hover:bg-primary/10 py-1.5 rounded-md font-medium transition-colors">
+                  <button onClick={() => { navigate('/boards'); setWsDropdownOpen(false); }} className="w-full text-center text-sm text-primary hover:bg-primary/10 py-1.5 rounded-md font-medium transition-colors">
                     Xem tất cả bảng công việc
                   </button>
                 </div>

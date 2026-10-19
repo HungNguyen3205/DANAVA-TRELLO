@@ -22,6 +22,15 @@ class BoardMemberAddedNotification extends Notification
 
     public function via(object $notifiable): array
     {
+        if ($notifiable instanceof User) {
+            $prefs = $notifiable->notification_preferences ?? [];
+            if (is_array($prefs) && isset($prefs['board_invited']) && $prefs['board_invited'] === false) {
+                return [];
+            }
+            if ($notifiable->account_status && $notifiable->account_status !== 'active') {
+                return [];
+            }
+        }
         return ['database'];
     }
 
@@ -35,6 +44,7 @@ class BoardMemberAddedNotification extends Notification
             'actor_id' => $this->actor->id,
             'actor_name' => $this->actor->name,
             'message' => $this->actor->name . ' đã thêm bạn vào bảng "' . $this->board->name . '"',
+            'action_url' => "/{$this->board->public_id}/kanban",
         ];
     }
 }

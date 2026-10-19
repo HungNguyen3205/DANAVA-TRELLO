@@ -15,13 +15,16 @@ class UsersSeeder extends Seeder
         // 1. Dọn sạch các tài khoản demo cũ thừa (dev, tester) nếu có
         User::whereIn('email', ['dev@danava.vn', 'tester@danava.vn'])->delete();
 
+        $adminPassword = env('DEFAULT_ADMIN_PASSWORD', 'Danava@Admin2026!');
+        $userPassword = env('DEFAULT_USER_PASSWORD', 'Danava@User2026!');
+
         // 2. Cập nhật hoặc tạo tài khoản Admin Danava - System Admin duy nhất
         $admin = User::updateOrCreate(
             ['email' => 'admin@danava.vn'],
             [
                 'username' => 'admin',
                 'name' => 'Admin Danava',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($adminPassword),
                 'system_role' => 'system_admin',
                 'account_status' => 'active',
                 'must_change_password' => false,
@@ -34,17 +37,17 @@ class UsersSeeder extends Seeder
             [
                 'username' => 'namhung',
                 'name' => 'Hùng Nguyễn Nam',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($userPassword),
                 'system_role' => 'user',
                 'account_status' => 'active',
                 'must_change_password' => false,
-                'phone' => '0971120038',
+                'phone' => '0901234567',
                 'gender' => 'Nam',
-                'dob' => '2005-02-03',
-                'address' => '136 Phuong Sai',
-                'join_date' => '2026-09-01',
-                'contact_email' => 'namhung03022005@gmail.com',
-                'avatar' => '/storage/avatars/6HY7qEsGfi6xjZFGozVRF5Covms1ICodfBiDq9Ra.jpg',
+                'position' => 'Trưởng nhóm kỹ thuật',
+                'dob' => '1995-01-01',
+                'address' => 'Hải Châu, Đà Nẵng',
+                'join_date' => '2026-01-01',
+                'contact_email' => 'namhung@danava.vn',
             ]
         );
 
@@ -53,11 +56,12 @@ class UsersSeeder extends Seeder
             ['email' => 'letanthanh@danava.vn'],
             [
                 'username' => 'letanthanh',
-                'name' => 'letanthanh',
-                'password' => Hash::make('123456'),
+                'name' => 'Lê Tấn Thành',
+                'password' => Hash::make($userPassword),
                 'system_role' => 'user',
                 'account_status' => 'active',
                 'must_change_password' => false,
+                'position' => 'Chuyên viên vận hành',
                 'created_by' => $admin->id,
             ]
         );
@@ -67,11 +71,12 @@ class UsersSeeder extends Seeder
             ['email' => 'test@danava.vn'],
             [
                 'username' => 'test',
-                'name' => 'test',
-                'password' => Hash::make('123456'),
+                'name' => 'Nhân viên Test',
+                'password' => Hash::make($userPassword),
                 'system_role' => 'user',
                 'account_status' => 'active',
                 'must_change_password' => false,
+                'position' => 'Kiểm thử viên',
                 'created_by' => $admin->id,
             ]
         );

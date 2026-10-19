@@ -16,14 +16,14 @@ class MyTaskController extends Controller
         $todayEnd = Carbon::now($tz)->endOfDay()->utc();
         $upcomingEnd = Carbon::now($tz)->addDays(7)->endOfDay()->utc();
 
-        $query = Task::with(['column.board.workspace', 'sprint', 'assignees'])
+        $query = Task::with(['column.board', 'sprint', 'assignees'])
             ->where(function ($q) use ($user) {
                 $q->where('tasks.assignee_id', $user->id)
                   ->orWhereHas('assignees', function ($sub) use ($user) {
                       $sub->where('users.id', $user->id);
                   });
             })
-            ->inUserWorkspaces($user->id);
+            ->inUserBoards($user->id);
 
         // Filters
         $due = $request->query('due');

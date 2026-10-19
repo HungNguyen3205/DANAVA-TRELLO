@@ -258,7 +258,7 @@ export function WorkspaceDashboard() {
               {/* View Boards Button */}
               <button
                 type="button"
-                onClick={() => navigate('/workspaces')}
+                onClick={() => navigate('/boards')}
                 className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary/90"
               >
                 <FolderKanban size={16} />

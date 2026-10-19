@@ -31,24 +31,27 @@ class DemoSeeder extends Seeder
         $fourDaysLaterStr = $now->copy()->addDays(4)->format('Y-m-d');
         $sixDaysLaterStr = $now->copy()->addDays(6)->format('Y-m-d');
 
+        $adminPassword = env('DEFAULT_ADMIN_PASSWORD', 'Danava@Admin2026!');
+        $userPassword = env('DEFAULT_USER_PASSWORD', 'Danava@User2026!');
+
         // 1. TẠO / CẬP NHẬT TÀI KHOẢN NGƯỜI DÙNG DEMO & TEAM
         // Tài khoản DEMO chính (System Admin toàn quyền)
         $demoUser = User::updateOrCreate(
             ['email' => 'demo@danava.vn'],
             [
                 'username' => 'demo',
-                'name' => 'Nguyễn Nam Hùng (Giám đốc Dự án)',
-                'password' => Hash::make('123456'),
+                'name' => 'Demo Manager (Giám đốc Dự án)',
+                'password' => Hash::make($adminPassword),
                 'system_role' => 'system_admin',
                 'account_status' => 'active',
                 'must_change_password' => false,
-                'phone' => '0971120038',
+                'phone' => '0900000001',
                 'gender' => 'Nam',
-                'dob' => '1995-02-03',
+                'position' => 'Giám đốc Dự án',
+                'dob' => '1990-01-01',
                 'address' => 'Hải Châu, Đà Nẵng',
                 'join_date' => '2025-01-01',
-                'contact_email' => 'hungnguyen@danava.vn',
-                'avatar' => '/storage/avatars/6HY7qEsGfi6xjZFGozVRF5Covms1ICodfBiDq9Ra.jpg',
+                'contact_email' => 'demo@danava.vn',
             ]
         );
 
@@ -58,10 +61,11 @@ class DemoSeeder extends Seeder
             [
                 'username' => 'admin',
                 'name' => 'Admin Danava',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($adminPassword),
                 'system_role' => 'system_admin',
                 'account_status' => 'active',
                 'must_change_password' => false,
+                'position' => 'Quản trị hệ thống',
             ]
         );
 
@@ -70,14 +74,14 @@ class DemoSeeder extends Seeder
             ['email' => 'namhung@danava.vn'],
             [
                 'username' => 'namhung',
-                'name' => 'Nguyễn Nam Hùng',
-                'password' => Hash::make('123456'),
-                'system_role' => 'system_admin',
+                'name' => 'Hùng Nguyễn Nam',
+                'password' => Hash::make($userPassword),
+                'system_role' => 'user',
                 'account_status' => 'active',
                 'must_change_password' => false,
-                'phone' => '0971120038',
+                'phone' => '0900000002',
                 'gender' => 'Nam',
-                'avatar' => '/storage/avatars/6HY7qEsGfi6xjZFGozVRF5Covms1ICodfBiDq9Ra.jpg',
+                'position' => 'Trưởng nhóm kỹ thuật',
             ]
         );
 
@@ -87,11 +91,12 @@ class DemoSeeder extends Seeder
             [
                 'username' => 'letanthanh',
                 'name' => 'Lê Tấn Thành (Lead Kỹ thuật)',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($userPassword),
                 'system_role' => 'user',
                 'account_status' => 'active',
                 'must_change_password' => false,
-                'phone' => '0905123456',
+                'position' => 'Kỹ sư phần mềm',
+                'phone' => '0900000003',
                 'address' => 'Sơn Trà, Đà Nẵng',
             ]
         );
@@ -102,11 +107,12 @@ class DemoSeeder extends Seeder
             [
                 'username' => 'hoangnam',
                 'name' => 'Trần Hoàng Nam (Marketing Specialist)',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($userPassword),
                 'system_role' => 'user',
                 'account_status' => 'active',
                 'must_change_password' => false,
-                'phone' => '0912345678',
+                'position' => 'Chuyên viên Marketing',
+                'phone' => '0900000004',
             ]
         );
 
@@ -116,11 +122,12 @@ class DemoSeeder extends Seeder
             [
                 'username' => 'maichi',
                 'name' => 'Nguyễn Mai Chi (UI/UX Designer)',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($userPassword),
                 'system_role' => 'user',
                 'account_status' => 'active',
                 'must_change_password' => false,
-                'phone' => '0987654321',
+                'position' => 'Thiết kế UI/UX',
+                'phone' => '0900000005',
             ]
         );
 

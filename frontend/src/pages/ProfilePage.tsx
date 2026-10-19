@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Save, User, Phone, Shield, Loader2, Calendar, MapPin, Mail, ChevronDown, Check } from 'lucide-react';
+import { Camera, Save, User, Phone, Shield, Loader2, Calendar, MapPin, Mail, ChevronDown, Check, Briefcase, Building2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ export function ProfilePage() {
     name: user?.name || '',
     phone: user?.phone || '',
     gender: user?.gender || '',
+    position: user?.position || '',
     dob: user?.dob || '',
     address: user?.address || '',
     join_date: user?.join_date || '',
@@ -34,6 +35,7 @@ export function ProfilePage() {
         name: user.name || '',
         phone: user.phone || '',
         gender: user.gender || '',
+        position: user.position || '',
         dob: user.dob || '',
         address: user.address || '',
         join_date: user.join_date || '',
@@ -95,6 +97,7 @@ export function ProfilePage() {
     formData.name !== (user?.name || '') ||
     formData.phone !== (user?.phone || '') ||
     formData.gender !== (user?.gender || '') ||
+    formData.position !== (user?.position || '') ||
     formData.dob !== (user?.dob || '') ||
     formData.address !== (user?.address || '') ||
     formData.join_date !== (user?.join_date || '') ||
@@ -110,6 +113,7 @@ export function ProfilePage() {
       if (formData.name) data.append('name', formData.name);
       if (formData.phone) data.append('phone', formData.phone);
       if (formData.gender) data.append('gender', formData.gender);
+      if (formData.position) data.append('position', formData.position);
       if (formData.dob) data.append('dob', formData.dob);
       if (formData.address) data.append('address', formData.address);
       if (formData.join_date) data.append('join_date', formData.join_date);
@@ -210,11 +214,34 @@ export function ProfilePage() {
 
           <div className="z-10 flex-1 min-w-0">
             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground truncate">{user?.name}</h1>
-            <div className="flex items-center gap-2 mt-1.5">
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
                 <Shield size={12} />
                 {getRoleLabel(user?.system_role || '')}
               </span>
+              {user?.position && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent text-foreground text-xs font-medium">
+                  <Briefcase size={12} />
+                  {user.position}
+                </span>
+              )}
+              {user?.department ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                  style={{
+                    backgroundColor: user.department.color ? `${user.department.color}18` : '#6366f118',
+                    color: user.department.color || '#6366f1',
+                  }}
+                >
+                  <Building2 size={12} />
+                  {user.department.name}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
+                  <Building2 size={12} />
+                  Chưa phân phòng
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -242,6 +269,35 @@ export function ProfilePage() {
                     onChange={handleChange}
                     className="w-full pl-11 pr-4 py-2.5 bg-accent/50 border border-transparent rounded-full focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm font-medium placeholder:font-normal"
                     placeholder="Chưa cập nhật"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-foreground">Phòng ban</label>
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                  <input
+                    type="text"
+                    disabled
+                    value={user?.department ? `${user.department.name} (${user.department.code})` : 'Chưa phân phòng'}
+                    className="w-full pl-11 pr-4 py-2.5 bg-muted/40 border border-transparent rounded-full text-sm font-medium text-muted-foreground cursor-not-allowed"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground px-2">Phòng ban do Quản trị viên phân bổ, không thể tự chỉnh sửa.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-foreground">Chức vụ</label>
+                <div className="relative">
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                  <input
+                    type="text"
+                    name="position"
+                    value={formData.position}
+                    onChange={handleChange}
+                    className="w-full pl-11 pr-4 py-2.5 bg-accent/50 border border-transparent rounded-full focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm font-medium placeholder:font-normal"
+                    placeholder="Chưa cập nhật (VD: Kỹ sư phần mềm, Designer...)"
                   />
                 </div>
               </div>

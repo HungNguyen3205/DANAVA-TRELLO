@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Briefcase, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined, Columns } from 'lucide-react';
+import { Home, Briefcase, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined, Columns, Trash2, Building2 } from 'lucide-react';
 import React, { useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -45,10 +45,11 @@ export function PersonalLayout() {
           </div>
           
           <SidebarItem icon={<Home size={18} />} label="Trang chủ của tôi" to="/home" active={location.pathname === '/home'} />
-          <SidebarItem icon={<Columns size={18} />} label="Bảng công việc" to="/workspaces" active={location.pathname === '/workspaces'} />
+          <SidebarItem icon={<Columns size={18} />} label="Bảng công việc" to="/boards" active={location.pathname === '/boards'} />
           <SidebarItem icon={<CheckSquare size={18} />} label="Công việc của tôi" to="/my-tasks" active={location.pathname === '/my-tasks'} />
           <SidebarItem icon={<Bell size={18} />} label="Thông báo" to="/notifications" active={location.pathname === '/notifications'} />
           <SidebarItem icon={<Search size={18} />} label="Tìm kiếm" to="/search" active={location.pathname === '/search'} />
+          <SidebarItem icon={<Trash2 size={18} />} label="Thùng rác" to="/trash" active={location.pathname === '/trash'} />
           
           <div className="mt-8 mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             Tài khoản
@@ -62,6 +63,7 @@ export function PersonalLayout() {
                 <ShieldAlert size={14} /> Quản trị hệ thống
               </div>
               <SidebarItem icon={<Users size={18} />} label="Quản lý nhân viên" to="/admin/employees" active={location.pathname === '/admin/employees'} />
+              <SidebarItem icon={<Building2 size={18} />} label="Phòng ban" to="/admin/departments" active={location.pathname.startsWith('/admin/departments')} />
             </>
           )}
         </nav>

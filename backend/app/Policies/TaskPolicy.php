@@ -8,39 +8,26 @@ use Illuminate\Support\Facades\DB;
 
 class TaskPolicy
 {
-    private function resolveBoardId(Task $task): ?int
+    public function resolveBoardId(Task $task): ?int
     {
         if ($task->relationLoaded('column') && $task->column) {
             return $task->column->board_id;
         }
 
         $column = DB::table('kanban_columns')->where('id', $task->column_id)->first();
-        return $column ? $column->board_id : null;
-    }
-
-    private function isBoardMember(int $userId, ?int $boardId): bool
-    {
-        if (!$boardId) {
-            return false;
-        }
-
-        return DB::table('board_members')
-            ->where('board_id', $boardId)
-            ->where('user_id', $userId)
-            ->exists();
+        return $column ? (int) $column->board_id : null;
     }
 
     public function view(User $user, Task $task): bool
     {
         $boardId = $this->resolveBoardId($task);
-        return $this->isBoardMember($user->id, $boardId);
+        return $user->isBoardMember($boardId);
     }
 
     public function createSubtask(User $user, Task $task): bool
     {
-        // Must belong to the board
         $boardId = $this->resolveBoardId($task);
-        if (!$this->isBoardMember($user->id, $boardId)) {
+        if (!$user->isBoardMember($boardId)) {
             return false;
         }
 
@@ -55,23 +42,24 @@ class TaskPolicy
     public function update(User $user, Task $task): bool
     {
         $boardId = $this->resolveBoardId($task);
-        return $this->isBoardMember($user->id, $boardId);
+        return $user->isBoardMember($boardId);
     }
 
     public function delete(User $user, Task $task): bool
     {
         $boardId = $this->resolveBoardId($task);
-        return $this->isBoardMember($user->id, $boardId);
+        return $user->isBoardMember($boardId);
     }
 
     public function assignMember(User $user, Task $task, int $targetUserId): bool
     {
         $boardId = $this->resolveBoardId($task);
-        if (!$this->isBoardMember($user->id, $boardId)) {
+        if (!$user->isBoardMember($boardId)) {
             return false;
         }
 
         // Target user must also be a member of the same board
-        return $this->isBoardMember($targetUserId, $boardId);
+        $targetUser = User::find($targetUserId);
+        return $targetUser && $targetUser->isBoardMember($boardId);
     }
 }

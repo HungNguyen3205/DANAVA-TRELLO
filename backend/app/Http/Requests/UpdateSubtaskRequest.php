@@ -17,6 +17,7 @@ class UpdateSubtaskRequest extends FormRequest
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'sometimes|nullable|string|in:Thấp,Bình thường,Cao,Khẩn cấp',
+            'complexity' => 'sometimes|nullable|string|in:XS,S,M,L,XL,xs,s,m,l,xl',
             'is_completed' => 'sometimes|nullable|boolean',
             'completed_at' => 'sometimes|nullable',
             'start_date' => 'sometimes|nullable|date',

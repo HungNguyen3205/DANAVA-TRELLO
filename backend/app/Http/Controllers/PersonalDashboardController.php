@@ -24,8 +24,8 @@ class PersonalDashboardController extends Controller
                                       $sub->where('users.id', $user->id);
                                   });
                              })
-                             ->with(['column.board.workspace', 'assignee', 'assignees'])
-                             ->inUserWorkspaces($user->id);
+                             ->with(['column.board', 'assignee', 'assignees'])
+                             ->inUserBoards($user->id);
 
         $cacheKey = "personal_dashboard_optimized_{$user->id}";
         $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function() use ($user, $baseTaskQuery, $todayStart, $todayEnd, $upcomingEnd) {
@@ -45,7 +45,7 @@ class PersonalDashboardController extends Controller
                 $attentionItems[] = [
                     'id' => $t->id, 'type' => 'overdue', 'message' => 'Đã quá hạn',
                     'task_title' => $t->title, 'board_id' => $t->column?->board?->id ?? null,
-                    'workspace_id' => $t->column?->board?->workspace?->id ?? null, 'created_at' => $t->created_at,
+                    'workspace_id' => $t->column?->board?->workspace_id ?? null, 'created_at' => $t->created_at,
                 ];
             }
 
@@ -54,7 +54,7 @@ class PersonalDashboardController extends Controller
                 $attentionItems[] = [
                     'id' => $t->id, 'type' => 'urgent', 'message' => 'Khẩn cấp',
                     'task_title' => $t->title, 'board_id' => $t->column?->board?->id ?? null,
-                    'workspace_id' => $t->column?->board?->workspace?->id ?? null, 'created_at' => $t->created_at,
+                    'workspace_id' => $t->column?->board?->workspace_id ?? null, 'created_at' => $t->created_at,
                 ];
             }
             
@@ -63,7 +63,7 @@ class PersonalDashboardController extends Controller
                 $attentionItems[] = [
                     'id' => $t->id, 'type' => 'due_today', 'message' => 'Đến hạn hôm nay',
                     'task_title' => $t->title, 'board_id' => $t->column?->board?->id ?? null,
-                    'workspace_id' => $t->column?->board?->workspace?->id ?? null, 'created_at' => $t->created_at,
+                    'workspace_id' => $t->column?->board?->workspace_id ?? null, 'created_at' => $t->created_at,
                 ];
             }
 
@@ -72,7 +72,7 @@ class PersonalDashboardController extends Controller
                 $attentionItems[] = [
                     'id' => $t->id, 'type' => 'due_soon', 'message' => 'Sắp đến hạn',
                     'task_title' => $t->title, 'board_id' => $t->column?->board?->id ?? null,
-                    'workspace_id' => $t->column?->board?->workspace?->id ?? null, 'created_at' => $t->created_at,
+                    'workspace_id' => $t->column?->board?->workspace_id ?? null, 'created_at' => $t->created_at,
                 ];
             }
 
@@ -99,7 +99,7 @@ class PersonalDashboardController extends Controller
                     'workspace_name' => $task->column?->board?->workspace?->name ?? '',
                     'board_name' => $task->column?->board?->name ?? '',
                     'board_id' => $task->column?->board?->id ?? null,
-                    'workspace_id' => $task->column?->board?->workspace?->id ?? null,
+                    'workspace_id' => $task->column?->board?->workspace_id ?? null,
                     'status' => $status,
                     'priority' => $task->priority,
                     'due_date' => $task->due_date,
@@ -149,7 +149,7 @@ class PersonalDashboardController extends Controller
         $todaySchedule = $data['todaySchedule'];
         $focusTasks = $data['focusTasks'];
 
-        // Recent Workspaces: chỉ lấy workspace người dùng sở hữu HOẶC workspace chung của công ty (loại trừ workspace cá nhân của người khác)
+        // Recent Workspaces: giữ tương thích ngược
         $recentWorkspaces = $user->workspaces()
             ->where(function ($q) use ($user) {
                 $q->where('workspaces.owner_id', $user->id)
@@ -159,24 +159,18 @@ class PersonalDashboardController extends Controller
             ->limit(5)
             ->get();
             
+        // Recent Boards: chỉ lấy board người dùng sở hữu HOẶC là thành viên
         $recentBoards = \DB::table('boards')
-            ->join('board_members', 'boards.id', '=', 'board_members.board_id')
-            ->where('board_members.user_id', $user->id)
+            ->leftJoin('board_members', 'boards.id', '=', 'board_members.board_id')
+            ->where(function($q) use ($user) {
+                $q->where('boards.owner_id', $user->id)
+                  ->orWhere('board_members.user_id', $user->id);
+            })
+            ->distinct()
             ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
             ->orderBy('boards.updated_at', 'desc')
             ->limit(8)
             ->get();
-
-        // Nếu người dùng chưa tương tác riêng bảng nào nhưng thuộc không gian làm việc chung, hiển thị bảng trong không gian đó
-        if ($recentBoards->isEmpty() && $recentWorkspaces->isNotEmpty()) {
-            $wsIds = $recentWorkspaces->pluck('id');
-            $recentBoards = \DB::table('boards')
-                ->whereIn('workspace_id', $wsIds)
-                ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
-                ->orderBy('updated_at', 'desc')
-                ->limit(8)
-                ->get();
-        }
 
         $starredBoards = \DB::table('boards')
             ->join('board_members', 'boards.id', '=', 'board_members.board_id')

@@ -326,7 +326,7 @@ export const SearchPage = () => {
                       {workspaces.map(workspace => (
                         <div 
                           key={workspace.id}
-                          onClick={() => navigate('/workspaces')}
+                          onClick={() => navigate('/boards')}
                           className="group bg-card hover:bg-accent border border-border rounded-xl p-4 transition-all cursor-pointer shadow-sm hover:shadow-md flex items-start gap-4"
                         >
                           <div className="mt-1 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/10">

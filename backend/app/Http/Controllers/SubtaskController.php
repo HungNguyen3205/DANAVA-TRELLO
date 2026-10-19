@@ -9,6 +9,8 @@ use App\Models\ActivityLog;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskMemberAssignedNotification;
+use App\Services\NotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -92,6 +94,7 @@ class SubtaskController extends Controller
                 'title' => trim($request->input('title')),
                 'description' => $request->input('description'),
                 'priority' => $request->input('priority', 'Bình thường'),
+                'complexity' => strtoupper(trim((string)$request->input('complexity', 'M'))) ?: 'M',
                 'order' => $task->order ?? 0,
                 'sort_order' => $sortOrder,
                 'start_date' => $request->input('start_date'),
@@ -209,6 +212,17 @@ class SubtaskController extends Controller
                 'new_value' => $newPriority,
             ];
             $updates['priority'] = $newPriority;
+        }
+
+        // Complexity
+        if ($request->has('complexity') && $request->input('complexity') !== $subtask->complexity) {
+            $newComplexity = strtoupper(trim((string)$request->input('complexity'))) ?: 'M';
+            $logs[] = [
+                'action' => 'đổi độ phức tạp',
+                'old_value' => $subtask->complexity ?: 'M',
+                'new_value' => $newComplexity,
+            ];
+            $updates['complexity'] = $newComplexity;
         }
 
         // Due date
@@ -329,6 +343,36 @@ class SubtaskController extends Controller
             }
         }
 
+        // Send notification to unassigned members
+        if (!empty($removed)) {
+            foreach ($removed as $uid) {
+                if ($uid !== $currentUser->id) {
+                    $user = User::find($uid);
+                    if ($user) {
+                        NotificationService::notifyUnassigned($subtask, $user, $currentUser);
+                    }
+                }
+            }
+        }
+
+        // Send notification for due date change
+        if ($request->has('due_date')) {
+            $oldDueDate = $subtask->getOriginal('due_date') ? Carbon::parse($subtask->getOriginal('due_date'))->toDateString() : null;
+            $newDueDate = $subtask->due_date ? Carbon::parse($subtask->due_date)->toDateString() : null;
+            if ($oldDueDate !== $newDueDate) {
+                NotificationService::notifyDueDateChanged($subtask, $currentUser, $oldDueDate, $newDueDate);
+            }
+        }
+
+        // Send notification for completion transition
+        if (isset($isCompleted) && isset($wasCompleted) && $isCompleted !== $wasCompleted) {
+            if ($isCompleted) {
+                NotificationService::notifyTaskCompleted($subtask, $currentUser);
+            } else {
+                NotificationService::notifyTaskReopened($subtask, $currentUser);
+            }
+        }
+
         return response()->json($subtask->fresh(['assignees', 'creator', 'activityLogs.user']));
     }
 
@@ -353,6 +397,7 @@ class SubtaskController extends Controller
             ]);
         }
 
+        $subtask->update(['deleted_by' => $currentUser->id]);
         $subtask->delete();
 
         return response()->json(['message' => 'Đã xóa công việc con thành công.']);

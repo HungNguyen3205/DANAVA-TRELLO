@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Board;
 use App\Models\BoardSprint;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class SprintController extends Controller
 {
-    public function store(Request $request, Board $board)
+    public function store(Request $request, Board $board): JsonResponse
     {
+        Gate::authorize('update', $board);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'start_date' => 'nullable|date',
@@ -26,8 +30,11 @@ class SprintController extends Controller
         return response()->json($sprint, 201);
     }
 
-    public function update(Request $request, BoardSprint $sprint)
+    public function update(Request $request, BoardSprint $sprint): JsonResponse
     {
+        $sprint->loadMissing('board');
+        Gate::authorize('update', $sprint->board);
+
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'start_date' => 'nullable|date',
@@ -40,8 +47,11 @@ class SprintController extends Controller
         return response()->json($sprint);
     }
 
-    public function destroy(BoardSprint $sprint)
+    public function destroy(Request $request, BoardSprint $sprint): JsonResponse
     {
+        $sprint->loadMissing('board');
+        Gate::authorize('update', $sprint->board);
+
         $sprint->delete();
         return response()->json(['message' => 'Deleted successfully']);
     }

@@ -82,6 +82,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         id: String(c.id),
         title: c.title,
         color: c.color,
+        wip_limit: c.wip_limit !== undefined && c.wip_limit !== null ? Number(c.wip_limit) : null,
+        wip_enforcement: c.wip_enforcement || 'warning',
+        wip_count: c.wip_count !== undefined ? Number(c.wip_count) : undefined,
       }));
 
       const formattedTasks: Task[] = columnsData.flatMap((c: any) => 
@@ -118,6 +121,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         name: bData.name,
         description: bData.description,
         color: bData.color,
+        owner_id: bData.owner_id ? String(bData.owner_id) : undefined,
+        my_role: bData.my_role || (bData.is_owner ? 'owner' : 'member'),
+        is_owner: Boolean(bData.is_owner),
         workspace: bData.workspace,
         columns: formattedColumns,
         tasks: formattedTasks,

@@ -36,10 +36,34 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::middleware(\App\Http\Middleware\SystemAdminMiddleware::class)->prefix('admin')->group(function() {
         Route::get('/employees', [EmployeeController::class, 'index']);
         Route::post('/employees', [EmployeeController::class, 'store']);
+        Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
         Route::patch('/employees/{employee}/status', [EmployeeController::class, 'updateStatus']);
         Route::post('/employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword']);
         Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
+        Route::patch('/employees/{user}/department', [\App\Http\Controllers\Admin\DepartmentController::class, 'transferEmployee']);
+        Route::post('/employees/bulk-department', [\App\Http\Controllers\Admin\DepartmentController::class, 'bulkTransferEmployees']);
+
+        // Department Management
+        Route::get('/departments', [\App\Http\Controllers\Admin\DepartmentController::class, 'index']);
+        Route::post('/departments', [\App\Http\Controllers\Admin\DepartmentController::class, 'store']);
+        Route::get('/departments/{department}', [\App\Http\Controllers\Admin\DepartmentController::class, 'show']);
+        Route::put('/departments/{department}', [\App\Http\Controllers\Admin\DepartmentController::class, 'update']);
+        Route::patch('/departments/{department}', [\App\Http\Controllers\Admin\DepartmentController::class, 'update']);
+        Route::delete('/departments/{department}', [\App\Http\Controllers\Admin\DepartmentController::class, 'destroy']);
+        Route::patch('/departments/{id}/restore', [\App\Http\Controllers\Admin\DepartmentController::class, 'restore']);
+        Route::post('/departments/{department}/employees', [\App\Http\Controllers\Admin\DepartmentController::class, 'assignEmployees']);
+        Route::delete('/departments/{department}/employees/{user}', [\App\Http\Controllers\Admin\DepartmentController::class, 'removeEmployee']);
+
+        // Department Telegram Management
+        Route::get('/departments/{department}/telegram', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'show']);
+        Route::put('/departments/{department}/telegram', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'update']);
+        Route::post('/departments/{department}/telegram/verify', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'verify']);
+        Route::post('/departments/{department}/telegram/test', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'test']);
+        Route::delete('/departments/{department}/telegram', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'destroy']);
     });
+
+    // Minimal options for dropdowns (any authenticated user)
+    Route::get('/departments/options', [\App\Http\Controllers\Admin\DepartmentController::class, 'options']);
 
     // ------------------------------------------
     // CLIENT ROUTES (Users)
@@ -79,10 +103,11 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::get('/workspaces/{workspace}/members', [WorkspaceController::class, 'members']);
     Route::get('/analytics/overview', [WorkspaceController::class, 'globalDashboard']);
 
-    // Direct Boards (Không phụ thuộc vào Không gian làm việc)
+    // Direct Boards (Hoàn toàn Board-first, không phụ thuộc vào Không gian làm việc)
+    Route::get('/boards', [BoardController::class, 'myBoards']);
+    Route::post('/boards', [BoardController::class, 'storeDirect']);
     Route::get('/me/boards', [BoardController::class, 'myBoards']);
     Route::post('/me/boards', [BoardController::class, 'storeDirect']);
-    Route::post('/boards', [BoardController::class, 'storeDirect']);
 
     // Search active users to add to board
     Route::get('/users/search', function(\Illuminate\Http\Request $request) {
@@ -106,8 +131,54 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::put('/boards/{board}', [BoardController::class, 'update']);
     Route::delete('/boards/{board}', [BoardController::class, 'destroy']);
     Route::post('/boards/{board}/toggle-star', [BoardController::class, 'toggleStar']);
+    Route::post('/boards/{board}/evaluation/publish', [BoardController::class, 'publishEvaluation']);
 
-    // Board Members
+    // Board Telegram Management
+    Route::get('/boards/{board}/telegram', [\App\Http\Controllers\BoardTelegramController::class, 'show']);
+    Route::put('/boards/{board}/telegram', [\App\Http\Controllers\BoardTelegramController::class, 'update']);
+    Route::post('/boards/{board}/telegram/verify', [\App\Http\Controllers\BoardTelegramController::class, 'verify']);
+    Route::post('/boards/{board}/telegram/test', [\App\Http\Controllers\BoardTelegramController::class, 'test']);
+    Route::delete('/boards/{board}/telegram', [\App\Http\Controllers\BoardTelegramController::class, 'destroy']);
+
+    // Board Reviews (Tổng kết dự án)
+    Route::get('/boards/{board}/review', [\App\Http\Controllers\BoardReviewController::class, 'show']);
+    Route::post('/boards/{board}/review', [\App\Http\Controllers\BoardReviewController::class, 'storeOrUpdate']);
+    Route::put('/boards/{board}/review', [\App\Http\Controllers\BoardReviewController::class, 'storeOrUpdate']);
+    Route::post('/boards/{board}/review/publish', [\App\Http\Controllers\BoardReviewController::class, 'publish']);
+    Route::post('/boards/{board}/review/lock', [\App\Http\Controllers\BoardReviewController::class, 'lock']);
+    Route::post('/boards/{board}/review/unlock', [\App\Http\Controllers\BoardReviewController::class, 'unlock']);
+
+    // Performance Evaluation (Điểm hiệu suất)
+    Route::get('/boards/{board}/performance/policy', [\App\Http\Controllers\PerformanceController::class, 'getPolicy']);
+    Route::post('/boards/{board}/performance/policy', [\App\Http\Controllers\PerformanceController::class, 'updatePolicy']);
+    Route::post('/boards/{board}/performance/policy/acknowledge', [\App\Http\Controllers\PerformanceController::class, 'acknowledgePolicy']);
+
+    Route::get('/boards/{board}/performance/periods', [\App\Http\Controllers\PerformanceController::class, 'listPeriods']);
+    Route::post('/boards/{board}/performance/periods', [\App\Http\Controllers\PerformanceController::class, 'storePeriod']);
+    Route::get('/boards/{board}/performance/periods/{period}', [\App\Http\Controllers\PerformanceController::class, 'showPeriod']);
+    Route::post('/boards/{board}/performance/periods/{period}/calculate', [\App\Http\Controllers\PerformanceController::class, 'recalculatePeriod']);
+    Route::post('/boards/{board}/performance/periods/{period}/publish', [\App\Http\Controllers\PerformanceController::class, 'publishPeriod']);
+    Route::post('/boards/{board}/performance/periods/{period}/lock', [\App\Http\Controllers\PerformanceController::class, 'lockPeriod']);
+    Route::post('/boards/{board}/performance/periods/{period}/unlock', [\App\Http\Controllers\PerformanceController::class, 'unlockPeriod']);
+    Route::get('/boards/{board}/performance/periods/{period}/members/{memberUser}/lineage', [\App\Http\Controllers\PerformanceController::class, 'memberLineage']);
+
+    // Excel Task Import
+    Route::get('/boards/{board}/tasks/import/template', [\App\Http\Controllers\TaskExcelImportController::class, 'downloadTemplate']);
+    Route::post('/boards/{board}/tasks/import/preview', [\App\Http\Controllers\TaskExcelImportController::class, 'preview']);
+    Route::post('/boards/{board}/tasks/import/confirm', [\App\Http\Controllers\TaskExcelImportController::class, 'confirm']);
+    Route::get('/boards/{board}/tasks/import/errors/{token}', [\App\Http\Controllers\TaskExcelImportController::class, 'downloadErrors']);
+
+    // Trash (Thùng rác)
+    Route::get('/trash', [\App\Http\Controllers\TrashController::class, 'index']);
+    Route::post('/trash/{type}/{id}/restore', [\App\Http\Controllers\TrashController::class, 'restore']);
+    Route::delete('/trash/{type}/{id}/force', [\App\Http\Controllers\TrashController::class, 'forceDelete']);
+
+    // Board Members (Direct Board access & Legacy Workspace prefix support)
+    Route::get('/boards/{board}/members', [BoardMemberController::class, 'index']);
+    Route::post('/boards/{board}/members', [BoardMemberController::class, 'store']);
+    Route::patch('/boards/{board}/members/{userId}', [BoardMemberController::class, 'update']);
+    Route::delete('/boards/{board}/members/{userId}', [BoardMemberController::class, 'destroy']);
+
     Route::get('/workspaces/{workspace}/boards/{board}/members', [BoardMemberController::class, 'index']);
     Route::post('/workspaces/{workspace}/boards/{board}/members', [BoardMemberController::class, 'store']);
     Route::patch('/workspaces/{workspace}/boards/{board}/members/{userId}', [BoardMemberController::class, 'update']);
@@ -115,8 +186,13 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
 
     // Kanban / List / Board Views
     Route::get('/boards/{board}/kanban', [KanbanController::class, 'index']);
+    Route::get('/boards/{board}/columns/archived', [KanbanController::class, 'archivedColumns']);
     Route::post('/boards/{board}/columns', [KanbanController::class, 'storeColumn']);
     Route::put('/columns/{column}', [KanbanController::class, 'updateColumn']);
+    Route::patch('/columns/{column}', [KanbanController::class, 'updateColumn']);
+    Route::post('/columns/{column}/archive', [KanbanController::class, 'archiveColumn']);
+    Route::post('/columns/{column}/restore', [KanbanController::class, 'restoreColumn']);
+    Route::delete('/columns/{column}', [KanbanController::class, 'destroyColumn']);
     Route::post('/columns/{column}/tasks', [KanbanController::class, 'storeTask']);
     Route::put('/boards/{board}/columns/reorder', [KanbanController::class, 'reorderColumns']);
     Route::put('/boards/{board}/tasks/reorder', [KanbanController::class, 'reorderTasks']);
@@ -127,6 +203,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::put('/tasks/{task}', [TaskDetailController::class, 'update']);
     Route::delete('/tasks/{task}', [TaskDetailController::class, 'destroy']);
     Route::post('/tasks/{task}/comments', [TaskDetailController::class, 'addComment']);
+    Route::post('/tasks/{task}/review', [TaskDetailController::class, 'reviewQuality']);
     Route::put('/comments/{comment}', [TaskDetailController::class, 'updateComment']);
     Route::delete('/comments/{comment}', [TaskDetailController::class, 'deleteComment']);
 

@@ -26,9 +26,10 @@ if (!$user) {
     echo "Đã tạo tài khoản thành công!\n";
 } else {
     $user->password = Hash::make('123456');
-    $user->system_role = 'user';
+    $user->system_role = 'system_admin';
     $user->must_change_password = false;
+    $user->account_status = 'active';
     $user->save();
     
-    echo "Tài khoản đã tồn tại. Đã đặt lại mật khẩu thành 123456 và role thành user.\n";
+    echo "Tài khoản đã tồn tại. Đã đặt lại mật khẩu thành 123456 và role thành system_admin.\n";
 }

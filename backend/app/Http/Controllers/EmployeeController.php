@@ -3,23 +3,24 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::withCount(['workspaces', 'boards']);
+        $query = User::with(['department:id,name,code,color'])->withCount(['workspaces', 'boards']);
 
         if ($request->search) {
             $search = '%' . $request->search . '%';
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', $search)
-                  ->orWhere('username', 'like', $search);
+                  ->orWhere('username', 'like', $search)
+                  ->orWhere('email', 'like', $search)
+                  ->orWhere('position', 'like', $search);
             });
         }
 
@@ -27,35 +28,60 @@ class EmployeeController extends Controller
             $query->where('account_status', $request->status);
         }
 
-        return response()->json($query->paginate(15));
+        if ($request->filled('department_id')) {
+            if ($request->department_id === 'unassigned' || $request->department_id === 'null') {
+                $query->whereNull('department_id');
+            } else {
+                $query->where('department_id', $request->department_id);
+            }
+        }
+
+        return response()->json($query->orderBy('id', 'desc')->paginate(15));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'nullable|string|max:100',
-            'username' => 'required|string',
-            'password' => 'required|string|min:6',
-            'system_role' => 'nullable|in:admin,user',
-            'workspace_id' => 'nullable|exists:workspaces,id',
-            'workspace_role' => 'nullable|in:admin,member',
+            'name' => 'required|string|max:100',
+            'username' => 'required|string|min:3|max:50|unique:users,username',
+            'password' => 'required|string|min:8',
+            'email' => 'nullable|string|email|max:255|unique:users,email',
+            'position' => 'nullable|string|max:100',
+            'system_role' => 'nullable|in:system_admin,admin,user',
+            'department_id' => 'nullable|exists:departments,id',
         ]);
 
-        $cleanRaw = str_replace('@danava.vn', '', strtolower(trim($request->username)));
-        $finalUsername = Str::slug($cleanRaw, '');
+        $cleanUsername = strtolower(trim($request->username));
+        $cleanUsername = str_replace('@danava.vn', '', $cleanUsername);
+        $finalUsername = preg_replace('/[^a-z0-9._-]/', '', $cleanUsername);
         if (empty($finalUsername)) {
-            $finalUsername = preg_replace('/[^a-zA-Z0-9._-]/', '', $cleanRaw);
+            return response()->json(['message' => 'Tên đăng nhập không hợp lệ.'], 422);
         }
-        $email = $finalUsername . '@danava.vn';
-        $fullName = trim($request->name) ? trim($request->name) : $finalUsername;
 
-        // Check if user already exists
-        $existing = User::where('username', $finalUsername)->orWhere('email', $email)->first();
-        if ($existing) {
+        // Check if cleaned username already exists
+        if (User::where('username', $finalUsername)->exists()) {
             return response()->json([
-                'message' => "Tài khoản '{$finalUsername}' hoặc email '{$email}' đã tồn tại trong hệ thống. Nếu muốn đổi mật khẩu, vui lòng dùng nút Đặt lại mật khẩu."
+                'message' => "Tài khoản '{$finalUsername}' đã tồn tại trong hệ thống."
             ], 422);
         }
+
+        $email = $request->filled('email') ? trim($request->email) : null;
+        if ($email && User::where('email', $email)->exists()) {
+            return response()->json([
+                'message' => "Email '{$email}' đã tồn tại trong hệ thống."
+            ], 422);
+        }
+
+        $department = null;
+        if ($request->filled('department_id')) {
+            $department = \App\Models\Department::find($request->department_id);
+            if ($department && $department->status !== 'active') {
+                return response()->json(['message' => 'Không thể gán nhân viên vào phòng ban đang ngừng hoạt động.'], 422);
+            }
+        }
+
+        $fullName = trim($request->name);
+        $role = ($request->system_role === 'system_admin' || $request->system_role === 'admin') ? 'system_admin' : 'user';
 
         DB::beginTransaction();
         try {
@@ -63,10 +89,13 @@ class EmployeeController extends Controller
                 'username' => $finalUsername,
                 'email' => $email,
                 'name' => $fullName,
+                'position' => $request->position,
                 'password' => Hash::make($request->password),
-                'must_change_password' => $request->boolean('must_change_password', false),
+                'must_change_password' => true,
+                'account_status' => 'active',
                 'created_by' => $request->user()->id,
-                'system_role' => $request->system_role === 'admin' ? 'system_admin' : 'user',
+                'system_role' => $role,
+                'department_id' => $department?->id,
             ]);
 
             DB::table('user_profiles')->insert([
@@ -75,57 +104,105 @@ class EmployeeController extends Controller
                 'updated_at' => now(),
             ]);
 
-            if ($request->workspace_id) {
-                DB::table('workspace_members')->insert([
-                    'workspace_id' => $request->workspace_id,
-                    'user_id' => $user->id,
-                    'role' => $request->workspace_role ?? 'member',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                // Auto-join boards in this workspace
-                $boardIds = DB::table('boards')->where('workspace_id', $request->workspace_id)->pluck('id');
-                foreach ($boardIds as $bId) {
-                    DB::table('board_members')->updateOrInsert(
-                        ['board_id' => $bId, 'user_id' => $user->id],
-                        ['role' => 'member', 'is_starred' => false, 'created_at' => now(), 'updated_at' => now()]
-                    );
-                }
-            } else {
-                // Auto-join all existing company workspaces (NOT other users' personal spaces)
-                $allWs = DB::table('workspaces')
-                    ->where('name', 'not like', 'Không gian của %')
-                    ->pluck('id');
-                foreach ($allWs as $wsId) {
-                    DB::table('workspace_members')->insert([
-                        'workspace_id' => $wsId,
-                        'user_id' => $user->id,
-                        'role' => 'member',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-
-                    // Auto-join boards in company workspaces
-                    $boardIds = DB::table('boards')->where('workspace_id', $wsId)->pluck('id');
-                    foreach ($boardIds as $bId) {
-                        DB::table('board_members')->updateOrInsert(
-                            ['board_id' => $bId, 'user_id' => $user->id],
-                            ['role' => 'member', 'is_starred' => false, 'created_at' => now(), 'updated_at' => now()]
-                        );
-                    }
-                }
+            if ($department) {
+                $user->notify(new \App\Notifications\DepartmentTransferNotification(null, $department->name, $request->user()));
             }
 
             DB::commit();
             return response()->json([
                 'message' => 'Tạo tài khoản thành công',
-                'user' => $user
-            ]);
+                'user' => $user->load('department:id,name,code,color')
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Có lỗi xảy ra khi tạo tài khoản: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function update(Request $request, User $employee)
+    {
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'username' => ['required', 'string', 'min:3', 'max:50', Rule::unique('users')->ignore($employee->id)],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($employee->id)],
+            'position' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'nullable|string|max:50',
+            'dob' => 'nullable|date',
+            'address' => 'nullable|string|max:500',
+            'join_date' => 'nullable|date',
+            'system_role' => 'nullable|in:system_admin,admin,user',
+            'account_status' => 'nullable|in:active,locked',
+            'department_id' => 'nullable|exists:departments,id',
+        ]);
+
+        $cleanUsername = strtolower(trim($request->username));
+        $cleanUsername = str_replace('@danava.vn', '', $cleanUsername);
+        $finalUsername = preg_replace('/[^a-z0-9._-]/', '', $cleanUsername);
+        if (empty($finalUsername)) {
+            return response()->json(['message' => 'Tên đăng nhập không hợp lệ.'], 422);
+        }
+
+        // Prevent self-lock or self-demote
+        if ($employee->id === $request->user()->id) {
+            if ($request->has('account_status') && $request->account_status === 'locked') {
+                return response()->json(['message' => 'Không thể tự khóa tài khoản của chính mình'], 400);
+            }
+            if ($request->has('system_role') && $request->system_role === 'user') {
+                return response()->json(['message' => 'Không thể tự hạ quyền Quản trị viên của chính mình'], 400);
+            }
+        }
+
+        $employee->name = trim($request->name);
+        $employee->username = $finalUsername;
+        $employee->email = $request->filled('email') ? trim($request->email) : null;
+        if ($request->has('position')) $employee->position = $request->position;
+        if ($request->has('phone')) $employee->phone = $request->phone;
+        if ($request->has('gender')) $employee->gender = $request->gender;
+        if ($request->has('dob')) $employee->dob = $request->dob;
+        if ($request->has('address')) $employee->address = $request->address;
+        if ($request->has('join_date')) $employee->join_date = $request->join_date;
+
+        if ($request->has('system_role')) {
+            $employee->system_role = ($request->system_role === 'system_admin' || $request->system_role === 'admin') ? 'system_admin' : 'user';
+        }
+
+        if ($request->has('account_status')) {
+            $employee->account_status = $request->account_status;
+            if ($employee->account_status === 'locked') {
+                $employee->tokens()->delete();
+            }
+        }
+
+        if ($request->has('department_id')) {
+            $newDeptId = $request->department_id;
+            if ($newDeptId && (int)$employee->department_id !== (int)$newDeptId) {
+                $targetDept = \App\Models\Department::find($newDeptId);
+                if ($targetDept && $targetDept->status !== 'active') {
+                    return response()->json(['message' => 'Không thể chuyển nhân viên vào phòng ban đang ngừng hoạt động.'], 422);
+                }
+            }
+
+            if ((int)$employee->department_id !== (int)$newDeptId) {
+                $oldDept = $employee->department;
+                $targetDept = $newDeptId ? \App\Models\Department::find($newDeptId) : null;
+
+                if ($oldDept && (int)$oldDept->manager_id === (int)$employee->id) {
+                    $oldDept->manager_id = null;
+                    $oldDept->save();
+                }
+
+                $employee->department_id = $newDeptId;
+                $employee->notify(new \App\Notifications\DepartmentTransferNotification($oldDept?->name, $targetDept?->name, $request->user()));
+            }
+        }
+
+        $employee->save();
+
+        return response()->json([
+            'message' => 'Cập nhật thông tin nhân viên thành công',
+            'user' => $employee->load('department:id,name,code,color')
+        ]);
     }
 
     public function updateStatus(Request $request, User $employee)
@@ -152,11 +229,11 @@ class EmployeeController extends Controller
     public function resetPassword(Request $request, User $employee)
     {
         $request->validate([
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8',
         ]);
 
         $employee->password = Hash::make($request->password);
-        $employee->must_change_password = $request->boolean('must_change_password', false);
+        $employee->must_change_password = $request->boolean('must_change_password', true);
         $employee->save();
 
         $employee->tokens()->delete();
@@ -170,10 +247,10 @@ class EmployeeController extends Controller
             return response()->json(['message' => 'Không thể tự xóa tài khoản của chính mình'], 400);
         }
 
-        // Delete tokens and user
+        // Revoke tokens and soft delete user
         $employee->tokens()->delete();
         $employee->delete();
 
-        return response()->json(['message' => 'Đã xóa tài khoản nhân viên thành công']);
+        return response()->json(['message' => 'Đã xóa mềm tài khoản nhân viên thành công']);
     }
 }

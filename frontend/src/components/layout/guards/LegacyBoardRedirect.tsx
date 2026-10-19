@@ -21,7 +21,7 @@ export function LegacyBoardRedirect() {
     api.get(`/boards/${id}`)
       .then((res) => {
         if (res.data?.public_id) {
-          const requestedView = ['kanban', 'list', 'calendar', 'members', 'settings']
+          const requestedView = ['kanban', 'list', 'calendar', 'dashboard', 'members', 'settings']
             .find((view) => location.pathname.endsWith(`/${view}`)) || 'kanban';
           navigate(`/${res.data.public_id}/${requestedView}${location.search}`, { replace: true });
         } else {
@@ -39,13 +39,13 @@ export function LegacyBoardRedirect() {
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-screen">
-        <div className="animate-pulse text-primary font-medium mb-4">Đang tìm Không gian làm việc của Bảng này...</div>
+        <div className="animate-pulse text-primary font-medium mb-4">Đang mở bảng...</div>
       </div>
     );
   }
 
   if (error) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/boards" replace />;
   }
 
   return null;

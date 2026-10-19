@@ -15,11 +15,18 @@ export function CardContent({ task, board, theme }: { task: Task; board: Board; 
   const totalSubtasks = (task as any).total_subtasks_count ?? task.totalSubtasksCount ?? (task.subtasks?.length || 0);
   const doneSubtasks = (task as any).done_subtasks_count ?? task.doneSubtasksCount ?? (task.subtasks?.filter(s => !!s.completed_at || s.completedAt).length || 0);
 
+  const totalChecklistsItems = (task as any).total_checklists_items ?? task.totalChecklistsItems ?? task.checklists?.reduce((acc, c) => acc + (c.items?.length || 0), 0) ?? 0;
+  const doneChecklistsItems = (task as any).done_checklists_items ?? task.doneChecklistsItems ?? task.checklists?.reduce((acc, c) => acc + (c.items?.filter(i => i.done)?.length || 0), 0) ?? 0;
+
   const totalItems = totalSubtasks > 0 ? totalSubtasks : totalChecklistsItems;
   const doneItems = totalSubtasks > 0 ? doneSubtasks : doneChecklistsItems;
   
+  const commentsCount = (task as any).comments_count ?? task.commentsCount ?? (task.comments?.length || 0);
+  const attachmentsCount = (task as any).attachments_count ?? task.attachmentsCount ?? (task.attachments?.length || 0);
+
   const progress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
   const isDone = doneItems === totalItems && totalItems > 0;
+  const assignee = board?.users?.find((u) => u.id === task.assigneeId);
   const displayAssignees = (task.assignees && task.assignees.length > 0) 
     ? task.assignees 
     : (assignee ? [assignee] : []);

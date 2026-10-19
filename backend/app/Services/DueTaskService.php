@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class DueTaskService
 {
@@ -18,7 +17,10 @@ class DueTaskService
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
         $tasks = Task::with('column.board')
-            ->where('assignee_id', $user->id)
+            ->where(function ($q) use ($user) {
+                $q->where('assignee_id', $user->id)
+                  ->orWhereHas('assignees', fn($sq) => $sq->where('users.id', $user->id));
+            })
             ->whereNotNull('due_date')
             ->get();
 
@@ -39,41 +41,21 @@ class DueTaskService
 
             $dueDate = Carbon::parse($task->due_date, 'Asia/Ho_Chi_Minh');
             $board = $task->column->board;
-            $boardTitle = $board->name ?? $board->title ?? 'Bảng công việc';
 
-            // 1. Check Overdue (due date is in past days)
+            // 1. Check Overdue (due date has passed)
             if ($now->isAfter($dueDate) && !$now->isSameDay($dueDate)) {
-                self::notifyIfNotExists($user, $task, $board->id, $boardTitle, 'overdue', \App\Notifications\TaskOverdueNotification::class);
+                $msg = "Công việc \"{$task->title}\" đã quá hạn (" . $dueDate->format('d/m/Y') . ")";
+                NotificationService::send($user, 'overdue', $msg, $task, null, $board, extraData: [
+                    'due_date' => $task->due_date,
+                ]);
             }
-            // 2. Check Due Today (due date is today)
-            elseif ($now->isSameDay($dueDate)) {
-                self::notifyIfNotExists($user, $task, $board->id, $boardTitle, 'due_today', \App\Notifications\TaskDueTodayNotification::class);
+            // 2. Check Approaching Due (due today or within 24 hours)
+            elseif ($now->isSameDay($dueDate) || ($now->diffInHours($dueDate, false) > 0 && $now->diffInHours($dueDate, false) <= 24)) {
+                $msg = "Công việc \"{$task->title}\" sắp đến hạn (" . $dueDate->format('d/m/Y') . ")";
+                NotificationService::send($user, 'due_soon', $msg, $task, null, $board, extraData: [
+                    'due_date' => $task->due_date,
+                ]);
             }
-            // 3. Check Approaching Due (within 24 hours)
-            elseif ($now->copy()->addDay()->isSameDay($dueDate) || ($now->diffInHours($dueDate, false) > 0 && $now->diffInHours($dueDate, false) <= 24)) {
-                self::notifyIfNotExists($user, $task, $board->id, $boardTitle, 'approaching_due', \App\Notifications\TaskApproachingDueNotification::class);
-            }
-        }
-    }
-
-    private static function notifyIfNotExists(User $user, Task $task, $boardId, string $boardTitle, string $type, string $notificationClass): void
-    {
-        // Check preferences
-        $prefs = $user->notification_preferences ?? [];
-        if (isset($prefs[$type]) && $prefs[$type] === false) {
-            return;
-        }
-
-        // Avoid duplicate notification for the exact same task & type
-        $exists = DB::table('notifications')
-            ->where('notifiable_id', $user->id)
-            ->where('notifiable_type', get_class($user))
-            ->where('data', 'LIKE', '%"task_id":'.$task->id.'%')
-            ->where('data', 'LIKE', '%"type":"'.$type.'"%')
-            ->exists();
-
-        if (!$exists) {
-            $user->notify(new $notificationClass($task, $boardId, $boardTitle));
         }
     }
 }

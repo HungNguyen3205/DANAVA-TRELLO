@@ -73,6 +73,7 @@ class BoardDashboardController extends Controller
             ->select([
                 'tasks.id',
                 'tasks.parent_task_id',
+                'tasks.assignee_id',
                 'tasks.title',
                 'tasks.priority',
                 'tasks.due_date',

@@ -4,7 +4,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, Plus, 
   Briefcase, Calendar, ChevronRight, Activity, Users, 
   ShieldAlert, User, X, LayoutDashboard, ArrowUpRight, Sparkles,
-  MessageSquare, CheckSquare
+  MessageSquare, CheckSquare, Columns
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -71,21 +71,15 @@ export function HomePage() {
   const openTaskModal = async () => {
     setShowTaskModal(true);
     try {
-      const res = await api.get('/workspaces');
-      setWorkspacesList(res.data);
+      const res = await api.get('/boards');
+      setBoardsList(res.data || []);
+      if (res.data?.length > 0) {
+        setTaskForm(prev => ({ ...prev, boardId: res.data[0].id.toString() }));
+      }
     } catch (e) {
-      toast.error('Không thể tải dữ liệu Không gian làm việc');
+      toast.error('Không thể tải danh sách bảng công việc');
     }
   };
-
-  useEffect(() => {
-    if (taskForm.workspaceId) {
-      setBoardsList([]);
-      setColumnsList([]);
-      setTaskForm(prev => ({ ...prev, boardId: '', columnId: '' }));
-      api.get(`/workspaces/${taskForm.workspaceId}/boards`).then(res => setBoardsList(res.data)).catch(console.error);
-    }
-  }, [taskForm.workspaceId]);
 
   useEffect(() => {
     if (taskForm.boardId) {
@@ -207,11 +201,11 @@ export function HomePage() {
               </button>
 
               <button 
-                onClick={() => navigate('/workspaces')} 
+                onClick={() => navigate('/boards')} 
                 className="flex items-center gap-2 px-4 py-2.5 bg-background hover:bg-accent text-muted-foreground hover:text-foreground border border-border rounded-xl text-sm font-medium shadow-xs transition-all"
               >
-                <Briefcase size={16} className="text-indigo-500" />
-                <span>Không gian</span>
+                <Columns size={16} className="text-primary" />
+                <span>Bảng công việc</span>
               </button>
             </div>
           </div>
@@ -237,14 +231,14 @@ export function HomePage() {
 
               {continueItems.length === 0 ? (
                 <div className="bg-card border border-border p-8 rounded-2xl text-center text-sm text-muted-foreground shadow-xs">
-                  Hoạt động của bạn sẽ xuất hiện tại đây khi bạn tương tác với các Không gian hoặc Bảng.
+                  Hoạt động của bạn sẽ xuất hiện tại đây khi bạn tương tác với các Bảng công việc.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {continueItems.map((item, idx) => (
                     <div 
                       key={idx} 
-                      onClick={() => navigate(item.type === 'board' ? (item.public_id ? `/${item.public_id}/kanban` : `/b/${item.id}`) : '/workspaces')} 
+                      onClick={() => navigate(item.type === 'board' ? (item.public_id ? `/${item.public_id}/kanban` : `/b/${item.id}`) : '/boards')} 
                       className="group bg-card hover:bg-accent/40 border border-border hover:border-primary/40 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden"
                     >
                       {/* Top accent line */}
@@ -296,21 +290,21 @@ export function HomePage() {
                       {recentWorkspaces.length}
                     </span>
                   </h2>
-                  <Link to="/workspaces" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                  <Link to="/boards" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
                     Xem tất cả <ChevronRight size={14} />
                   </Link>
                 </div>
 
                 {recentWorkspaces.length === 0 ? (
                   <div className="p-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
-                    Chưa có Không gian nào.
+                    Chưa có Bảng nào.
                   </div>
                 ) : (
                   <div className="space-y-2.5 flex-1">
                     {recentWorkspaces.slice(0, 5).map((ws: any) => (
                       <div 
                         key={ws.id} 
-                        onClick={() => navigate('/workspaces')} 
+                        onClick={() => navigate('/boards')} 
                         className="group flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-border hover:bg-accent/60 transition-all cursor-pointer"
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -554,36 +548,19 @@ export function HomePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Không gian làm việc <span className="text-destructive">*</span></label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Bảng công việc <span className="text-destructive">*</span></label>
                 <select 
-                  value={taskForm.workspaceId}
-                  onChange={e => setTaskForm(prev => ({ ...prev, workspaceId: e.target.value }))}
+                  value={taskForm.boardId}
+                  onChange={e => setTaskForm(prev => ({ ...prev, boardId: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   required
                 >
-                  <option value="">-- Chọn không gian --</option>
-                  {workspacesList.map(w => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
+                  <option value="">-- Chọn Bảng --</option>
+                  {boardsList.map(b => (
+                    <option key={b.id} value={b.id}>{b.name || b.title}</option>
                   ))}
                 </select>
               </div>
-
-              {taskForm.workspaceId && (
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Bảng (Board) <span className="text-destructive">*</span></label>
-                  <select 
-                    value={taskForm.boardId}
-                    onChange={e => setTaskForm(prev => ({ ...prev, boardId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    required
-                  >
-                    <option value="">-- Chọn Bảng --</option>
-                    {boardsList.map(b => (
-                      <option key={b.id} value={b.id}>{b.name || b.title}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {taskForm.boardId && columnsList.length > 0 && (
                 <div>

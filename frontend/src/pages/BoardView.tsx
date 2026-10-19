@@ -3,20 +3,28 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
-import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus, BarChart3 } from 'lucide-react';
+import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus, BarChart3, Archive, FileSpreadsheet } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
 import { useBoardStore } from '../store/boardStore';
+import { useAuthStore } from '../store/authStore';
 import { getAvatarUrl } from '../lib/avatar';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
 import { BoardMembersHeader } from '../components/layout/BoardMembersHeader';
+import { ArchivedColumnsModal } from '../components/kanban/ArchivedColumnsModal';
+import { ShareBoardModal } from '../components/kanban/ShareBoardModal';
+import { TaskExcelImportModal } from '../components/kanban/TaskExcelImportModal';
 
 export function BoardView() {
   const { boardId, basePath } = useBoardRoute();
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
+  const user = useAuthStore((state) => state.user);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
+  const [showArchivedModal, setShowArchivedModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,6 +48,33 @@ export function BoardView() {
       const t = board.tasks.find((taskItem: any) => taskItem.id.toString() === taskId);
       if (t) {
         setActiveTask(t);
+      } else {
+        api.get(`/tasks/${taskId}`)
+          .then(({ data }) => {
+            if (data) {
+              const formattedTask: Task = {
+                id: String(data.id),
+                parentTaskId: data.parent_task_id ? String(data.parent_task_id) : null,
+                columnId: String(data.column_id),
+                title: data.title,
+                description: data.description || '',
+                priority: data.priority,
+                labels: (data.labels || []).map((l: any) => ({ id: String(l.id), name: l.name, color: l.color })),
+                assigneeId: data.assignee_id ? String(data.assignee_id) : '',
+                assignees: data.assignees || [],
+                collaborators: [],
+                dueDate: data.due_date || '',
+                completedAt: data.completed_at || null,
+                checklists: [],
+                attachments: [],
+                comments: [],
+              };
+              setActiveTask(formattedTask);
+            }
+          })
+          .catch(() => {
+            toast.error('Không tìm thấy công việc được yêu cầu');
+          });
       }
       // Remove query param from URL so closing the modal or refetching board won't reopen it
       const newParams = new URLSearchParams(searchParams);
@@ -51,9 +86,21 @@ export function BoardView() {
   const handleOpen = (t: Task) => setActiveTask(t);
   
   const handleAdd = (columnId: string) => {
+    const targetCol = board?.columns.find(c => String(c.id) === String(columnId));
+    const rootTasksInCol = board?.tasks.filter(t => String(t.columnId) === String(columnId) && !t.parentTaskId) || [];
+    const hasLimit = Boolean(targetCol?.wip_limit && targetCol.wip_limit > 0);
+    const isLimitReached = hasLimit && rootTasksInCol.length >= (targetCol?.wip_limit || 0);
+
+    if (isLimitReached && targetCol?.wip_enforcement === 'strict') {
+      toast.error(`Cột "${targetCol.title}" đã đạt giới hạn WIP tối đa (${targetCol.wip_limit} công việc). Chế độ Nghiêm ngặt không cho phép thêm thẻ mới.`);
+      return;
+    }
+
     setPromptData({
       isOpen: true,
-      title: 'Nhập tên công việc mới:',
+      title: isLimitReached
+        ? `Cột "${targetCol?.title}" đã đạt giới hạn WIP (${rootTasksInCol.length}/${targetCol?.wip_limit}). Nhập tên công việc mới để tiếp tục:`
+        : 'Nhập tên công việc mới:',
       onConfirm: async (title) => {
         if (!title?.trim()) {
           setPromptData(null);
@@ -119,7 +166,7 @@ export function BoardView() {
             return;
           }
           try {
-            await api.put(`/columns/${c.id}`, { title: title.trim() });
+            await api.patch(`/columns/${c.id}`, { title: title.trim() });
             setPromptData(null);
             toast.success('Đã cập nhật cột');
             setBoard((prev) => {
@@ -161,8 +208,12 @@ export function BoardView() {
         }));
         await api.put(`/boards/${id}/tasks/reorder`, { tasks: payload });
       }
-    } catch (e) {
-      toast.error('Lỗi khi lưu vị trí kéo thả');
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Lỗi khi lưu vị trí kéo thả';
+      toast.error(msg);
+      // Rollback UI on drag & drop failure
+      await fetchBoard(boardId || '1', true);
+      return false;
     }
     return true; 
   };
@@ -173,8 +224,8 @@ export function BoardView() {
     <div className="flex-1 min-h-0 overflow-hidden h-full flex flex-col relative bg-background">
       <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50">
         <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium">
-          <Link to="/workspaces" className="hover:text-primary transition-colors flex items-center gap-1.5">
-            <LayoutDashboard size={14} /> Không gian làm việc
+          <Link to="/boards" className="hover:text-primary transition-colors flex items-center gap-1.5">
+            <LayoutDashboard size={14} /> Bảng công việc
           </Link>
           <ChevronRight size={14} className="opacity-50" />
           <span className="text-foreground font-semibold">{board.title}</span>
@@ -209,7 +260,12 @@ export function BoardView() {
           
           <div className="flex items-center gap-3 border-l border-border pl-4">
             <BoardMembersHeader users={board.users} basePath={basePath} />
-            <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent">
+            <button 
+              onClick={() => setShowShareModal(true)}
+              title="Chia sẻ bảng công việc"
+              aria-label="Chia sẻ bảng công việc"
+              className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border hover:shadow-2xs"
+            >
               <Share2 size={18} />
             </button>
             <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border hover:shadow-sm">
@@ -248,7 +304,25 @@ export function BoardView() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowExcelImportModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-xl transition-all border border-border/80 shadow-2xs"
+                title="Nhập công việc từ Excel"
+              >
+                <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="hidden sm:inline">Nhập từ Excel</span>
+              </button>
+
+              <button
+                onClick={() => setShowArchivedModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-xl transition-all border border-border/80 shadow-2xs"
+                title="Xem các cột đã lưu trữ"
+              >
+                <Archive size={15} className="text-amber-600 dark:text-amber-400" />
+                <span className="hidden sm:inline">Cột lưu trữ</span>
+              </button>
+
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input 
@@ -256,7 +330,7 @@ export function BoardView() {
                   placeholder="Tìm kiếm công việc..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-56 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                  className="w-52 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                 />
               </div>
               {board.columns && board.columns.length > 0 && (
@@ -323,6 +397,46 @@ export function BoardView() {
           title={promptData.title}
           onConfirm={promptData.onConfirm}
           onCancel={() => setPromptData(null)}
+        />
+      )}
+
+      {showArchivedModal && (
+        <ArchivedColumnsModal
+          isOpen={showArchivedModal}
+          board={board}
+          canManage={Boolean(
+            board.is_owner ||
+            board.my_role === 'owner' ||
+            board.my_role === 'admin' ||
+            (user && board.owner_id && String(board.owner_id) === String(user.id)) ||
+            (user && board.users?.some(u => String(u.id) === String(user.id) && (u.role === 'admin' || u.role === 'owner')))
+          )}
+          onClose={() => setShowArchivedModal(false)}
+        />
+      )}
+
+      {showShareModal && (
+        <ShareBoardModal
+          isOpen={showShareModal}
+          board={board}
+          canManage={Boolean(
+            board.is_owner ||
+            board.my_role === 'owner' ||
+            board.my_role === 'admin' ||
+            (user && board.owner_id && String(board.owner_id) === String(user.id)) ||
+            (user && board.users?.some(u => String(u.id) === String(user.id) && (u.role === 'admin' || u.role === 'owner')))
+          )}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
+
+      {showExcelImportModal && (
+        <TaskExcelImportModal
+          isOpen={showExcelImportModal}
+          boardId={board.id}
+          boardCode={board.publicId || board.id}
+          onImportSuccess={() => fetchBoard(boardId, true)}
+          onClose={() => setShowExcelImportModal(false)}
         />
       )}
     </div>

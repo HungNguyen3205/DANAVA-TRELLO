@@ -2,7 +2,7 @@
  * Resolve full avatar URL.
  * Supports absolute URLs, data URIs, or relative backend storage paths.
  */
-export function getAvatarUrl(avatarPath?: string | null): string {
+export function getAvatarUrl(avatarPath?: string | null, _fallbackName?: string): string {
   if (!avatarPath) return '';
   if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://') || avatarPath.startsWith('data:')) {
     return avatarPath;

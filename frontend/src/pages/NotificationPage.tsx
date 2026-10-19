@@ -1,40 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Check, Clock, AlertCircle, UserPlus, Filter, Layout } from 'lucide-react';
+import { 
+  Bell, Check, Clock, AlertCircle, UserPlus, UserMinus, Filter, Layout, 
+  MessageSquare, AtSign, CheckCircle2, RefreshCw, Calendar, Star, Award, 
+  ArrowRightCircle, Loader2, AlertTriangle, RefreshCcw, Building2
+} from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../lib/api/notifications';
 import type { AppNotification } from '../lib/api/notifications';
 import { updateTabNotification, notifyNotificationsUpdated } from '../lib/tabNotification';
 import { useNavigate } from 'react-router-dom';
-import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
+import { isToday, isYesterday, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
+
+type FilterType = 'all' | 'assigned' | 'comments' | 'deadlines' | 'completed';
 
 export const NotificationPage = () => {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'assigned' | 'due' | 'overdue'>('all');
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchNotifications = async (p = 1, append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
+
     try {
-      const isUnreadOnly = filter === 'unread';
-      const data = await getNotifications(p, isUnreadOnly);
-      
-      let filteredData = data.notifications.data;
-      if (filter === 'assigned') filteredData = filteredData.filter(n => n.data.type === 'assigned' || n.data.type === 'due_today');
-      if (filter === 'due') filteredData = filteredData.filter(n => n.data.type === 'due_today' || n.data.type === 'approaching_due');
-      if (filter === 'overdue') filteredData = filteredData.filter(n => n.data.type === 'overdue');
+      const data = await getNotifications(p, false, filter);
+      const items = data.notifications.data;
 
       if (append) {
-        setNotifications(prev => [...prev, ...filteredData]);
+        setNotifications(prev => [...prev, ...items]);
       } else {
-        setNotifications(filteredData);
+        setNotifications(items);
       }
       setUnreadCount(data.unread_count);
       updateTabNotification(data.unread_count);
+      notifyNotificationsUpdated(data.unread_count);
       setHasMore(data.notifications.next_page_url !== null);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e?.response?.data?.message || 'Không thể tải thông báo. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -44,8 +60,9 @@ export const NotificationPage = () => {
   }, [filter]);
 
   const loadMore = () => {
-    setPage(p => p + 1);
-    fetchNotifications(page + 1, true);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchNotifications(nextPage, true);
   };
 
   const handleMarkAllAsRead = async () => {
@@ -84,6 +101,92 @@ export const NotificationPage = () => {
     }
   };
 
+  const getNotificationIconInfo = (type: string) => {
+    switch (type) {
+      case 'board_invited':
+        return {
+          Icon: Layout,
+          iconBg: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+        };
+      case 'assigned':
+        return {
+          Icon: UserPlus,
+          iconBg: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+        };
+      case 'unassigned':
+        return {
+          Icon: UserMinus,
+          iconBg: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+        };
+      case 'due_date_changed':
+        return {
+          Icon: Calendar,
+          iconBg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+        };
+      case 'due_soon':
+      case 'due_today':
+        return {
+          Icon: Clock,
+          iconBg: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+        };
+      case 'overdue':
+        return {
+          Icon: AlertCircle,
+          iconBg: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+        };
+      case 'column_moved':
+        return {
+          Icon: ArrowRightCircle,
+          iconBg: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400'
+        };
+      case 'task_completed':
+        return {
+          Icon: CheckCircle2,
+          iconBg: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+        };
+      case 'task_reopened':
+        return {
+          Icon: RefreshCw,
+          iconBg: 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+        };
+      case 'comment_added':
+        return {
+          Icon: MessageSquare,
+          iconBg: 'bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400'
+        };
+      case 'mention':
+        return {
+          Icon: AtSign,
+          iconBg: 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400'
+        };
+      case 'quality_review':
+        return {
+          Icon: Star,
+          iconBg: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+        };
+      case 'evaluation_published':
+        return {
+          Icon: Award,
+          iconBg: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+        };
+      case 'department_transferred':
+        return {
+          Icon: Building2,
+          iconBg: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+        };
+      case 'department_manager_assigned':
+        return {
+          Icon: Award,
+          iconBg: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+        };
+      default:
+        return {
+          Icon: Bell,
+          iconBg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+        };
+    }
+  };
+
   const renderGroup = (title: string, list: AppNotification[]) => {
     if (list.length === 0) return null;
     return (
@@ -92,22 +195,7 @@ export const NotificationPage = () => {
         <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm divide-y divide-border/50">
           {list.map(n => {
             const isUnread = !n.read_at;
-            let Icon = Bell;
-            let iconBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-            
-            if (n.data.type === 'board_invited') {
-              Icon = Layout;
-              iconBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
-            } else if (n.data.type === 'assigned') {
-              Icon = UserPlus;
-              iconBg = 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
-            } else if (n.data.type === 'due_today' || n.data.type === 'approaching_due') {
-              Icon = Clock;
-              iconBg = 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400';
-            } else if (n.data.type === 'overdue') {
-              Icon = AlertCircle;
-              iconBg = 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
-            }
+            const { Icon, iconBg } = getNotificationIconInfo(n.data.type);
 
             return (
               <div 
@@ -140,7 +228,7 @@ export const NotificationPage = () => {
                 </div>
                 {isUnread && (
                   <div className="hidden md:flex shrink-0">
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary" title="Chưa đọc"></div>
                   </div>
                 )}
               </div>
@@ -177,13 +265,13 @@ export const NotificationPage = () => {
                 </span>
               )}
             </div>
-            <p className="text-muted-foreground">Cập nhật những hoạt động mới nhất về công việc của bạn.</p>
+            <p className="text-muted-foreground">Cập nhật toàn bộ hoạt động trong vòng đời công việc của bạn.</p>
           </div>
           
           {unreadCount > 0 && (
             <button 
               onClick={handleMarkAllAsRead}
-              className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-2 transition-colors px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-lg"
+              className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-2 transition-colors px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-lg cursor-pointer"
             >
               <Check size={16} />
               Đánh dấu tất cả đã đọc
@@ -196,31 +284,58 @@ export const NotificationPage = () => {
           <Filter size={16} className="text-muted-foreground mr-2 shrink-0" />
           {[
             { id: 'all', label: 'Tất cả' },
-            { id: 'unread', label: 'Chưa đọc' },
-            { id: 'assigned', label: 'Được giao việc' },
-            { id: 'due', label: 'Sắp/đến hạn' },
-            { id: 'overdue', label: 'Quá hạn' },
+            { id: 'assigned', label: 'Được giao' },
+            { id: 'comments', label: 'Bình luận' },
+            { id: 'deadlines', label: 'Deadline' },
+            { id: 'completed', label: 'Hoàn thành' },
           ].map(f => (
             <button
               key={f.id}
-              onClick={() => setFilter(f.id as any)}
-              className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === f.id ? 'bg-foreground text-background shadow-sm' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}
+              onClick={() => setFilter(f.id as FilterType)}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${filter === f.id ? 'bg-foreground text-background shadow-sm' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}
             >
               {f.label}
             </button>
           ))}
         </div>
 
-        {/* Content */}
-        {notifications.length === 0 ? (
+        {/* Loading State */}
+        {loading ? (
+          <div className="py-20 flex flex-col items-center justify-center bg-card border border-border rounded-xl">
+            <Loader2 size={36} className="text-primary animate-spin mb-4" />
+            <p className="text-sm font-medium text-muted-foreground">Đang tải thông báo...</p>
+          </div>
+        ) : error ? (
+          /* Error State */
+          <div className="text-center py-16 bg-card border border-destructive/30 rounded-xl p-6">
+            <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={32} />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Đã có lỗi xảy ra</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto mb-6">{error}</p>
+            <button
+              onClick={() => fetchNotifications(1, false)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+            >
+              <RefreshCcw size={16} />
+              Thử lại
+            </button>
+          </div>
+        ) : notifications.length === 0 ? (
+          /* Empty State */
           <div className="text-center py-20 bg-card border border-border rounded-xl">
             <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Bell size={32} className="text-muted-foreground opacity-50" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">Không có thông báo nào</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">Bạn đã xem hết tất cả thông báo mới. Khi có cập nhật mới, chúng sẽ xuất hiện tại đây.</p>
+            <p className="text-muted-foreground max-w-sm mx-auto">
+              {filter === 'all' 
+                ? 'Bạn đã xem hết tất cả thông báo mới. Khi có cập nhật mới, chúng sẽ xuất hiện tại đây.'
+                : 'Không tìm thấy thông báo nào phù hợp với bộ lọc hiện tại.'}
+            </p>
           </div>
         ) : (
+          /* Notifications List */
           <div>
             {renderGroup('Hôm nay', today)}
             {renderGroup('Hôm qua', yesterday)}
@@ -230,9 +345,11 @@ export const NotificationPage = () => {
               <div className="text-center mt-8">
                 <button 
                   onClick={loadMore}
-                  className="px-6 py-2.5 bg-card border border-border hover:bg-muted text-foreground font-medium rounded-xl transition-colors shadow-sm"
+                  disabled={loadingMore}
+                  className="px-6 py-2.5 bg-card border border-border hover:bg-muted text-foreground font-medium rounded-xl transition-colors shadow-sm inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  Tải thêm thông báo
+                  {loadingMore && <Loader2 size={16} className="animate-spin" />}
+                  {loadingMore ? 'Đang tải thêm...' : 'Tải thêm thông báo'}
                 </button>
               </div>
             )}
@@ -243,3 +360,4 @@ export const NotificationPage = () => {
     </div>
   );
 };
+

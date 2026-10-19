@@ -4,22 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\TaskAttachment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 class TaskAttachmentController extends Controller
 {
-    public function store(Request $request, Task $task)
+    public function store(Request $request, Task $task): JsonResponse
     {
-        // Kiểm tra quyền sở hữu task (Chống BOLA)
-        abort_unless(
-            $task->column && 
-            $task->column->board && 
-            $task->column->board->workspace && 
-            $task->column->board->workspace->members()->where('user_id', $request->user()->id)->exists(),
-            403,
-            'Bạn không có quyền tải tệp lên công việc này.'
-        );
+        Gate::authorize('view', $task);
 
         $request->validate([
             'file' => 'required|file|mimes:jpeg,png,jpg,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,7z|max:10240' // max 10MB
@@ -39,10 +34,24 @@ class TaskAttachmentController extends Controller
         return response()->json($attachment->load('user'), 201);
     }
 
-    public function destroy(TaskAttachment $attachment)
+    public function destroy(Request $request, TaskAttachment $attachment): JsonResponse
     {
-        Storage::disk('public')->delete($attachment->file_path);
+        $task = $attachment->task;
+        Gate::authorize('view', $task);
+
+        $taskBoardId = $task->column?->board_id ?: DB::table('kanban_columns')->where('id', $task->column_id)->value('board_id');
+        $isAuthor = ((int)$attachment->user_id === (int)$request->user()->id);
+        $isBoardAdmin = $request->user()->isBoardAdmin($taskBoardId);
+
+        abort_unless(
+            $isAuthor || $isBoardAdmin,
+            403,
+            'Bạn chỉ có thể xóa tệp do chính mình tải lên hoặc bạn phải là Quản trị viên bảng.'
+        );
+
+        $attachment->update(['deleted_by' => $request->user()->id]);
         $attachment->delete();
-        return response()->json(['message' => 'Attachment deleted']);
+
+        return response()->json(['message' => 'Attachment moved to trash']);
     }
 }

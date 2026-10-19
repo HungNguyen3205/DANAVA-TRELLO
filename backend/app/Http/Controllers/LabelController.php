@@ -5,60 +5,35 @@ namespace App\Http\Controllers;
 use App\Models\Board;
 use App\Models\Label;
 use App\Models\Task;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class LabelController extends Controller
 {
-    private function canEditBoard($user, $boardId)
+    public function index(Request $request, Board $board): JsonResponse
     {
-        $board = Board::find($boardId);
-        if (!$board) return false;
+        Gate::authorize('view', $board);
 
-        // Check workspace admin
-        $wsMember = DB::table('workspace_members')
-            ->where('workspace_id', $board->workspace_id)
-            ->where('user_id', $user->id)
-            ->first();
-            
-        if ($wsMember && $wsMember->role === 'admin') {
-            return true;
-        }
-
-        // Check board role
-        $boardMember = DB::table('board_members')
-            ->where('board_id', $board->id)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if ($boardMember && in_array($boardMember->role, ['admin', 'editor'])) {
-            return true;
-        }
-
-        return false;
-    }
-
-    public function index(Board $board)
-    {
         return response()->json($board->labels);
     }
 
-    public function store(Request $request, Board $board)
+    public function store(Request $request, Board $board): JsonResponse
     {
-        if (!$this->canEditBoard($request->user(), $board->id)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
+        Gate::authorize('view', $board);
 
         $request->validate([
             'name' => [
                 'required',
                 'string',
+                'max:100',
                 Rule::unique('labels')->where(function ($query) use ($board) {
                     return $query->where('board_id', $board->id);
                 })
             ],
-            'color' => 'required|string'
+            'color' => 'required|string|max:50'
         ], [
             'name.unique' => 'Tên nhãn đã tồn tại trong bảng này.',
             'name.required' => 'Tên nhãn không được để trống.'
@@ -68,21 +43,21 @@ class LabelController extends Controller
         return response()->json($label, 201);
     }
 
-    public function update(Request $request, Label $label)
+    public function update(Request $request, Label $label): JsonResponse
     {
-        if (!$this->canEditBoard($request->user(), $label->board_id)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
+        $label->loadMissing('board');
+        Gate::authorize('view', $label->board);
 
         $request->validate([
             'name' => [
                 'sometimes',
                 'string',
+                'max:100',
                 Rule::unique('labels')->where(function ($query) use ($label) {
                     return $query->where('board_id', $label->board_id);
                 })->ignore($label->id)
             ],
-            'color' => 'sometimes|string'
+            'color' => 'sometimes|string|max:50'
         ], [
             'name.unique' => 'Tên nhãn đã tồn tại trong bảng này.'
         ]);
@@ -91,36 +66,36 @@ class LabelController extends Controller
         return response()->json($label);
     }
 
-    public function destroy(Request $request, Label $label)
+    public function destroy(Request $request, Label $label): JsonResponse
     {
-        if (!$this->canEditBoard($request->user(), $label->board_id)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
+        $label->loadMissing('board');
+        Gate::authorize('view', $label->board);
 
-        // DB Cascade should handle pivot table `task_label` removal.
         $label->delete();
-        return response()->json(['message' => 'Label deleted']);
+        return response()->json(['message' => 'Đã xóa nhãn thành công']);
     }
 
-    public function syncTaskLabels(Request $request, Task $task)
+    public function syncTaskLabels(Request $request, Task $task): JsonResponse
     {
-        // Load task column -> board to check permission
-        $task->load('column.board');
-        if (!$task->column || !$task->column->board) {
-            return response()->json(['message' => 'Task not in a board'], 404);
-        }
-
-        if (!$this->canEditBoard($request->user(), $task->column->board->id)) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
+        Gate::authorize('update', $task);
 
         $request->validate([
             'label_ids' => 'required|array',
-            'label_ids.*' => 'exists:labels,id'
+            'label_ids.*' => 'integer|exists:labels,id'
         ]);
+
+        $taskBoardId = $task->column?->board_id ?: DB::table('kanban_columns')->where('id', $task->column_id)->value('board_id');
+        $validBoardLabelIds = Label::where('board_id', $taskBoardId)->pluck('id')->toArray();
+
+        $invalidLabels = array_diff($request->label_ids, $validBoardLabelIds);
+        if (!empty($invalidLabels)) {
+            return response()->json([
+                'message' => 'Một hoặc nhiều nhãn không thuộc bảng này.',
+                'errors' => ['label_ids' => ['Một hoặc nhiều nhãn không thuộc bảng này.']]
+            ], 422);
+        }
 
         $task->labels()->sync($request->label_ids);
         return response()->json($task->load('labels'));
     }
 }
-

@@ -5,7 +5,7 @@ import { PromptModal } from '../components/ui/PromptModal';
 import { 
   Filter, Search, Share2, LayoutDashboard, 
   ChevronRight, Plus, List as ListIcon, Calendar as CalendarIcon,
-  Clock, LayoutGrid, BarChart3
+  Clock, LayoutGrid, BarChart3, FileSpreadsheet
 } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import { useBoardRoute } from '../components/layout/BoardRouteContext';
 import { BoardMembersHeader } from '../components/layout/BoardMembersHeader';
 import { CustomSelect } from '../components/ui/CustomSelect';
 import { StatusSelect } from '../components/ui/StatusSelect';
+import { TaskExcelImportModal } from '../components/kanban/TaskExcelImportModal';
 
 const THEME_HEX_MAP: Record<string, string> = {
   violet: '#7C5CFC',
@@ -62,6 +63,7 @@ export function ListView() {
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
+  const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [groupBy, setGroupBy] = useState<'status' | 'sprint' | 'assignee' | 'none'>('status');
 
@@ -185,8 +187,8 @@ export function ListView() {
       {/* Top Header / Breadcrumb */}
       <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50">
         <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium">
-          <Link to="/workspaces" className="hover:text-primary transition-colors flex items-center gap-1.5">
-            <LayoutDashboard size={14} /> Không gian làm việc
+          <Link to="/boards" className="hover:text-primary transition-colors flex items-center gap-1.5">
+            <LayoutDashboard size={14} /> Bảng công việc
           </Link>
           <ChevronRight size={14} className="opacity-50" />
           <span className="text-foreground font-semibold">{board.title}</span>
@@ -247,6 +249,14 @@ export function ListView() {
                 triggerClassName="py-1.5 px-3 text-[13px] rounded-lg"
               />
             </div>
+            <button
+              onClick={() => setShowExcelImportModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-card hover:bg-muted rounded-lg transition-colors border border-border shadow-sm"
+              title="Nhập công việc từ Excel"
+            >
+              <FileSpreadsheet size={14} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Nhập từ Excel</span>
+            </button>
             <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-card hover:bg-muted rounded-lg transition-colors border border-border shadow-sm">
               <Filter size={14} className="text-muted-foreground" />
               Bộ lọc
@@ -430,6 +440,16 @@ export function ListView() {
           title={promptData.title}
           onConfirm={promptData.onConfirm}
           onCancel={() => setPromptData(null)}
+        />
+      )}
+
+      {showExcelImportModal && board && (
+        <TaskExcelImportModal
+          isOpen={showExcelImportModal}
+          boardId={board.id}
+          boardCode={board.publicId || board.id}
+          onImportSuccess={() => fetchBoard(boardId, true)}
+          onClose={() => setShowExcelImportModal(false)}
         />
       )}
     </div>

@@ -17,6 +17,7 @@ class StoreSubtaskRequest extends FormRequest
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'nullable|string|in:Thấp,Bình thường,Cao,Khẩn cấp',
+            'complexity' => 'nullable|string|in:XS,S,M,L,XL,xs,s,m,l,xl',
             'start_date' => 'nullable|date',
             'due_date' => 'nullable|date',
             'assignee_ids' => 'nullable|array',

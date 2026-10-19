@@ -38,6 +38,7 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('Bình thường');
+  const [complexity, setComplexity] = useState<'XS' | 'S' | 'M' | 'L' | 'XL'>('M');
   const [isCompleted, setIsCompleted] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
@@ -56,6 +57,7 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
         setTitle(data.title || '');
         setDescription(data.description || '');
         setPriority(data.priority || 'Bình thường');
+        setComplexity(data.complexity || 'M');
         setIsCompleted(!data.completed_at ? false : true);
         setStartDate(data.start_date || '');
         setDueDate(data.due_date || '');
@@ -106,6 +108,7 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
         title: title.trim(),
         description: description,
         priority: priority,
+        complexity: complexity,
         is_completed: isCompleted,
         start_date: startDate || null,
         due_date: dueDate || null,
@@ -219,16 +222,36 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
 
           {/* Quick Meta Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 border border-border/50 rounded-xl">
-            {/* Priority */}
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
-                Mức độ ưu tiên
-              </label>
-              <PrioritySelect
-                value={priority}
-                onChange={(p) => setPriority(p)}
-                disabled={busy}
-              />
+            {/* Priority & Complexity */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Ưu tiên
+                </label>
+                <PrioritySelect
+                  value={priority}
+                  onChange={(p) => setPriority(p)}
+                  disabled={busy}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Độ phức tạp
+                </label>
+                <select
+                  value={complexity}
+                  onChange={(e) => setComplexity(e.target.value as any)}
+                  disabled={busy}
+                  className="w-full bg-background border border-input rounded-xl px-2.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary/50"
+                >
+                  <option value="XS">XS (1đ)</option>
+                  <option value="S">S (2đ)</option>
+                  <option value="M">M (3đ)</option>
+                  <option value="L">L (5đ)</option>
+                  <option value="XL">XL (8đ)</option>
+                </select>
+              </div>
             </div>
 
             {/* Assignees */}

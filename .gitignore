@@ -27,3 +27,5 @@ dist-ssr
 # Local credentials
 .env*
 !.env.example
+!.env.testing
+!backend/.env.testing

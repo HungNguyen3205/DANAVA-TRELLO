@@ -24,7 +24,7 @@ export function BoardMembersView() {
       const bId = boardId?.replace('board-', '') || '1';
       const [boardRes, membersRes] = await Promise.all([
         api.get(`/boards/${bId}`),
-        api.get(`/workspaces/${workspaceId}/boards/${bId}/members`)
+        api.get(`/boards/${bId}/members`)
       ]);
       setBoard(boardRes.data);
       setMembers(membersRes.data);
@@ -33,7 +33,7 @@ export function BoardMembersView() {
     } finally {
       setIsLoading(false);
     }
-  }, [workspaceId, boardId]);
+  }, [boardId]);
 
   useEffect(() => {
     fetchMembers();
@@ -47,7 +47,7 @@ export function BoardMembersView() {
     setMembers(prev => prev.map(m => m.id === userId ? { ...m, role: newRole } : m));
     
     try {
-      await api.patch(`/workspaces/${workspaceId}/boards/${bId}/members/${userId}`, { role: newRole });
+      await api.patch(`/boards/${bId}/members/${userId}`, { role: newRole });
       toast.success('Đã cập nhật vai trò');
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Lỗi khi cập nhật vai trò');
@@ -60,7 +60,7 @@ export function BoardMembersView() {
     
     const bId = boardId?.replace('board-', '') || '1';
     try {
-      await api.delete(`/workspaces/${workspaceId}/boards/${bId}/members/${userId}`);
+      await api.delete(`/boards/${bId}/members/${userId}`);
       toast.success('Đã gỡ thành viên khỏi bảng');
       fetchMembers();
     } catch (e: any) {
@@ -78,8 +78,8 @@ export function BoardMembersView() {
       <header className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50 gap-4">
         <div>
           <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium mb-1">
-            <Link to="/workspaces" className="hover:text-primary transition-colors flex items-center gap-1.5">
-              <LayoutDashboard size={14} /> Không gian làm việc
+            <Link to="/boards" className="hover:text-primary transition-colors flex items-center gap-1.5">
+              <LayoutDashboard size={14} /> Bảng công việc
             </Link>
             <ChevronRight size={14} className="opacity-50" />
             <Link to={`${basePath}/kanban`} className="hover:text-primary transition-colors">
@@ -218,12 +218,7 @@ function AddBoardMemberModal({ workspaceId, boardId, onClose, onAdded }: { works
         const res = await api.get(`/users/search?q=${encodeURIComponent(search.trim())}`);
         setAvailableUsers(res.data);
       } catch (e) {
-        try {
-          const res = await api.get(`/workspaces/${workspaceId}/members`);
-          setAvailableUsers(res.data);
-        } catch {
-          setAvailableUsers([]);
-        }
+        setAvailableUsers([]);
       } finally {
         setIsLoading(false);
       }
@@ -231,13 +226,13 @@ function AddBoardMemberModal({ workspaceId, boardId, onClose, onAdded }: { works
 
     const timer = setTimeout(fetchUsers, search ? 300 : 0);
     return () => clearTimeout(timer);
-  }, [workspaceId, search]);
+  }, [search]);
 
   const handleAdd = async (userId: string) => {
     setIsSubmitting(true);
     try {
       const bId = boardId?.replace('board-', '') || '1';
-      await api.post(`/workspaces/${workspaceId}/boards/${bId}/members`, {
+      await api.post(`/boards/${bId}/members`, {
         user_id: userId,
         role: selectedRole
       });

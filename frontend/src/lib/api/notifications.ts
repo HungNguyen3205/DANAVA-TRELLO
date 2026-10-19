@@ -7,14 +7,24 @@ export interface AppNotification {
   notifiable_id: number;
   data: {
     type: string;
-    task_id: number;
-    task_title: string;
-    board_id: number;
-    board_title: string;
+    task_id?: number;
+    subtask_id?: number;
+    task_title?: string;
+    board_id?: number;
+    board_title?: string;
+    board_name?: string;
+    board_public_id?: string;
     message: string;
+    action_url?: string;
     actor_id?: number;
     actor_name?: string;
+    actor_username?: string;
+    inviter_name?: string;
     due_date?: string;
+    target_column_id?: number;
+    target_column_title?: string;
+    period_title?: string;
+    extra?: any;
   };
   read_at: string | null;
   created_at: string;
@@ -42,10 +52,13 @@ export interface NotificationResponse {
 
 const inFlightNotifications = new Map<string, Promise<NotificationResponse>>();
 
-export const getNotifications = (page = 1, unreadOnly = false): Promise<NotificationResponse> => {
+export const getNotifications = (page = 1, unreadOnly = false, filter?: string): Promise<NotificationResponse> => {
   const params = new URLSearchParams({ page: page.toString() });
   if (unreadOnly) {
     params.append('unread', '1');
+  }
+  if (filter && filter !== 'all') {
+    params.append('filter', filter);
   }
   const urlKey = `/notifications?${params.toString()}`;
   

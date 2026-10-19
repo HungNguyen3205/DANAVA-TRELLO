@@ -4,8 +4,9 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Task;
+use App\Models\User;
+use App\Services\NotificationService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class CheckDueTasks extends Command
 {
@@ -14,64 +15,54 @@ class CheckDueTasks extends Command
 
     public function handle()
     {
-        // Set timezone
         date_default_timezone_set('Asia/Ho_Chi_Minh');
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
-        $tasks = Task::with('column.board', 'assignee')
-            ->whereNotNull('assignee_id')
+        $tasks = Task::with(['column.board', 'assignees', 'assignee'])
             ->whereNotNull('due_date')
+            ->whereNull('completed_at')
             ->get();
 
+        $count = 0;
+
         foreach ($tasks as $task) {
-            // Ignore if task is in a "done" column
+            if (!$task->column || !$task->column->board) {
+                continue;
+            }
+
+            // Skip if task is in a completed/done column
             $colTitle = mb_strtolower($task->column->title);
-            if (str_contains($colTitle, 'hoàn thành') || str_contains($colTitle, 'done')) {
+            if (str_contains($colTitle, 'hoàn thành') || str_contains($colTitle, 'done') || str_contains($colTitle, 'completed')) {
                 continue;
             }
 
             $dueDate = Carbon::parse($task->due_date, 'Asia/Ho_Chi_Minh');
-            $user = $task->assignee;
-            if (!$user || !$task->column->board) continue;
-
             $board = $task->column->board;
 
-            // Check Overdue
-            if ($now->isAfter($dueDate) && !$now->isSameDay($dueDate)) {
-                $this->notifyIfNotExists($user, $task, $board, 'overdue', \App\Notifications\TaskOverdueNotification::class);
-            } 
-            // Check Due Today
-            elseif ($now->isSameDay($dueDate)) {
-                $this->notifyIfNotExists($user, $task, $board, 'due_today', \App\Notifications\TaskDueTodayNotification::class);
-            } 
-            // Check Approaching Due (24 hours before)
-            elseif ($now->copy()->addDay()->isSameDay($dueDate) || ($now->diffInHours($dueDate, false) > 0 && $now->diffInHours($dueDate, false) <= 24)) {
-                $this->notifyIfNotExists($user, $task, $board, 'approaching_due', \App\Notifications\TaskApproachingDueNotification::class);
+            // Collect all assigned users
+            $assignees = $task->assignees->all();
+            if ($task->assignee && !in_array($task->assignee->id, array_map(fn($u) => $u->id, $assignees))) {
+                $assignees[] = $task->assignee;
+            }
+
+            foreach ($assignees as $user) {
+                // Check Overdue
+                if ($now->isAfter($dueDate) && !$now->isSameDay($dueDate)) {
+                    $msg = "Công việc \"{$task->title}\" đã quá hạn (" . $dueDate->format('d/m/Y') . ")";
+                    if (NotificationService::send($user, 'overdue', $msg, $task, null, $board, extraData: ['due_date' => $task->due_date])) {
+                        $count++;
+                    }
+                } 
+                // Check Approaching Due (due today or within 24 hours)
+                elseif ($now->isSameDay($dueDate) || ($now->diffInHours($dueDate, false) > 0 && $now->diffInHours($dueDate, false) <= 24)) {
+                    $msg = "Công việc \"{$task->title}\" sắp đến hạn (" . $dueDate->format('d/m/Y') . ")";
+                    if (NotificationService::send($user, 'due_soon', $msg, $task, null, $board, extraData: ['due_date' => $task->due_date])) {
+                        $count++;
+                    }
+                }
             }
         }
         
-        $this->info('Checked due tasks successfully.');
-    }
-
-    private function notifyIfNotExists($user, $task, $board, $type, $notificationClass)
-    {
-        // Check preferences
-        $prefs = $user->notification_preferences ?? [];
-        if (isset($prefs[$type]) && $prefs[$type] === false) {
-            return;
-        }
-
-        // Check if user already has this exact notification for this task
-        $exists = DB::table('notifications')
-            ->where('notifiable_id', $user->id)
-            ->where('notifiable_type', get_class($user))
-            ->where('data', 'LIKE', '%"task_id":'.$task->id.'%')
-            ->where('data', 'LIKE', '%"type":"'.$type.'"%')
-            ->exists();
-
-        if (!$exists) {
-            $boardTitle = $board->name ?? $board->title ?? 'Bảng công việc';
-            $user->notify(new $notificationClass($task, $board->id, $boardTitle));
-        }
+        $this->info("Checked due tasks successfully. Sent {$count} notification(s).");
     }
 }

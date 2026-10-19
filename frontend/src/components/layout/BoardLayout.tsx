@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
-import { LayoutDashboard, Grid, Calendar, Users, Settings, ArrowLeft, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Grid, Calendar, Users, Settings, ArrowLeft, BarChart3, FileText, Award, ShieldCheck, Trash2 } from 'lucide-react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
+import { useBoardStore } from '../../store/boardStore';
 import { useBoardRoute } from './BoardRouteContext';
 
 export function BoardLayout() {
   const location = useLocation();
   const { basePath } = useBoardRoute();
   const { isMobileSidebarOpen, closeMobileSidebar } = useUIStore();
+  const board = useBoardStore((state) => state.board);
+  const isOwnerOrAdmin = board?.is_owner || board?.my_role === 'owner' || board?.my_role === 'admin';
   
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -31,11 +34,11 @@ export function BoardLayout() {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
           
           <Link 
-            to="/workspaces"
+            to="/boards"
             className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
           >
             <ArrowLeft size={16} />
-            Quay lại Không gian
+            Quay lại danh sách bảng
           </Link>
           
           <div className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -46,8 +49,14 @@ export function BoardLayout() {
           <SidebarItem icon={<LayoutDashboard size={18} />} label="Danh sách" to={`${basePath}/list`} active={location.pathname.includes('/list')} />
           <SidebarItem icon={<Calendar size={18} />} label="Lịch" to={`${basePath}/calendar`} active={location.pathname.includes('/calendar')} />
           <SidebarItem icon={<BarChart3 size={18} />} label="Thống kê" to={`${basePath}/dashboard`} active={location.pathname.includes('/dashboard')} />
+          <SidebarItem icon={<Award size={18} />} label="Điểm hiệu suất" to={`${basePath}/performance`} active={location.pathname.includes('/performance')} />
+          <SidebarItem icon={<ShieldCheck size={18} />} label="Nội quy hiệu suất" to={`${basePath}/performance-policy`} active={location.pathname.includes('/performance-policy')} />
           <SidebarItem icon={<Users size={18} />} label="Thành viên" to={`${basePath}/members`} active={location.pathname.includes('/members')} />
+          <SidebarItem icon={<FileText size={18} />} label="Tổng kết dự án" to={`${basePath}/review`} active={location.pathname.includes('/review')} />
           <SidebarItem icon={<Settings size={18} />} label="Cài đặt bảng" to={`${basePath}/settings`} active={location.pathname.includes('/settings')} />
+          {isOwnerOrAdmin && (
+            <SidebarItem icon={<Trash2 size={18} />} label="Thùng rác" to={`${basePath}/trash`} active={location.pathname.includes('/trash')} />
+          )}
           
         </nav>
       </aside>

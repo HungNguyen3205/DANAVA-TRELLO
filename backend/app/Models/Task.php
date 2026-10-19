@@ -9,7 +9,16 @@ class Task extends Model
 {
     use SoftDeletes;
 
+    public const COMPLEXITY_POINTS = [
+        'XS' => 1,
+        'S'  => 2,
+        'M'  => 3,
+        'L'  => 5,
+        'XL' => 8,
+    ];
+
     protected $fillable = [
+        'external_key',
         'parent_task_id',
         'column_id', 
         'sprint_id', 
@@ -17,14 +26,35 @@ class Task extends Model
         'created_by',
         'title', 
         'description', 
+        'notes',
         'priority', 
+        'complexity',
+        'estimated_points',
+        'progress_percent',
         'order', 
         'sort_order',
         'start_date',
         'due_date',
         'completed_at',
-        'completed_by'
+        'completed_by',
+        'archived_at',
+        'archived_by',
+        'quality_rating',
+        'quality_review_note',
+        'quality_reviewed_by',
+        'quality_reviewed_at',
+        'deleted_by',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'archived_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'quality_reviewed_at' => 'datetime',
+            'quality_rating' => 'integer',
+        ];
+    }
 
     public function parent()
     {
@@ -41,8 +71,23 @@ class Task extends Model
     public function assignees()
     {
         return $this->belongsToMany(User::class, 'task_assignees', 'task_id', 'user_id')
-                    ->withPivot('assigned_by')
+                    ->withPivot(['assigned_by', 'contribution_percent'])
                     ->withTimestamps();
+    }
+
+    public function qualityReviewer()
+    {
+        return $this->belongsTo(User::class, 'quality_reviewed_by');
+    }
+
+    public function deletedBy()
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    public function getComplexityPointsAttribute(): int
+    {
+        return self::COMPLEXITY_POINTS[strtoupper($this->complexity ?? 'M')] ?? 3;
     }
 
     public function creator()
@@ -131,15 +176,24 @@ class Task extends Model
         });
     }
 
-    // Scope to filter tasks in workspaces the user is a member of
-    public function scopeInUserWorkspaces($query, $userId)
+    // Scope to filter tasks in boards the user is an owner or member of
+    public function scopeInUserBoards($query, $userId)
     {
         return $query->whereHas('column.board', function ($q) use ($userId) {
-            $q->whereIn('workspace_id', function ($sub) use ($userId) {
-                $sub->select('workspace_id')
-                    ->from('workspace_members')
-                    ->where('user_id', $userId);
+            $q->where(function ($sub) use ($userId) {
+                $sub->where('boards.owner_id', $userId)
+                    ->orWhereIn('boards.id', function ($mQuery) use ($userId) {
+                        $mQuery->select('board_id')
+                               ->from('board_members')
+                               ->where('user_id', $userId);
+                    });
             });
         });
+    }
+
+    // Deprecated scope kept for backwards compatibility
+    public function scopeInUserWorkspaces($query, $userId)
+    {
+        return $this->scopeInUserBoards($query, $userId);
     }
 }

@@ -5,9 +5,37 @@ export interface User {
   name: string;
   email?: string;
   username?: string;
-  initials: string;
+  initials?: string;
   avatar?: string;
+  phone?: string;
+  gender?: string;
+  position?: string;
+  dob?: string;
+  address?: string;
+  join_date?: string;
+  contact_email?: string;
+  system_role?: string;
+  role?: string;
+  account_status?: string;
+  must_change_password?: boolean;
   notification_preferences?: any;
+  department_id?: number | null;
+  department?: Department | null;
+}
+export interface Department {
+  id: number;
+  name: string;
+  code: string;
+  description?: string | null;
+  manager_id?: number | null;
+  manager?: User | null;
+  creator?: User | null;
+  status: 'active' | 'inactive';
+  color?: string | null;
+  employees_count?: number;
+  created_at: string;
+  updated_at?: string;
+  deleted_at?: string | null;
 }
 export interface ChecklistItem {
   id: string;
@@ -24,6 +52,10 @@ export interface Comment {
   author: string;
   body: string;
   createdAt: string;
+  user_id?: string | number;
+  user?: User;
+  content?: string;
+  created_at?: string;
 }
 export interface Activity {
   id: string;
@@ -48,23 +80,30 @@ export interface Attachment {
 export interface Task {
   id: string;
   parentTaskId?: string | null;
+  parent_task_id?: string | number | null;
   columnId: string;
   title: string;
   description: string;
   priority: Priority;
+  complexity?: 'XS' | 'S' | 'M' | 'L' | 'XL';
   labels: Label[];
   assigneeId: string;
-  assignees?: User[];
+  assignees?: (User & { pivot?: { contribution_percent?: number } })[];
   collaborators: string[];
   startDate?: string;
   dueDate: string;
+  due_date?: string | null;
   completedAt?: string | null;
+  completed_at?: string | null;
   sortOrder?: number;
   creator?: User;
   subtasks?: Task[];
+  qualityRating?: number | null;
+  qualityReviewNote?: string | null;
   checklists: Checklist[];
   comments: Comment[];
   attachments: Attachment[];
+  activity_logs?: any[];
   totalSubtasksCount?: number;
   doneSubtasksCount?: number;
   totalChecklistsItems?: number;
@@ -113,7 +152,13 @@ export interface Column {
   id: string;
   title: string;
   color?: string;
+  wip_limit?: number | null;
+  wip_enforcement?: 'warning' | 'strict';
+  wip_count?: number;
   completed?: boolean;
+  archived_at?: string | null;
+  archived_by?: number | string | null;
+  tasks_count?: number;
 }
 export interface Sprint {
   id: string;
@@ -129,6 +174,10 @@ export interface Board {
   name?: string;
   description?: string;
   color?: string;
+  owner_id?: string;
+  owner?: User;
+  my_role?: 'owner' | 'admin' | 'member' | string;
+  is_owner?: boolean;
   workspace?: any;
   columns: Column[];
   tasks: Task[];
@@ -137,3 +186,4 @@ export interface Board {
   sprints?: Sprint[];
   labels?: Label[];
 }
+

@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Board;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 class BoardPolicy
 {
@@ -14,10 +13,7 @@ class BoardPolicy
      */
     public function view(User $user, Board $board): bool
     {
-        return DB::table('board_members')
-            ->where('board_id', $board->id)
-            ->where('user_id', $user->id)
-            ->exists();
+        return $user->isBoardMember($board->id);
     }
 
     /**
@@ -34,11 +30,7 @@ class BoardPolicy
      */
     public function update(User $user, Board $board): bool
     {
-        return DB::table('board_members')
-            ->where('board_id', $board->id)
-            ->where('user_id', $user->id)
-            ->where('role', 'admin')
-            ->exists();
+        return $user->isBoardAdmin($board->id);
     }
 
     /**
@@ -46,14 +38,14 @@ class BoardPolicy
      */
     public function delete(User $user, Board $board): bool
     {
-        return $this->update($user, $board);
+        return $user->isBoardAdmin($board->id);
     }
 
     /**
-     * Manage members on board.
+     * Manage members on board (add, change role, remove).
      */
     public function manageMembers(User $user, Board $board): bool
     {
-        return $this->update($user, $board);
+        return $user->isBoardAdmin($board->id);
     }
 }

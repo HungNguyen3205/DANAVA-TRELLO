@@ -28,6 +28,15 @@ class TaskMemberAssignedNotification extends Notification
 
     public function via(object $notifiable): array
     {
+        if ($notifiable instanceof User) {
+            $prefs = $notifiable->notification_preferences ?? [];
+            if (is_array($prefs) && isset($prefs['assigned']) && $prefs['assigned'] === false) {
+                return [];
+            }
+            if ($notifiable->account_status && $notifiable->account_status !== 'active') {
+                return [];
+            }
+        }
         return ['database'];
     }
 

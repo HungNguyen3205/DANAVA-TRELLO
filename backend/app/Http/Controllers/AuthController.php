@@ -11,49 +11,9 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        // Block public registration if a system admin exists
-        $adminExists = User::where('system_role', 'system_admin')->exists();
-        if ($adminExists) {
-            return response()->json(['message' => 'Việc đăng ký tự do đã bị khóa. Vui lòng liên hệ System Admin.'], 403);
-        }
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
-        ]);
-
-        $baseUsername = explode('@', $request->email)[0];
-        $baseUsername = strtolower(preg_replace('/[^a-z0-9._]/', '', $baseUsername));
-        if (empty($baseUsername)) $baseUsername = 'user' . time();
-        $username = $baseUsername;
-        $count = 1;
-        while (User::where('username', $username)->exists()) {
-            $username = $baseUsername . $count;
-            $count++;
-        }
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'username' => $username,
-            'password' => Hash::make($request->password),
-            'system_role' => 'system_admin', // First user is admin automatically only via this legacy route
-        ]);
-
-        \Illuminate\Support\Facades\DB::table('user_profiles')->insert([
-            'user_id' => $user->id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user
-        ]);
+            'message' => 'Đăng ký tài khoản tự do đã bị vô hiệu hóa. Vui lòng liên hệ Quản trị viên hệ thống (System Admin) để được cấp tài khoản.'
+        ], 403);
     }
 
     public function login(Request $request)
@@ -105,7 +65,7 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json($request->user()->load('department:id,name,code,color'));
     }
 
     public function updateProfile(Request $request)
@@ -115,7 +75,8 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
-            'gender' => 'nullable|string',
+            'gender' => 'nullable|string|max:50',
+            'position' => 'nullable|string|max:100',
             'avatar' => 'nullable|image|max:5120', // 5MB max
             'dob' => 'nullable|date',
             'address' => 'nullable|string|max:500',
@@ -123,9 +84,11 @@ class AuthController extends Controller
             'contact_email' => 'nullable|email|max:255'
         ]);
 
+        // Explicitly update only allowed fields - prevent changing system_role, account_status, created_by
         if ($request->has('name')) $user->name = $request->name;
         if ($request->has('phone')) $user->phone = $request->phone;
         if ($request->has('gender')) $user->gender = $request->gender;
+        if ($request->has('position')) $user->position = $request->position;
         if ($request->has('dob')) $user->dob = $request->dob;
         if ($request->has('address')) $user->address = $request->address;
         if ($request->has('join_date')) $user->join_date = $request->join_date;
@@ -155,7 +118,7 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|string|min:6|confirmed',
+            'new_password' => 'required|string|min:8|confirmed',
         ]);
 
         $user = $request->user();

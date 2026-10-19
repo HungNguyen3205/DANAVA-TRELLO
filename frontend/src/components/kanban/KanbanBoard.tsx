@@ -16,10 +16,12 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import type { Board, Column, Task } from "../../types";
 import { moveColumn, moveTask } from "../../lib/board";
 import { BoardColumn } from "./BoardColumn";
 import { CardContent } from "./TaskCard";
+import { WipConfirmModal } from "./WipConfirmModal";
 export function KanbanBoard({
   board,
   visibleTasks,
@@ -38,6 +40,16 @@ export function KanbanBoard({
   disabled: boolean;
 }) {
   const [active, setActive] = useState<Task | Column | null>(null);
+  const [wipWarningPrompt, setWipWarningPrompt] = useState<{
+    isOpen: boolean;
+    columnTitle: string;
+    wipLimit: number;
+    currentCount: number;
+    actionType: 'move';
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
+
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
@@ -45,6 +57,7 @@ export function KanbanBoard({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
   function finish({ active: dragged, over }: DragEndEvent) {
     setActive(null);
     if (!over || dragged.id === over.id) return;
@@ -66,22 +79,62 @@ export function KanbanBoard({
         over.data.current?.type === "Task"
           ? over.data.current.task.columnId
           : overId;
-      const next = moveTask(
-        board,
-        draggedId,
-        target,
-        over.data.current?.type === "Task" ? overId : undefined,
-      );
-      if (next !== board) {
-        // Calculate previous and next siblings in the new column
-        const newTasksInCol = next.tasks.filter((t) => t.columnId === target);
-        const newIdx = newTasksInCol.findIndex((t) => t.id === draggedId);
-        const prevId = newIdx > 0 ? newTasksInCol[newIdx - 1].id : undefined;
-        const nextId = newIdx < newTasksInCol.length - 1 ? newTasksInCol[newIdx + 1].id : undefined;
-        
-        // Use any to pass extra arguments safely
-        void (onSave as any)(next, `Di chuyển: ${data.task.title}`, { taskId: draggedId, columnId: target, prevId, nextId });
+
+      const sourceColumnId = data.task.columnId;
+      const isChangingColumn = String(sourceColumnId) !== String(target);
+      const isRootTask = !data.task.parentTaskId;
+
+      const executeMove = () => {
+        const next = moveTask(
+          board,
+          draggedId,
+          target,
+          over.data.current?.type === "Task" ? overId : undefined,
+        );
+        if (next !== board) {
+          // Calculate previous and next siblings in the new column
+          const newTasksInCol = next.tasks.filter((t) => t.columnId === target);
+          const newIdx = newTasksInCol.findIndex((t) => t.id === draggedId);
+          const prevId = newIdx > 0 ? newTasksInCol[newIdx - 1].id : undefined;
+          const nextId = newIdx < newTasksInCol.length - 1 ? newTasksInCol[newIdx + 1].id : undefined;
+          
+          // Use any to pass extra arguments safely
+          void (onSave as any)(next, `Di chuyển: ${data.task.title}`, { taskId: draggedId, columnId: target, prevId, nextId });
+        }
+      };
+
+      // WIP Limit check when moving a root task to a different column
+      if (isChangingColumn && isRootTask) {
+        const destCol = board.columns.find((c) => String(c.id) === String(target));
+        if (destCol && destCol.wip_limit && destCol.wip_limit > 0) {
+          const destRootTasksCount = board.tasks.filter((t) => String(t.columnId) === String(target) && !t.parentTaskId).length;
+          if (destRootTasksCount >= destCol.wip_limit) {
+            if (destCol.wip_enforcement === 'strict') {
+              toast.error(`Cột "${destCol.title}" đã đạt giới hạn WIP tối đa (${destCol.wip_limit} công việc). Chế độ Nghiêm ngặt không cho phép chuyển vào.`);
+              return;
+            } else {
+              // Warning mode: prompt confirmation
+              setWipWarningPrompt({
+                isOpen: true,
+                columnTitle: destCol.title,
+                wipLimit: destCol.wip_limit,
+                currentCount: destRootTasksCount,
+                actionType: 'move',
+                onConfirm: () => {
+                  setWipWarningPrompt(null);
+                  executeMove();
+                },
+                onCancel: () => {
+                  setWipWarningPrompt(null);
+                }
+              });
+              return;
+            }
+          }
+        }
       }
+
+      executeMove();
     }
   }
 
@@ -196,6 +249,18 @@ export function KanbanBoard({
             );
           })())}
       </DragOverlay>
+
+      {wipWarningPrompt && (
+        <WipConfirmModal
+          isOpen={wipWarningPrompt.isOpen}
+          columnTitle={wipWarningPrompt.columnTitle}
+          wipLimit={wipWarningPrompt.wipLimit}
+          currentCount={wipWarningPrompt.currentCount}
+          actionType="move"
+          onConfirm={wipWarningPrompt.onConfirm}
+          onCancel={wipWarningPrompt.onCancel}
+        />
+      )}
     </DndContext>
   );
 }

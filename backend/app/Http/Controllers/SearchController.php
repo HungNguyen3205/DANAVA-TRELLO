@@ -39,21 +39,29 @@ class SearchController extends Controller
 
         // Search Boards
         if (in_array($type, ['all', 'boards'])) {
-            $boards = Board::whereHas('workspace.members', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })->where('title', 'LIKE', "%{$q}%")->take(10)->get()->map(function ($board) {
-                $board->workspace_id = $board->workspace->id;
-                return $board;
-            });
+            $boards = Board::where(function ($query) use ($user) {
+                $query->where('owner_id', $user->id)
+                      ->orWhereHas('members', function ($sub) use ($user) {
+                          $sub->where('users.id', $user->id);
+                      });
+            })->where(function ($query) use ($q) {
+                $query->where('name', 'LIKE', "%{$q}%")
+                      ->orWhere('description', 'LIKE', "%{$q}%");
+            })->take(10)->get();
 
             $results['boards'] = $boards;
         }
 
         // Search Tasks
         if (in_array($type, ['all', 'tasks'])) {
-            $tasksQuery = Task::with(['column.board.workspace', 'assignee'])
-                ->whereHas('column.board.workspace.members', function ($query) use ($user) {
-                    $query->where('user_id', $user->id);
+            $tasksQuery = Task::with(['column.board', 'assignee'])
+                ->whereHas('column.board', function ($bQuery) use ($user) {
+                    $bQuery->where(function ($query) use ($user) {
+                        $query->where('boards.owner_id', $user->id)
+                              ->orWhereHas('members', function ($sub) use ($user) {
+                                  $sub->where('users.id', $user->id);
+                              });
+                    });
                 })
                 ->where(function ($query) use ($q) {
                     $query->where('title', 'LIKE', "%{$q}%")
@@ -87,13 +95,13 @@ class SearchController extends Controller
                 return [
                     'id' => $task->id,
                     'title' => $task->title,
-                    'description' => substr(strip_tags($task->description), 0, 100),
+                    'description' => substr(strip_tags($task->description ?? ''), 0, 100),
                     'priority' => $task->priority,
                     'due_date' => $task->due_date,
                     'completed_at' => $task->completed_at,
                     'status' => $task->column ? $task->column->title : null,
                     'workspace' => $workspace ? ['id' => $workspace->id, 'name' => $workspace->name] : null,
-                    'board' => $board ? ['id' => $board->id, 'title' => $board->title] : null,
+                    'board' => $board ? ['id' => $board->id, 'public_id' => $board->public_id, 'name' => $board->name] : null,
                     'assignee' => $task->assignee ? ['id' => $task->assignee->id, 'name' => $task->assignee->name, 'avatar' => $task->assignee->avatar] : null,
                 ];
             });

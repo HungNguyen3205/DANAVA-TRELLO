@@ -14,13 +14,14 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $adminPassword = env('DEFAULT_ADMIN_PASSWORD', 'Danava@Admin2026!');
         $user = User::firstOrCreate(
             ['email' => 'admin@danava.vn'],
             [
                 'name' => 'Admin Danava',
                 'username' => 'admin',
                 'system_role' => 'system_admin',
-                'password' => Hash::make('123456')
+                'password' => Hash::make($adminPassword)
             ]
         );
 

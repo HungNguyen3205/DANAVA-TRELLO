@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Check, Clock, AlertCircle, UserPlus, CheckCircle2, Layout } from 'lucide-react';
+import { 
+  Bell, Check, Clock, AlertCircle, UserPlus, UserMinus, CheckCircle2, Layout,
+  MessageSquare, AtSign, RefreshCw, Calendar, Star, Award, ArrowRightCircle, Building2
+} from 'lucide-react';
 import { getNotifications, markAsRead, markAllAsRead } from '../../lib/api/notifications';
 import type { AppNotification } from '../../lib/api/notifications';
 import { updateTabNotification } from '../../lib/tabNotification';
@@ -17,10 +20,96 @@ export const NotificationBell = () => {
   const fetchNotifications = async () => {
     try {
       const data = await getNotifications(1);
-      setNotifications(data.notifications.data.slice(0, 5)); // Just take top 5 for popup
+      setNotifications(data.notifications.data.slice(0, 8)); // Top 8 notifications for dropdown
       setUnreadCount(data.unread_count);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const getNotificationIconInfo = (type: string) => {
+    switch (type) {
+      case 'board_invited':
+        return {
+          Icon: Layout,
+          iconBg: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+        };
+      case 'assigned':
+        return {
+          Icon: UserPlus,
+          iconBg: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+        };
+      case 'unassigned':
+        return {
+          Icon: UserMinus,
+          iconBg: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+        };
+      case 'due_date_changed':
+        return {
+          Icon: Calendar,
+          iconBg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+        };
+      case 'due_soon':
+      case 'due_today':
+        return {
+          Icon: Clock,
+          iconBg: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+        };
+      case 'overdue':
+        return {
+          Icon: AlertCircle,
+          iconBg: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+        };
+      case 'column_moved':
+        return {
+          Icon: ArrowRightCircle,
+          iconBg: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400'
+        };
+      case 'task_completed':
+        return {
+          Icon: CheckCircle2,
+          iconBg: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+        };
+      case 'task_reopened':
+        return {
+          Icon: RefreshCw,
+          iconBg: 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+        };
+      case 'comment_added':
+        return {
+          Icon: MessageSquare,
+          iconBg: 'bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400'
+        };
+      case 'mention':
+        return {
+          Icon: AtSign,
+          iconBg: 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400'
+        };
+      case 'quality_review':
+        return {
+          Icon: Star,
+          iconBg: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+        };
+      case 'evaluation_published':
+        return {
+          Icon: Award,
+          iconBg: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+        };
+      case 'department_transferred':
+        return {
+          Icon: Building2,
+          iconBg: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+        };
+      case 'department_manager_assigned':
+        return {
+          Icon: Award,
+          iconBg: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+        };
+      default:
+        return {
+          Icon: Bell,
+          iconBg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+        };
     }
   };
 
@@ -134,23 +223,7 @@ export const NotificationBell = () => {
               <div className="divide-y divide-border/50">
                 {notifications.map(n => {
                   const isUnread = !n.read_at;
-                  
-                  let Icon = Bell;
-                  let iconBg = 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-                  
-                  if (n.data.type === 'board_invited') {
-                    Icon = Layout;
-                    iconBg = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
-                  } else if (n.data.type === 'assigned') {
-                    Icon = UserPlus;
-                    iconBg = 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
-                  } else if (n.data.type === 'due_today' || n.data.type === 'approaching_due') {
-                    Icon = Clock;
-                    iconBg = 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400';
-                  } else if (n.data.type === 'overdue') {
-                    Icon = AlertCircle;
-                    iconBg = 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
-                  }
+                  const { Icon, iconBg } = getNotificationIconInfo(n.data.type);
 
                   return (
                     <div 

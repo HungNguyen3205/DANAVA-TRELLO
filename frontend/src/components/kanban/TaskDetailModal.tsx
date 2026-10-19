@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Trash2, Check, AlignLeft, CheckSquare, 
   MessageSquare, UserPlus, Tag, Paperclip, 
-  CalendarDays, CreditCard, Clock, Send, Eye
+  CalendarDays, CreditCard, Clock, Send, Eye, Share2
 } from 'lucide-react';
 import type { Task, Board } from '../../types';
 import api from '../../lib/axios';
@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useBoardStore } from '../../store/boardStore';
 import { toast } from 'sonner';
 import { getAvatarUrl } from '../../lib/avatar';
+import { copyToClipboard } from '../../lib/clipboard';
 import { PrioritySelect } from '../ui/PrioritySelect';
 import { StatusSelect } from '../ui/StatusSelect';
 import { TaskDatesModal } from './TaskDatesModal';
@@ -46,6 +47,21 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const [isDatesVisible, setIsDatesVisible] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
+
+  const canManageBoard = currentUser?.system_role === 'admin' ||
+    (board as any).role === 'admin' ||
+    (board as any).role === 'owner' ||
+    (board.owner_id && currentUser?.id && String(board.owner_id) === String(currentUser.id));
+
+  const handleSaveQualityReview = async (rating: number, note: string) => {
+    try {
+      await api.post(`/tasks/${task.id}/review`, { rating, summary: note });
+      update({ qualityRating: rating, qualityReviewNote: note });
+      toast.success('Đã lưu đánh giá chất lượng');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi khi lưu đánh giá');
+    }
+  };
 
   const newCommentRef = useRef<HTMLTextAreaElement | null>(null);
   const editCommentRef = useRef<HTMLTextAreaElement | null>(null);
@@ -93,6 +109,9 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
         subtasks: t.subtasks || [],
         assignees: t.assignees || [],
         assigneeId: t.assignee_id ? String(t.assignee_id) : (t.assignees?.[0]?.id ? String(t.assignees[0].id) : ''),
+        complexity: t.complexity || 'M',
+        qualityRating: t.quality_rating,
+        qualityReviewNote: t.quality_review_note,
         checklists: (t.checklists || []).map((cl: any) => ({
           id: String(cl.id),
           title: cl.title,
@@ -140,6 +159,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
         description: payload.description,
         column_id: payload.columnId,
         priority: payload.priority,
+        complexity: payload.complexity || 'M',
         assignee_id: selectedUserIds[0] || null,
         assignee_ids: selectedUserIds,
         start_date: payload.startDate || null,
@@ -221,6 +241,17 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const currentColumn = board.columns.find(c => c.id === draft.columnId);
   const assignedUser = board.users?.find(u => u.id === draft.assigneeId);
 
+  const handleShareTask = async () => {
+    const publicCode = board.publicId || board.id;
+    const taskUrl = `${window.location.origin}/${publicCode}/kanban?task=${task.id}`;
+    const success = await copyToClipboard(taskUrl);
+    if (success) {
+      toast.success('Đã sao chép liên kết');
+    } else {
+      toast.error('Không thể sao chép liên kết. Vui lòng sao chép thủ công.');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 backdrop-blur-[2px] animate-in fade-in duration-200 overflow-y-auto py-6 px-3 md:py-10 md:px-4" onClick={onClose}>
       <div 
@@ -229,12 +260,10 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
       >
         {/* Header Section */}
         <header className="px-6 lg:px-8 pt-8 pb-5 flex items-start justify-between bg-card shrink-0 border-b border-border/50">
-          <div className="flex gap-4 items-start w-full pr-14">
+          <div className="flex gap-4 items-start w-full pr-28">
             <CreditCard className="text-muted-foreground mt-1.5 shrink-0" size={24} />
             <div className="w-full">
               <div className="flex items-center text-[13px] text-muted-foreground font-medium mb-1.5 gap-2">
-                <span>Workspace</span>
-                <span className="text-border text-xs">/</span>
                 <span>{board.title}</span>
                 <span className="text-border text-xs">/</span>
                 <span className="text-foreground underline decoration-muted-foreground/30 underline-offset-4">{currentColumn?.title}</span>
@@ -247,13 +276,25 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               />
             </div>
           </div>
-          <button 
-            onClick={onClose} 
-            title="Đóng"
-            className="absolute right-5 top-5 flex items-center justify-center w-10 h-10 text-muted-foreground hover:bg-accent hover:text-foreground rounded-full transition-colors z-10"
-          >
-            <X size={20} />
-          </button>
+          
+          <div className="absolute right-5 top-5 flex items-center gap-1.5 z-10">
+            <button
+              type="button"
+              onClick={handleShareTask}
+              title="Chia sẻ liên kết công việc"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors border border-border/60 shadow-2xs"
+            >
+              <Share2 size={13} className="text-primary" />
+              <span>Chia sẻ</span>
+            </button>
+            <button 
+              onClick={onClose} 
+              title="Đóng"
+              className="flex items-center justify-center w-8 h-8 text-muted-foreground hover:bg-accent hover:text-foreground rounded-full transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </header>
 
         <div className="flex flex-col md:flex-row bg-card">
@@ -775,6 +816,62 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               />
             </div>
 
+            {/* Complexity (Độ phức tạp) */}
+            <div>
+              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Độ phức tạp (Điểm)</h4>
+              <select
+                value={draft.complexity || 'M'}
+                onChange={(e) => {
+                  const val = e.target.value as any;
+                  update({ complexity: val });
+                  save({ complexity: val });
+                }}
+                className="w-full bg-card border border-border/80 rounded-xl px-3 py-2 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/40 shadow-xs cursor-pointer"
+              >
+                <option value="XS">XS (1 điểm - Rất nhỏ)</option>
+                <option value="S">S (2 điểm - Nhỏ)</option>
+                <option value="M">M (3 điểm - Tiêu chuẩn)</option>
+                <option value="L">L (5 điểm - Lớn)</option>
+                <option value="XL">XL (8 điểm - Rất lớn)</option>
+              </select>
+            </div>
+
+            {/* Quality Review (Owner/Admin only) */}
+            {canManageBoard && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                    Đánh giá chất lượng
+                  </h4>
+                  {draft.qualityRating && (
+                    <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
+                      {draft.qualityRating}/5 ★
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => handleSaveQualityReview(star, draft.qualityReviewNote || '')}
+                      className={`text-lg transition-transform hover:scale-125 cursor-pointer ${
+                        (draft.qualityRating || 0) >= star ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'
+                      }`}
+                      title={`Đánh giá ${star} sao`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+                {draft.qualityReviewNote && (
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 italic">
+                    "{draft.qualityReviewNote}"
+                  </p>
+                )}
+              </div>
+            )}
+
             <div>
               <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Thêm vào thẻ</h4>
               <div className="space-y-2">
@@ -1088,12 +1185,20 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
             <div>
               <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 mt-4">Hành động</h4>
               <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleShareTask}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 bg-card hover:bg-accent text-foreground/90 rounded-xl font-semibold text-[13px] transition-all text-left border border-border/80 shadow-xs hover:shadow hover:-translate-y-px"
+                >
+                  <Share2 size={15} className="text-primary" />
+                  <span>Chia sẻ công việc</span>
+                </button>
                 <button 
                   onClick={() => setConfirmDelete(true)} 
                   disabled={busy} 
-                  className="w-full flex items-center gap-2 px-3 py-2.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg font-medium text-[13px] transition-all text-left border border-red-500/20 group"
+                  className="w-full flex items-center gap-2 px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl font-semibold text-[13px] transition-all text-left border border-red-500/20 group"
                 >
-                  <Trash2 size={16} className="text-red-400 group-hover:text-white transition-colors" /> Xóa công việc
+                  <Trash2 size={15} className="text-red-400 group-hover:text-white transition-colors" /> Xóa công việc
                 </button>
               </div>
             </div>
