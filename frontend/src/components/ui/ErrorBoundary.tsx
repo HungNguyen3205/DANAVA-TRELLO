@@ -27,24 +27,63 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const isChunkLoadError =
+        this.state.error?.message?.includes('dynamically imported module') ||
+        this.state.error?.message?.includes('Importing a module script failed') ||
+        this.state.error?.name === 'ChunkLoadError';
+
+      if (isChunkLoadError) {
+        return (
+          <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-background text-foreground">
+            <div className="max-w-md w-full bg-card p-8 rounded-2xl border border-border shadow-xl text-center space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold">
+                ↺
+              </div>
+              <h2 className="text-xl font-bold">Hệ thống vừa cập nhật phiên bản mới</h2>
+              <p className="text-sm text-muted-foreground">
+                Vui lòng tải lại trang để nạp mã nguồn và dữ liệu mới nhất.
+              </p>
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="w-full py-2.5 px-4 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-all shadow-md"
+              >
+                Tải lại trang ngay
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-background text-foreground">
           <div className="max-w-md w-full bg-card p-8 rounded-2xl border border-border shadow-xl text-center space-y-4">
             <div className="w-14 h-14 mx-auto rounded-full bg-destructive/10 text-destructive flex items-center justify-center text-2xl font-bold">
               !
             </div>
-            <h2 className="text-xl font-bold">Hệ thống vừa cập nhật phiên bản mới</h2>
+            <h2 className="text-xl font-bold">Đã xảy ra sự cố giao diện</h2>
             <p className="text-sm text-muted-foreground">
-              Vui lòng tải lại trang để nạp mã nguồn và dữ liệu mới nhất.
+              {this.state.error?.message || 'Giao diện gặp lỗi không mong muốn khi xử lý thao tác.'}
             </p>
-            <button
-              onClick={() => {
-                window.location.reload();
-              }}
-              className="w-full py-2.5 px-4 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-all shadow-md"
-            >
-              Tải lại trang ngay
-            </button>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: undefined });
+                }}
+                className="flex-1 py-2.5 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground font-medium rounded-xl transition-all shadow-sm"
+              >
+                Thử lại
+              </button>
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="flex-1 py-2.5 px-4 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 transition-all shadow-md"
+              >
+                Tải lại trang
+              </button>
+            </div>
           </div>
         </div>
       );

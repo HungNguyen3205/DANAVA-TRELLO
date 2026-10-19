@@ -1,0 +1,1 @@
+import{u as e}from"./index-BSoBmd-V.js";function t(t){return+e(t)<Date.now()}export{t};

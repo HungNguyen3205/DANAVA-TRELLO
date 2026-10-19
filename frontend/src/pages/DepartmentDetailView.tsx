@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Building2, ArrowLeft, Users, UserCheck, CheckCircle2, Clock,
   AlertTriangle, Award, Edit2, ArrowRightLeft, UserMinus, Plus,
-  Calendar, Shield, ShieldAlert, Activity, RefreshCw, AlertCircle, ExternalLink
+  Calendar, Shield, ShieldAlert, Activity, RefreshCw, AlertCircle, ExternalLink, X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { getDepartmentDetails, removeDepartmentEmployee, assignDepartmentEmployees } from '../lib/api/departments';
@@ -576,16 +576,20 @@ function AddEmployeesToDepartmentModal({
     async function loadUsers() {
       setLoading(true);
       try {
-        const res = await api.get('/users/search?q=');
+        const adminRes = await api.get('/admin/employees', {
+          params: { per_page: 100, status: 'active' }
+        });
+        const rawUsers: User[] = adminRes.data?.data || (Array.isArray(adminRes.data) ? adminRes.data : []);
+
         if (isMounted) {
-          const available = (res.data || []).filter(
+          const available = rawUsers.filter(
             (u: User) => !existingEmployeeIds.includes(Number(u.id)) && u.account_status !== 'locked'
           );
           setUsers(available);
           setSelectedIds([]);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Failed to load employees for department assignment', err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -596,11 +600,14 @@ function AddEmployeesToDepartmentModal({
 
   if (!isOpen) return null;
 
-  const filtered = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      (u.username && u.username.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = users.filter((u) => {
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
+    const name = (u.name || '').toLowerCase();
+    const username = (u.username || '').toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    return name.includes(s) || username.includes(s) || email.includes(s);
+  });
 
   const handleAssign = async () => {
     if (selectedIds.length === 0) return;

@@ -37,7 +37,8 @@ class EmployeeController extends Controller
             }
         }
 
-        return response()->json($query->orderBy('id', 'desc')->paginate(15));
+        $perPage = min(max((int)$request->input('per_page', 15), 1), 200);
+        return response()->json($query->orderBy('id', 'desc')->paginate($perPage));
     }
 
     public function store(Request $request)
