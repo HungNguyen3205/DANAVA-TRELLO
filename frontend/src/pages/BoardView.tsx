@@ -26,6 +26,7 @@ export function BoardView() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isStarred, setIsStarred] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const openedTaskIdRef = useRef<string | null>(null);
@@ -35,6 +36,25 @@ export function BoardView() {
       fetchBoard(boardId).catch(e => toast.error('Không thể tải dữ liệu bảng'));
     }
   }, [boardId, fetchBoard]);
+
+  useEffect(() => {
+    if (board && typeof (board as any).is_starred !== 'undefined') {
+      setIsStarred(!!(board as any).is_starred);
+    }
+  }, [(board as any)?.is_starred]);
+
+  const handleToggleStar = async () => {
+    if (!board) return;
+    const nextStatus = !isStarred;
+    setIsStarred(nextStatus);
+    try {
+      await api.post(`/boards/${board.id}/toggle-star`);
+      toast.success(nextStatus ? 'Đã thêm vào danh sách yêu thích' : 'Đã bỏ khỏi danh sách yêu thích');
+    } catch {
+      setIsStarred(!nextStatus);
+      toast.error('Không thể cập nhật trạng thái yêu thích');
+    }
+  };
 
   useEffect(() => {
     const taskId = searchParams.get('task');
@@ -280,66 +300,71 @@ export function BoardView() {
         <div className="bg-card border border-border shadow-sm rounded-[20px] p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
           
           {/* Board Internal Header */}
-          <div className="flex items-center justify-between mb-6 shrink-0">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F0EDFF] to-[#E8E1FF] flex items-center justify-center text-primary shadow-sm border border-primary/10">
-                <LayoutDashboard size={22} className="text-primary" />
+          <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mb-6 shrink-0">
+            <div className="flex items-center gap-3.5 min-w-0 flex-1 max-w-full sm:max-w-xl">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F0EDFF] to-[#E8E1FF] dark:from-purple-950/40 dark:to-indigo-900/30 flex items-center justify-center text-primary shadow-xs border border-primary/15 shrink-0">
+                <LayoutDashboard size={20} className="text-primary" />
               </div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <h2 className="text-lg lg:text-xl font-bold tracking-tight text-foreground truncate" title={board.title}>
                   {board.title}
-                  <button className="text-[10px] font-semibold px-2 py-0.5 bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 rounded hover:bg-yellow-500/20 transition-colors flex items-center gap-1 ml-2">
-                    <Star size={10} className="fill-yellow-500" />
-                    Yêu thích
-                  </button>
                 </h2>
-                {/* <div className="text-[13px] text-muted-foreground mt-0.5 flex items-center gap-2">
-                  <Play size={12} className="text-primary" />
-                  <span className="font-medium text-primary/80">
-                    {board.sprints && board.sprints.length > 0 
-                      ? board.sprints.find((s: any) => s.status === 'active')?.name || board.sprints[0].name 
-                      : "Chưa có Sprint"}
-                  </span>
-                </div> */}
+                <button
+                  type="button"
+                  onClick={handleToggleStar}
+                  title={isStarred ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap shrink-0 shadow-2xs select-none active:scale-95 ${
+                    isStarred
+                      ? "bg-amber-500/15 border-amber-500/35 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
+                      : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
+                  }`}
+                >
+                  <Star size={12} className="fill-amber-500 text-amber-500 shrink-0" />
+                  <span className="whitespace-nowrap font-medium">Yêu thích</span>
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
               <button
+                type="button"
                 onClick={() => setShowExcelImportModal(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-xl transition-all border border-border/80 shadow-2xs"
+                className="h-9 px-3.5 inline-flex items-center gap-2 text-xs lg:text-[13px] font-medium text-slate-700 dark:text-slate-200 bg-background hover:bg-muted/80 active:bg-muted rounded-xl border border-border/80 shadow-2xs hover:shadow-xs transition-all whitespace-nowrap shrink-0"
                 title="Nhập công việc từ Excel"
               >
-                <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400" />
-                <span className="hidden sm:inline">Nhập từ Excel</span>
+                <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="whitespace-nowrap">Nhập từ Excel</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setShowArchivedModal(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-xl transition-all border border-border/80 shadow-2xs"
+                className="h-9 px-3.5 inline-flex items-center gap-2 text-xs lg:text-[13px] font-medium text-slate-700 dark:text-slate-200 bg-background hover:bg-muted/80 active:bg-muted rounded-xl border border-border/80 shadow-2xs hover:shadow-xs transition-all whitespace-nowrap shrink-0"
                 title="Xem các cột đã lưu trữ"
               >
-                <Archive size={15} className="text-amber-600 dark:text-amber-400" />
-                <span className="hidden sm:inline">Cột lưu trữ</span>
+                <Archive size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="whitespace-nowrap">Cột lưu trữ</span>
               </button>
 
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <div className="relative w-40 sm:w-48 lg:w-56 shrink min-w-[140px]">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground shrink-0 pointer-events-none" />
                 <input 
                   type="text" 
                   placeholder="Tìm kiếm công việc..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-52 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                  className="w-full h-9 pl-9 pr-3 text-xs lg:text-[13px] bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-2xs placeholder:text-muted-foreground/70"
                 />
               </div>
+
               {board.columns && board.columns.length > 0 && (
                 <button 
+                  type="button"
                   onClick={() => handleAdd(board.columns[0]?.id)}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm hover:-translate-y-[1px]"
+                  className="h-9 px-4 inline-flex items-center gap-1.5 text-xs lg:text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] active:scale-[0.98] rounded-xl transition-all shadow-xs hover:shadow-sm hover:-translate-y-[0.5px] whitespace-nowrap shrink-0"
                 >
-                  <Plus size={16} />
-                  Thêm công việc
+                  <Plus size={16} className="shrink-0 stroke-[2.5]" />
+                  <span className="whitespace-nowrap">Thêm công việc</span>
                 </button>
               )}
             </div>

@@ -209,33 +209,34 @@ export function ListView() {
       <div className="flex-1 overflow-hidden relative z-0 flex flex-col bg-card">
         
         {/* Toolbar */}
-        <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border bg-card sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+        <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border bg-card sticky top-0 z-10">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
             <button 
+              type="button"
               onClick={() => setPromptData({
                 isOpen: true,
                 title: 'Thêm công việc',
                 onConfirm: () => { setPromptData(null); handleAdd(board.columns[0]?.id); }
               })}
-              className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-lg transition-all shadow-sm"
+              className="h-9 px-4 inline-flex items-center gap-1.5 text-xs lg:text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] active:scale-[0.98] rounded-xl transition-all shadow-xs hover:shadow-sm whitespace-nowrap shrink-0"
             >
-              <Plus size={16} />
-              Thêm công việc
+              <Plus size={16} className="shrink-0 stroke-[2.5]" />
+              <span className="whitespace-nowrap">Thêm công việc</span>
             </button>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-48 sm:w-60 shrink min-w-[140px]">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground shrink-0 pointer-events-none" />
               <input 
                 type="text" 
                 placeholder="Tìm kiếm công việc..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                className="w-full h-9 pl-9 pr-3 text-xs lg:text-[13px] bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-2xs placeholder:text-muted-foreground/70"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Nhóm theo:</span>
               <CustomSelect
                 value={groupBy}
@@ -245,21 +246,25 @@ export function ListView() {
                   { value: 'assignee', label: 'Người phụ trách' },
                   { value: 'none', label: 'Không nhóm' },
                 ]}
-                className="w-36"
-                triggerClassName="py-1.5 px-3 text-[13px] rounded-lg"
+                className="w-36 shrink-0"
+                triggerClassName="h-9 py-1 px-3 text-xs lg:text-[13px] rounded-xl"
               />
             </div>
             <button
+              type="button"
               onClick={() => setShowExcelImportModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-card hover:bg-muted rounded-lg transition-colors border border-border shadow-sm"
+              className="h-9 px-3.5 inline-flex items-center gap-2 text-xs lg:text-[13px] font-medium text-slate-700 dark:text-slate-200 bg-background hover:bg-muted/80 active:bg-muted rounded-xl border border-border/80 shadow-2xs hover:shadow-xs transition-all whitespace-nowrap shrink-0"
               title="Nhập công việc từ Excel"
             >
-              <FileSpreadsheet size={14} className="text-emerald-600 dark:text-emerald-400" />
-              <span>Nhập từ Excel</span>
+              <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="whitespace-nowrap">Nhập từ Excel</span>
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-foreground bg-card hover:bg-muted rounded-lg transition-colors border border-border shadow-sm">
-              <Filter size={14} className="text-muted-foreground" />
-              Bộ lọc
+            <button 
+              type="button"
+              className="h-9 px-3.5 inline-flex items-center gap-2 text-xs lg:text-[13px] font-medium text-slate-700 dark:text-slate-200 bg-background hover:bg-muted/80 active:bg-muted rounded-xl border border-border/80 shadow-2xs hover:shadow-xs transition-all whitespace-nowrap shrink-0"
+            >
+              <Filter size={15} className="text-muted-foreground shrink-0" />
+              <span className="whitespace-nowrap">Bộ lọc</span>
             </button>
           </div>
         </div>
