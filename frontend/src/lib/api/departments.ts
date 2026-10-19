@@ -33,6 +33,7 @@ export interface DepartmentStatistics {
 export interface DepartmentDetailResponse {
   department: Department;
   employees: (User & { boards_count?: number; tasks_count?: number })[];
+  stats?: DepartmentStatistics;
   statistics: DepartmentStatistics;
   recent_activities: any[];
 }

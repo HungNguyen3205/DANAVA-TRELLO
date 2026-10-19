@@ -312,4 +312,118 @@ class DepartmentManagementTest extends TestCase
         $this->assertCount(1, $data);
         $this->assertEquals('ACT1', $data[0]['code']);
     }
+
+    /**
+     * Test admin can view department details with full stats and relations.
+     */
+    public function test_admin_can_view_department_details_successfully()
+    {
+        $dept = Department::create([
+            'name' => 'Phòng Kỹ thuật Phần mềm',
+            'code' => 'DEV',
+            'description' => 'Mô tả phòng kỹ thuật',
+            'manager_id' => $this->activeEmployee->id,
+            'status' => 'active',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $this->activeEmployee->department_id = $dept->id;
+        $this->activeEmployee->save();
+
+        $response = $this->actingAs($this->admin, 'sanctum')->getJson("/api/admin/departments/{$dept->id}");
+
+        $response->assertStatus(200);
+        $data = $response->json();
+
+        // Validate top-level response structure
+        $this->assertArrayHasKey('department', $data);
+        $this->assertArrayHasKey('employees', $data);
+        $this->assertArrayHasKey('stats', $data);
+        $this->assertArrayHasKey('statistics', $data);
+
+        // Validate department attributes
+        $this->assertEquals($dept->id, $data['department']['id']);
+        $this->assertEquals('Phòng Kỹ thuật Phần mềm', $data['department']['name']);
+        $this->assertEquals('DEV', $data['department']['code']);
+        $this->assertEquals('active', $data['department']['status']);
+        $this->assertEquals(1, $data['department']['employee_count']);
+        $this->assertNotNull($data['department']['manager']);
+        $this->assertEquals($this->activeEmployee->id, $data['department']['manager']['id']);
+
+        // Validate stats
+        $this->assertArrayHasKey('total_tasks', $data['stats']);
+        $this->assertArrayHasKey('completed_tasks', $data['stats']);
+        $this->assertArrayHasKey('incomplete_tasks', $data['stats']);
+        $this->assertArrayHasKey('overdue_tasks', $data['stats']);
+    }
+
+    /**
+     * Test department without manager can be viewed successfully (manager is null).
+     */
+    public function test_department_without_manager_can_be_viewed_successfully()
+    {
+        $dept = Department::create([
+            'name' => 'Phòng Chưa Có Trưởng',
+            'code' => 'NO_MGR',
+            'manager_id' => null,
+            'status' => 'active',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin, 'sanctum')->getJson("/api/admin/departments/{$dept->id}");
+
+        $response->assertStatus(200);
+        $data = $response->json();
+        $this->assertNull($data['department']['manager']);
+    }
+
+    /**
+     * Test department without employees can be viewed successfully without errors.
+     */
+    public function test_department_without_employees_can_be_viewed_successfully()
+    {
+        $dept = Department::create([
+            'name' => 'Phòng Mới Tinh',
+            'code' => 'EMPTY_DEPT',
+            'status' => 'active',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin, 'sanctum')->getJson("/api/admin/departments/{$dept->id}");
+
+        $response->assertStatus(200);
+        $data = $response->json();
+        $this->assertEmpty($data['employees']);
+        $this->assertEquals(0, $data['department']['employee_count']);
+        $this->assertEquals(0, $data['stats']['total_tasks']);
+        $this->assertEquals(0, $data['stats']['completed_tasks']);
+        $this->assertEquals(0, $data['stats']['incomplete_tasks']);
+        $this->assertEquals(0, $data['stats']['overdue_tasks']);
+    }
+
+    /**
+     * Test regular user cannot view department details (403 forbidden).
+     */
+    public function test_regular_user_cannot_view_department_details()
+    {
+        $dept = Department::create([
+            'name' => 'Phòng Bí mật',
+            'code' => 'SECRET',
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($this->regularUser, 'sanctum')->getJson("/api/admin/departments/{$dept->id}");
+
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test non-existent department returns 404.
+     */
+    public function test_non_existent_department_returns_404()
+    {
+        $response = $this->actingAs($this->admin, 'sanctum')->getJson('/api/admin/departments/999999');
+
+        $response->assertStatus(404);
+    }
 }

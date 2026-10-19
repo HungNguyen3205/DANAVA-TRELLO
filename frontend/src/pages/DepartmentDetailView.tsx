@@ -42,8 +42,15 @@ export const DepartmentDetailView: React.FC = () => {
     } catch (err: any) {
       if (err.response?.status === 403) {
         setError('Bạn không có quyền truy cập thông tin phòng ban này.');
+      } else if (err.response?.status === 404) {
+        setError('Phòng ban không tồn tại hoặc đã bị xóa.');
       } else {
-        setError(err.response?.data?.message || 'Không thể tải thông tin phòng ban.');
+        // Never leak raw exception to production users
+        const isDev = import.meta.env.DEV;
+        const msg = isDev
+          ? err.response?.data?.message || 'Không thể tải thông tin phòng ban. Vui lòng thử lại.'
+          : 'Không thể tải thông tin phòng ban. Vui lòng thử lại.';
+        setError(msg);
       }
     } finally {
       setLoading(false);
@@ -77,7 +84,7 @@ export const DepartmentDetailView: React.FC = () => {
         <p className="text-xs text-slate-500 mb-4">Chỉ Quản trị viên hệ thống mới có quyền xem trang này.</p>
         <button
           onClick={() => navigate('/home')}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700"
+          className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
         >
           Quay lại Trang chủ
         </button>
@@ -85,31 +92,107 @@ export const DepartmentDetailView: React.FC = () => {
     );
   }
 
+  // Loading Skeleton
   if (loading && !data) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12">
-        <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin mb-3" />
-        <p className="text-xs font-semibold text-slate-500">Đang tải chi tiết phòng ban...</p>
+      <div className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-950 p-6 lg:p-8 animate-pulse space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Breadcrumb Skeleton */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800" />
+            <div className="w-32 h-4 rounded bg-slate-200 dark:bg-slate-800" />
+          </div>
+
+          {/* Banner Skeleton */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200/80 dark:border-slate-800 space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-slate-200 dark:bg-slate-800 shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="w-48 h-7 rounded-lg bg-slate-200 dark:bg-slate-800" />
+                <div className="w-full max-w-md h-4 rounded bg-slate-200 dark:bg-slate-800" />
+                <div className="w-64 h-3 rounded bg-slate-200 dark:bg-slate-800" />
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid Skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                <div className="w-12 h-6 rounded bg-slate-200 dark:bg-slate-800" />
+                <div className="w-20 h-3 rounded bg-slate-200 dark:bg-slate-800" />
+              </div>
+            ))}
+          </div>
+
+          {/* Two-column layout Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
+              <div className="w-36 h-5 rounded bg-slate-200 dark:bg-slate-800" />
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((j) => (
+                  <div key={j} className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60" />
+                ))}
+              </div>
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
+              <div className="w-32 h-5 rounded bg-slate-200 dark:bg-slate-800" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((k) => (
+                  <div key={k} className="h-14 rounded-xl bg-slate-100 dark:bg-slate-800/60" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // Error State with Retry and Back buttons
   if (error || !data) {
     return (
-      <div className="flex-1 p-8 text-center">
-        <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
-        <p className="text-sm font-semibold text-rose-600 mb-4">{error || 'Không tìm thấy phòng ban.'}</p>
-        <button
-          onClick={() => navigate('/admin/departments')}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
-        >
-          Quay lại danh sách phòng ban
-        </button>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center mx-auto text-rose-500">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Không thể tải phòng ban</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              {error || 'Phòng ban không tồn tại hoặc đã bị xóa.'}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => fetchDetails()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Thử tải lại
+            </button>
+            <button
+              onClick={() => navigate('/admin/departments')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Danh sách phòng ban
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const { department, employees, statistics, recent_activities } = data;
+  const { department, employees, recent_activities = [] } = data;
+  const statistics = data.statistics || (data as any).stats || {
+    total_tasks: 0,
+    completed_tasks: 0,
+    incomplete_tasks: 0,
+    overdue_tasks: 0,
+    avg_performance_score: null,
+  };
   const deptColor = department.color || '#6366f1';
 
   return (

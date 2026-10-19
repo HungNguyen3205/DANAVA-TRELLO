@@ -11,6 +11,8 @@ use App\Notifications\DepartmentManagerAssignedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class DepartmentController extends Controller
@@ -163,112 +165,151 @@ class DepartmentController extends Controller
      */
     public function show(Request $request, Department $department): JsonResponse
     {
-        $department->load([
-            'manager:id,name,username,email,avatar,position,account_status',
-            'creator:id,name,username',
-        ]);
+        try {
+            $department->load([
+                'manager:id,name,username,email,avatar,position,account_status',
+                'creator:id,name,username',
+            ]);
 
-        // Employees list in this department
-        $employees = User::where('department_id', $department->id)
-            ->withCount('boards')
-            ->select('id', 'name', 'username', 'email', 'avatar', 'position', 'account_status', 'phone', 'join_date')
-            ->get();
+            // Employees list in this department
+            $employees = User::where('department_id', $department->id)
+                ->withCount('boards')
+                ->select('id', 'name', 'username', 'email', 'avatar', 'position', 'account_status', 'phone', 'join_date')
+                ->get();
 
-        $employeeIds = $employees->pluck('id')->toArray();
+            $employeeIds = $employees->pluck('id')->toArray();
 
-        // Calculate accurate task statistics without double counting
-        $distinctTaskIds = [];
-        if (!empty($employeeIds)) {
-            $assignedFromPivot = DB::table('task_assignees')
-                ->whereIn('user_id', $employeeIds)
-                ->pluck('task_id')
-                ->toArray();
+            // Calculate accurate task statistics without double counting
+            $distinctTaskIds = [];
+            if (!empty($employeeIds)) {
+                $assignedFromPivot = DB::table('task_assignees')
+                    ->whereIn('user_id', $employeeIds)
+                    ->pluck('task_id')
+                    ->toArray();
 
-            $assignedFromDirect = DB::table('tasks')
-                ->whereIn('assignee_id', $employeeIds)
-                ->whereNull('deleted_at')
-                ->pluck('id')
-                ->toArray();
+                $assignedFromDirect = DB::table('tasks')
+                    ->whereIn('assignee_id', $employeeIds)
+                    ->whereNull('deleted_at')
+                    ->pluck('id')
+                    ->toArray();
 
-            $distinctTaskIds = array_values(array_unique(array_merge($assignedFromPivot, $assignedFromDirect)));
-        }
-
-        $tasks = empty($distinctTaskIds)
-            ? collect()
-            : DB::table('tasks')
-                ->whereIn('id', $distinctTaskIds)
-                ->whereNull('deleted_at')
-                ->get(['id', 'completed_at', 'due_date']);
-
-        $totalTasks = $tasks->count();
-        $completedTasks = $tasks->whereNotNull('completed_at')->count();
-        $incompleteTasks = $totalTasks - $completedTasks;
-
-        $now = now();
-        $overdueTasks = $tasks->filter(function ($t) use ($now) {
-            if (!$t->due_date) return false;
-            $dueDate = \Carbon\Carbon::parse($t->due_date)->endOfDay();
-            if ($t->completed_at) {
-                return \Carbon\Carbon::parse($t->completed_at)->gt($dueDate);
+                $distinctTaskIds = array_values(array_unique(array_merge($assignedFromPivot, $assignedFromDirect)));
             }
-            return $now->gt($dueDate);
-        })->count();
 
-        $completedOnTimeTasks = $tasks->filter(function ($t) {
-            if (!$t->completed_at || !$t->due_date) return false;
-            $dueDate = \Carbon\Carbon::parse($t->due_date)->endOfDay();
-            return \Carbon\Carbon::parse($t->completed_at)->lte($dueDate);
-        })->count();
+            $tasks = empty($distinctTaskIds)
+                ? collect()
+                : DB::table('tasks')
+                    ->whereIn('id', $distinctTaskIds)
+                    ->whereNull('deleted_at')
+                    ->get(['id', 'completed_at', 'due_date']);
 
-        // Calculate average performance score if available
-        $avgPerformanceScore = null;
-        if (!empty($employeeIds) && Schema::hasTable('performance_scores')) {
-            $avgPerformanceScore = DB::table('performance_scores')
-                ->whereIn('user_id', $employeeIds)
-                ->where('is_provisional', false)
-                ->avg('final_score');
-            if ($avgPerformanceScore !== null) {
-                $avgPerformanceScore = round($avgPerformanceScore, 2);
+            $totalTasks = $tasks->count();
+            $completedTasks = $tasks->whereNotNull('completed_at')->count();
+            $incompleteTasks = max(0, $totalTasks - $completedTasks);
+
+            $now = now();
+            $overdueTasks = $tasks->filter(function ($t) use ($now) {
+                if (!$t->due_date) return false;
+                try {
+                    $dueDate = \Carbon\Carbon::parse($t->due_date)->endOfDay();
+                    if ($t->completed_at) {
+                        return \Carbon\Carbon::parse($t->completed_at)->gt($dueDate);
+                    }
+                    return $now->gt($dueDate);
+                } catch (\Throwable) {
+                    return false;
+                }
+            })->count();
+
+            $completedOnTimeTasks = $tasks->filter(function ($t) {
+                if (!$t->completed_at || !$t->due_date) return false;
+                try {
+                    $dueDate = \Carbon\Carbon::parse($t->due_date)->endOfDay();
+                    return \Carbon\Carbon::parse($t->completed_at)->lte($dueDate);
+                } catch (\Throwable) {
+                    return false;
+                }
+            })->count();
+
+            // Calculate average performance score if available
+            $avgPerformanceScore = null;
+            if (!empty($employeeIds)) {
+                try {
+                    if (Schema::hasTable('performance_scores')) {
+                        $avg = DB::table('performance_scores')
+                            ->whereIn('user_id', $employeeIds)
+                            ->where('is_provisional', false)
+                            ->avg('final_score');
+                        if ($avg !== null) {
+                            $avgPerformanceScore = round((float) $avg, 2);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Could not calculate avg performance score for department: ' . $e->getMessage());
+                    $avgPerformanceScore = null;
+                }
             }
-        }
 
-        // Attach individual task counts to employees
-        if (!empty($employeeIds)) {
-            $employeeTaskCounts = DB::table('task_assignees')
-                ->join('tasks', 'task_assignees.task_id', '=', 'tasks.id')
-                ->whereNull('tasks.deleted_at')
-                ->whereIn('task_assignees.user_id', $employeeIds)
-                ->groupBy('task_assignees.user_id')
-                ->select('task_assignees.user_id', DB::raw('count(distinct tasks.id) as tasks_count'))
-                ->pluck('tasks_count', 'user_id');
+            // Attach individual task counts to employees
+            if (!empty($employeeIds)) {
+                $pivotCounts = DB::table('task_assignees')
+                    ->join('tasks', 'task_assignees.task_id', '=', 'tasks.id')
+                    ->whereNull('tasks.deleted_at')
+                    ->whereIn('task_assignees.user_id', $employeeIds)
+                    ->select('task_assignees.user_id', 'tasks.id as task_id');
 
-            foreach ($employees as $emp) {
-                $emp->tasks_count = $employeeTaskCounts[$emp->id] ?? 0;
+                $directCounts = DB::table('tasks')
+                    ->whereNull('deleted_at')
+                    ->whereIn('assignee_id', $employeeIds)
+                    ->select('assignee_id as user_id', 'id as task_id');
+
+                $allAssignedPairs = $pivotCounts->union($directCounts)->get();
+                $tasksCountByUser = $allAssignedPairs->groupBy('user_id')->map->count();
+
+                foreach ($employees as $emp) {
+                    $emp->tasks_count = $tasksCountByUser[$emp->id] ?? 0;
+                }
             }
-        }
 
-        // Recent activity logs for this department
-        $recentLogs = ActivityLog::where('department_id', $department->id)
-            ->with(['user:id,name,username,avatar'])
-            ->latest()
-            ->limit(30)
-            ->get();
+            // Recent activity logs for this department
+            $recentLogs = ActivityLog::where('department_id', $department->id)
+                ->with(['user:id,name,username,avatar'])
+                ->latest()
+                ->limit(30)
+                ->get();
 
-        return response()->json([
-            'department' => $department,
-            'employees' => $employees,
-            'statistics' => [
-                'total_employees' => $employees->count(),
-                'active_employees' => $employees->where('account_status', 'active')->count(),
+            $stats = [
                 'total_tasks' => $totalTasks,
                 'completed_tasks' => $completedTasks,
                 'incomplete_tasks' => $incompleteTasks,
                 'overdue_tasks' => $overdueTasks,
                 'completed_on_time' => $completedOnTimeTasks,
+                'total_employees' => $employees->count(),
+                'active_employees' => $employees->where('account_status', 'active')->count(),
                 'avg_performance_score' => $avgPerformanceScore,
-            ],
-            'recent_activities' => $recentLogs,
-        ]);
+            ];
+
+            return response()->json([
+                'department' => $department,
+                'employees' => $employees,
+                'stats' => [
+                    'total_tasks' => $totalTasks,
+                    'completed_tasks' => $completedTasks,
+                    'incomplete_tasks' => $incompleteTasks,
+                    'overdue_tasks' => $overdueTasks,
+                ],
+                'statistics' => $stats,
+                'recent_activities' => $recentLogs,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("Error loading department details [ID: {$department->id}]: " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'message' => config('app.debug') ? $e->getMessage() : 'Không thể tải thông tin phòng ban. Vui lòng thử lại.',
+            ], 500);
+        }
     }
 
     /**

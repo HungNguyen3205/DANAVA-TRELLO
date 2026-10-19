@@ -26,6 +26,24 @@ class Department extends Model
         'deleted_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'employee_count',
+    ];
+
+    /**
+     * Accessor for employee_count.
+     */
+    public function getEmployeeCountAttribute(): int
+    {
+        if ($this->relationLoaded('employees')) {
+            return $this->employees->count();
+        }
+        if (array_key_exists('employees_count', $this->attributes)) {
+            return (int) $this->attributes['employees_count'];
+        }
+        return $this->employees()->count();
+    }
+
     /**
      * Relationship: The designated department manager.
      */
