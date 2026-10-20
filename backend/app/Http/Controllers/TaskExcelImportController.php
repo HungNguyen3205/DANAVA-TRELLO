@@ -14,12 +14,35 @@ class TaskExcelImportController extends Controller
         protected TaskExcelImportService $importService
     ) {}
 
+    protected function resolveBoard(Board|string|int $board): Board
+    {
+        if ($board instanceof Board) {
+            return $board;
+        }
+
+        if (is_numeric($board)) {
+            $found = Board::where('id', $board)->first();
+            if ($found) {
+                return $found;
+            }
+        }
+
+        $found = Board::where('public_id', $board)->first();
+
+        if (!$found) {
+            abort(404, 'Không tìm thấy bảng làm việc.');
+        }
+
+        return $found;
+    }
+
     /**
      * Download the official DANAVA task import template for this board.
      * Accessible by Board Members, Board Admins, and Board Owner.
      */
-    public function downloadTemplate(Request $request, Board $board): BinaryFileResponse
+    public function downloadTemplate(Request $request, Board|string|int $board): BinaryFileResponse
     {
+        $board = $this->resolveBoard($board);
         $user = $request->user();
 
         // System Admin or outsider cannot access if not a board member
@@ -42,8 +65,9 @@ class TaskExcelImportController extends Controller
      * Upload .xlsx file and generate validation preview.
      * Strictly restricted to Board Owner and Board Admin.
      */
-    public function preview(Request $request, Board $board): JsonResponse
+    public function preview(Request $request, Board|string|int $board): JsonResponse
     {
+        $board = $this->resolveBoard($board);
         $user = $request->user();
 
         // Check Board Owner or Board Admin permission (System admin without board role is denied)
@@ -67,8 +91,9 @@ class TaskExcelImportController extends Controller
      * Confirm import and persist data to database in a single atomic transaction.
      * Strictly restricted to Board Owner and Board Admin.
      */
-    public function confirm(Request $request, Board $board): JsonResponse
+    public function confirm(Request $request, Board|string|int $board): JsonResponse
     {
+        $board = $this->resolveBoard($board);
         $user = $request->user();
 
         if (!$user->isBoardAdmin($board->id)) {
@@ -89,8 +114,9 @@ class TaskExcelImportController extends Controller
     /**
      * Download Excel file containing error details for invalid rows.
      */
-    public function downloadErrors(Request $request, Board $board, string $token): BinaryFileResponse
+    public function downloadErrors(Request $request, Board|string|int $board, string $token): BinaryFileResponse
     {
+        $board = $this->resolveBoard($board);
         $user = $request->user();
 
         if (!$user->isBoardAdmin($board->id)) {
@@ -98,10 +124,11 @@ class TaskExcelImportController extends Controller
         }
 
         $filePath = $this->importService->generateErrorSpreadsheet($board, $token);
+        $boardCode = $board->public_id ?? (string)$board->id;
 
         return response()->download(
             $filePath,
-            "DANAVA_IMPORT_ERRORS_{$board->code}_{$token}.xlsx",
+            "DANAVA_IMPORT_ERRORS_{$boardCode}_{$token}.xlsx",
             [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ]

@@ -110,6 +110,12 @@ class TaskExcelImportTest extends TestCase
         $response->assertStatus(200);
         $response->assertHeader('Content-Disposition', 'attachment; filename=DANAVA_WORK_TASK_IMPORT_TEMPLATE.xlsx');
 
+        // Member can download template using public_id
+        $responsePublic = $this->actingAs($this->regularMember)
+            ->get("/api/boards/{$this->board->public_id}/tasks/import/template");
+        $responsePublic->assertStatus(200);
+        $responsePublic->assertHeader('Content-Disposition', 'attachment; filename=DANAVA_WORK_TASK_IMPORT_TEMPLATE.xlsx');
+
         // Outsider cannot download template
         $this->actingAs($this->outsider)
             ->get("/api/boards/{$this->board->id}/tasks/import/template")

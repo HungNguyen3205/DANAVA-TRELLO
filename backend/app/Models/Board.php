@@ -47,6 +47,26 @@ class Board extends Model
         return $publicId;
     }
 
+    /**
+     * Retrieve the model for a bound value.
+     * Supports both numeric id and alphanumeric public_id.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if (is_numeric($value)) {
+            $board = $this->where('id', $value)->first();
+            if ($board) {
+                return $board;
+            }
+        }
+
+        return $this->where('public_id', $value)->first();
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');

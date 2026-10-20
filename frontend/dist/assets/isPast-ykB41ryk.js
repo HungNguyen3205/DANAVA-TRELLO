@@ -1,1 +1,0 @@
-import{u as e}from"./index-CSWLh8o9.js";function t(t){return+e(t)<Date.now()}export{t};

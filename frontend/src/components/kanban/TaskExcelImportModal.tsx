@@ -46,6 +46,20 @@ export const TaskExcelImportModal: React.FC<TaskExcelImportModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Helper to extract error message even when responseType is blob
+  const getErrorMessage = async (err: any, fallback: string): Promise<string> => {
+    if (err?.response?.data instanceof Blob) {
+      try {
+        const text = await err.response.data.text();
+        const json = JSON.parse(text);
+        if (json?.message) return json.message;
+      } catch {
+        // Not a JSON error message inside blob
+      }
+    }
+    return err?.response?.data?.message || err?.message || fallback;
+  };
+
   // Handle template download
   const handleDownloadTemplate = async () => {
     try {
@@ -53,7 +67,8 @@ export const TaskExcelImportModal: React.FC<TaskExcelImportModalProps> = ({
       await downloadImportTemplate(targetId);
       toast.success('Đã tải xuống file mẫu DANAVA_WORK_TASK_IMPORT_TEMPLATE.xlsx');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Không thể tải file mẫu. Vui lòng thử lại.');
+      const message = await getErrorMessage(err, 'Không thể tải file mẫu. Vui lòng thử lại.');
+      toast.error(message);
     } finally {
       setDownloadingTemplate(false);
     }
@@ -150,7 +165,8 @@ export const TaskExcelImportModal: React.FC<TaskExcelImportModalProps> = ({
       await downloadImportErrors(targetId, previewData.preview_token);
       toast.success('Đã tải xuống file báo cáo lỗi chi tiết.');
     } catch (err: any) {
-      toast.error('Không thể tải báo cáo lỗi.');
+      const message = await getErrorMessage(err, 'Không thể tải báo cáo lỗi.');
+      toast.error(message);
     } finally {
       setDownloadingErrors(false);
     }
