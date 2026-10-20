@@ -91,8 +91,16 @@ class WorkspaceController extends Controller
         $cacheKey = "workspace_stats_{$workspace->id}_{$userId}_{$role}";
         $stats = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function() use ($workspace, $userId, $role) {
             $taskQuery = \Illuminate\Support\Facades\DB::table('tasks')
-                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-                ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
+                ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+                ->leftJoin('kanban_columns as kc', function ($join) {
+                    $join->on('tasks.column_id', '=', 'kc.id')->whereNull('kc.deleted_at');
+                })
+                ->leftJoin('kanban_columns as parent_kc', function ($join) {
+                    $join->on('parent_task.column_id', '=', 'parent_kc.id')->whereNull('parent_kc.deleted_at');
+                })
+                ->join('boards', function ($join) {
+                    $join->on('boards.id', '=', DB::raw('COALESCE(kc.board_id, parent_kc.board_id)'));
+                })
                 ->where('boards.workspace_id', $workspace->id)
                 ->whereNull('tasks.deleted_at');
                 
@@ -105,15 +113,19 @@ class WorkspaceController extends Controller
                 
             $totalTasks = (clone $taskQuery)->count();
             
-            $completedTitles = ['done', 'hoàn thành', 'completed'];
+            $completedTitles = ['done', 'hoàn thành', 'completed', 'đã xong'];
             $completedTasks = (clone $taskQuery)
-                ->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(kanban_columns.title)'), $completedTitles)
+                ->where(function ($q) use ($completedTitles) {
+                    $q->whereNotNull('tasks.completed_at')
+                      ->orWhereIn(\Illuminate\Support\Facades\DB::raw('LOWER(COALESCE(kc.title, parent_kc.title))'), $completedTitles);
+                })
                 ->count();
             
             $overdueTasks = (clone $taskQuery)
                 ->whereNotNull('tasks.due_date')
                 ->where('tasks.due_date', '<', \Carbon\Carbon::today())
-                ->whereNotIn(\Illuminate\Support\Facades\DB::raw('LOWER(kanban_columns.title)'), $completedTitles)
+                ->whereNull('tasks.completed_at')
+                ->whereNotIn(\Illuminate\Support\Facades\DB::raw('LOWER(COALESCE(kc.title, parent_kc.title))'), $completedTitles)
                 ->count();
 
             return [
@@ -160,12 +172,22 @@ class WorkspaceController extends Controller
         $role = $workspaceMember ? $workspaceMember->role : 'member';
 
         $cacheKey = "workspace_dashboard_{$workspace->id}_{$userId}_{$range}_" . ($role === 'admin' ? 'admin' : 'member');
+        if ($request->boolean('refresh')) {
+            \Illuminate\Support\Facades\Cache::forget($cacheKey);
+        }
         
-        $dashboardData = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function() use ($workspace, $userId, $role, $range, $rangeStart, $today) {
+        $dashboardData = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function() use ($workspace, $userId, $role, $range, $rangeStart, $today) {
             $query = DB::table('tasks')
-                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-                ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
-                ->leftJoin('users as assignees', 'tasks.assignee_id', '=', 'assignees.id')
+                ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+                ->leftJoin('kanban_columns as kc', function ($join) {
+                    $join->on('tasks.column_id', '=', 'kc.id')->whereNull('kc.deleted_at');
+                })
+                ->leftJoin('kanban_columns as parent_kc', function ($join) {
+                    $join->on('parent_task.column_id', '=', 'parent_kc.id')->whereNull('parent_kc.deleted_at');
+                })
+                ->join('boards', function ($join) {
+                    $join->on('boards.id', '=', DB::raw('COALESCE(kc.board_id, parent_kc.board_id)'));
+                })
                 ->where('boards.workspace_id', $workspace->id)
                 ->whereNull('tasks.deleted_at');
                 
@@ -178,24 +200,27 @@ class WorkspaceController extends Controller
 
             $tasks = $query->select([
                     'tasks.id',
+                    'tasks.parent_task_id',
                     'tasks.title',
                     'tasks.priority',
                     'tasks.due_date',
                     'tasks.created_at',
+                    'tasks.updated_at',
                     'tasks.completed_at',
                     'tasks.assignee_id',
-                    'assignees.name as assignee_name',
                     'boards.id as board_id',
                     'boards.name as board_name',
-                    'kanban_columns.title as column_name',
-                    'kanban_columns.color as column_color',
+                    DB::raw('COALESCE(kc.title, parent_kc.title, "Chưa phân loại") as column_name'),
+                    DB::raw('COALESCE(kc.color, parent_kc.color, "#7C5CFC") as column_color'),
                 ])
                 ->get();
+
+            $assigneesByTask = $this->resolveTaskAssigneesMap($tasks);
 
             $isCompleted = static function ($task): bool {
                 $column = mb_strtolower(trim((string) $task->column_name));
                 return !empty($task->completed_at)
-                    || in_array($column, ['done', 'hoàn thành', 'completed'], true);
+                    || in_array($column, ['done', 'hoàn thành', 'completed', 'đã xong'], true);
             };
 
             $totalTasks = $tasks->count();
@@ -268,15 +293,56 @@ class WorkspaceController extends Controller
                 ];
             })->sortByDesc('total')->values();
 
-            $workload = $tasks
-                ->reject($isCompleted)
-                ->groupBy(fn ($task) => $task->assignee_name ?: 'Chưa phân công')
-                ->map(fn ($items, $name) => [
-                    'name' => $name,
-                    'tasks' => $items->count(),
-                    'overdue' => $items->filter(fn ($task) => $task->due_date && Carbon::parse($task->due_date)->lt($today))->count(),
-                ])
-                ->sortByDesc('tasks')
+            // Workload: Map all tasks and subtasks to actual assigned members
+            $memberWorkload = [];
+            foreach ($tasks as $task) {
+                $done = $isCompleted($task);
+                $isOverdue = $task->due_date && Carbon::parse($task->due_date)->lt($today) && !$done;
+                $assignees = $assigneesByTask[$task->id] ?? [];
+
+                if (empty($assignees)) {
+                    $key = 'unassigned';
+                    if (!isset($memberWorkload[$key])) {
+                        $memberWorkload[$key] = [
+                            'name' => 'Chưa phân công',
+                            'tasks' => 0,
+                            'overdue' => 0,
+                            'completed' => 0,
+                        ];
+                    }
+                    if ($done) {
+                        $memberWorkload[$key]['completed']++;
+                    } else {
+                        $memberWorkload[$key]['tasks']++;
+                        if ($isOverdue) {
+                            $memberWorkload[$key]['overdue']++;
+                        }
+                    }
+                } else {
+                    foreach ($assignees as $member) {
+                        $key = 'user_' . $member['id'];
+                        if (!isset($memberWorkload[$key])) {
+                            $memberWorkload[$key] = [
+                                'name' => $member['name'],
+                                'tasks' => 0,
+                                'overdue' => 0,
+                                'completed' => 0,
+                            ];
+                        }
+                        if ($done) {
+                            $memberWorkload[$key]['completed']++;
+                        } else {
+                            $memberWorkload[$key]['tasks']++;
+                            if ($isOverdue) {
+                                $memberWorkload[$key]['overdue']++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            $workload = collect($memberWorkload)
+                ->sortByDesc(fn ($item) => $item['tasks'] + $item['completed'])
                 ->take(8)
                 ->values();
 
@@ -288,21 +354,33 @@ class WorkspaceController extends Controller
                 })
                 ->sortBy('due_date')
                 ->take(6)
-                ->map(fn ($task) => [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'board' => $task->board_name,
-                    'assignee' => $task->assignee_name ?: 'Chưa phân công',
-                    'priority' => $task->priority,
-                    'due_date' => $task->due_date,
-                    'days_left' => $today->diffInDays(Carbon::parse($task->due_date), false),
-                ])
+                ->map(function ($task) use ($assigneesByTask, $today) {
+                    $assignees = array_values($assigneesByTask[$task->id] ?? []);
+                    $assigneeName = !empty($assignees)
+                        ? implode(', ', array_map(fn($a) => $a['name'], $assignees))
+                        : 'Chưa phân công';
+
+                    return [
+                        'id' => $task->id,
+                        'parent_task_id' => $task->parent_task_id,
+                        'title' => $task->title,
+                        'board' => $task->board_name,
+                        'assignee' => $assigneeName,
+                        'priority' => $task->priority,
+                        'due_date' => $task->due_date,
+                        'days_left' => $today->diffInDays(Carbon::parse($task->due_date), false),
+                    ];
+                })
                 ->values();
 
             $recentActivity = DB::table('activity_logs')
                 ->join('tasks', 'activity_logs.task_id', '=', 'tasks.id')
-                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-                ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
+                ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+                ->leftJoin('kanban_columns as kc', 'tasks.column_id', '=', 'kc.id')
+                ->leftJoin('kanban_columns as parent_kc', 'parent_task.column_id', '=', 'parent_kc.id')
+                ->join('boards', function ($join) {
+                    $join->on('boards.id', '=', DB::raw('COALESCE(kc.board_id, parent_kc.board_id)'));
+                })
                 ->leftJoin('users', 'activity_logs.user_id', '=', 'users.id')
                 ->where('boards.workspace_id', $workspace->id)
                 ->orderByDesc('activity_logs.created_at')
@@ -385,8 +463,11 @@ class WorkspaceController extends Controller
         $boardIds = $boards->pluck('id')->toArray();
 
         $cacheKey = "global_dashboard_{$userId}_{$range}_{$scope}_" . ($isSystemAdmin ? 'admin' : 'member');
+        if ($request->boolean('refresh')) {
+            \Illuminate\Support\Facades\Cache::forget($cacheKey);
+        }
 
-        $dashboardData = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function() use ($boards, $boardIds, $userId, $range, $rangeStart, $today, $scope) {
+        $dashboardData = \Illuminate\Support\Facades\Cache::remember($cacheKey, 30, function() use ($boards, $boardIds, $userId, $range, $rangeStart, $today, $scope) {
             if (empty($boardIds)) {
                 return [
                     'range_days' => $range,
@@ -411,19 +492,26 @@ class WorkspaceController extends Controller
                 ];
             }
 
+            // Robust tasks query: resolve board & column for both root tasks and subtasks
             $tasksQuery = DB::table('tasks')
-                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-                ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
-                ->leftJoin('users as assignees', 'tasks.assignee_id', '=', 'assignees.id')
+                ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+                ->leftJoin('kanban_columns as kc', function ($join) {
+                    $join->on('tasks.column_id', '=', 'kc.id')
+                         ->whereNull('kc.deleted_at');
+                })
+                ->leftJoin('kanban_columns as parent_kc', function ($join) {
+                    $join->on('parent_task.column_id', '=', 'parent_kc.id')
+                         ->whereNull('parent_kc.deleted_at');
+                })
+                ->join('boards', function ($join) {
+                    $join->on('boards.id', '=', DB::raw('COALESCE(kc.board_id, parent_kc.board_id)'));
+                })
                 ->whereIn('boards.id', $boardIds)
                 ->whereNull('tasks.deleted_at');
 
-            if ($scope === 'personal') {
-                $tasksQuery->where('tasks.assignee_id', $userId);
-            }
-
-            $tasks = $tasksQuery->select([
+            $tasksRaw = $tasksQuery->select([
                 'tasks.id',
+                'tasks.parent_task_id',
                 'tasks.title',
                 'tasks.priority',
                 'tasks.due_date',
@@ -431,15 +519,25 @@ class WorkspaceController extends Controller
                 'tasks.updated_at',
                 'tasks.completed_at',
                 'tasks.assignee_id',
-                'assignees.name as assignee_name',
-                'assignees.avatar as assignee_avatar',
                 'boards.id as board_id',
                 'boards.public_id as board_public_id',
                 'boards.name as board_name',
                 'boards.color as board_color',
-                'kanban_columns.title as column_name',
-                'kanban_columns.color as column_color',
+                DB::raw('COALESCE(kc.title, parent_kc.title, "Chưa phân loại") as column_name'),
+                DB::raw('COALESCE(kc.color, parent_kc.color, "#7C5CFC") as column_color'),
             ])->get();
+
+            // Map all assignees including multi-assignees and subtask assignees
+            $assigneesByTask = $this->resolveTaskAssigneesMap($tasksRaw);
+
+            // Filter for personal scope: include any task or subtask the user is assigned to
+            if ($scope === 'personal') {
+                $tasks = $tasksRaw->filter(function ($t) use ($assigneesByTask, $userId) {
+                    return isset($assigneesByTask[$t->id][$userId]);
+                })->values();
+            } else {
+                $tasks = $tasksRaw;
+            }
 
             $isCompleted = static function ($task): bool {
                 $column = mb_strtolower(trim((string) $task->column_name));
@@ -523,27 +621,67 @@ class WorkspaceController extends Controller
             // Workload: in personal mode, group by board name; in team mode, group by assignee
             if ($scope === 'personal') {
                 $workload = $tasks
-                    ->reject($isCompleted)
                     ->groupBy(fn ($task) => $task->board_name ?: 'Khác')
                     ->map(fn ($items, $name) => [
                         'name' => $name,
-                        'tasks' => $items->count(),
-                        'overdue' => $items->filter(fn ($task) => $task->due_date && Carbon::parse($task->due_date)->lt($today))->count(),
+                        'tasks' => $items->reject($isCompleted)->count(),
+                        'overdue' => $items->filter(fn ($task) => $task->due_date && Carbon::parse($task->due_date)->lt($today) && !$isCompleted($task))->count(),
+                        'completed' => $items->filter($isCompleted)->count(),
                     ])
                     ->sortByDesc('tasks')
                     ->take(8)
                     ->values();
             } else {
-                $workload = $tasks
-                    ->reject($isCompleted)
-                    ->groupBy(fn ($task) => $task->assignee_name ?: 'Chưa phân công')
-                    ->map(fn ($items, $name) => [
-                        'name' => $name,
-                        'tasks' => $items->count(),
-                        'overdue' => $items->filter(fn ($task) => $task->due_date && Carbon::parse($task->due_date)->lt($today))->count(),
-                    ])
-                    ->sortByDesc('tasks')
-                    ->take(8)
+                $memberWorkload = [];
+                foreach ($tasks as $task) {
+                    $done = $isCompleted($task);
+                    $isOverdue = $task->due_date && Carbon::parse($task->due_date)->lt($today) && !$done;
+                    $assignees = $assigneesByTask[$task->id] ?? [];
+
+                    if (empty($assignees)) {
+                        $key = 'unassigned';
+                        if (!isset($memberWorkload[$key])) {
+                            $memberWorkload[$key] = [
+                                'name' => 'Chưa phân công',
+                                'tasks' => 0,
+                                'overdue' => 0,
+                                'completed' => 0,
+                            ];
+                        }
+                        if ($done) {
+                            $memberWorkload[$key]['completed']++;
+                        } else {
+                            $memberWorkload[$key]['tasks']++;
+                            if ($isOverdue) {
+                                $memberWorkload[$key]['overdue']++;
+                            }
+                        }
+                    } else {
+                        foreach ($assignees as $member) {
+                            $key = 'user_' . $member['id'];
+                            if (!isset($memberWorkload[$key])) {
+                                $memberWorkload[$key] = [
+                                    'name' => $member['name'],
+                                    'tasks' => 0,
+                                    'overdue' => 0,
+                                    'completed' => 0,
+                                ];
+                            }
+                            if ($done) {
+                                $memberWorkload[$key]['completed']++;
+                            } else {
+                                $memberWorkload[$key]['tasks']++;
+                                if ($isOverdue) {
+                                    $memberWorkload[$key]['overdue']++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $workload = collect($memberWorkload)
+                    ->sortByDesc(fn ($item) => $item['tasks'] + $item['completed'])
+                    ->take(10)
                     ->values();
             }
 
@@ -556,18 +694,27 @@ class WorkspaceController extends Controller
                 })
                 ->sortBy('due_date')
                 ->take(8)
-                ->map(fn ($task) => [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'board_id' => $task->board_id,
-                    'board' => $task->board_name,
-                    'board_public_id' => $task->board_public_id,
-                    'assignee' => $task->assignee_name ?: 'Chưa phân công',
-                    'assignee_avatar' => $task->assignee_avatar,
-                    'priority' => $task->priority,
-                    'due_date' => $task->due_date,
-                    'days_left' => $today->diffInDays(Carbon::parse($task->due_date), false),
-                ])
+                ->map(function ($task) use ($assigneesByTask, $today) {
+                    $assignees = array_values($assigneesByTask[$task->id] ?? []);
+                    $assigneeName = !empty($assignees)
+                        ? implode(', ', array_map(fn($a) => $a['name'], $assignees))
+                        : 'Chưa phân công';
+                    $assigneeAvatar = !empty($assignees) ? $assignees[0]['avatar'] : null;
+
+                    return [
+                        'id' => $task->id,
+                        'parent_task_id' => $task->parent_task_id,
+                        'title' => $task->title,
+                        'board_id' => $task->board_id,
+                        'board' => $task->board_name,
+                        'board_public_id' => $task->board_public_id,
+                        'assignee' => $assigneeName,
+                        'assignee_avatar' => $assigneeAvatar,
+                        'priority' => $task->priority,
+                        'due_date' => $task->due_date,
+                        'days_left' => $today->diffInDays(Carbon::parse($task->due_date), false),
+                    ];
+                })
                 ->values();
 
             // Total unique members
@@ -580,15 +727,25 @@ class WorkspaceController extends Controller
             $activities = collect();
             $logsQuery = DB::table('activity_logs')
                 ->join('tasks', 'activity_logs.task_id', '=', 'tasks.id')
-                ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-                ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
+                ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+                ->leftJoin('kanban_columns as kc', 'tasks.column_id', '=', 'kc.id')
+                ->leftJoin('kanban_columns as parent_kc', 'parent_task.column_id', '=', 'parent_kc.id')
+                ->join('boards', function ($join) {
+                    $join->on('boards.id', '=', DB::raw('COALESCE(kc.board_id, parent_kc.board_id)'));
+                })
                 ->leftJoin('users', 'activity_logs.user_id', '=', 'users.id')
                 ->whereIn('boards.id', $boardIds);
 
             if ($scope === 'personal') {
                 $logsQuery->where(function($q) use ($userId) {
                     $q->where('activity_logs.user_id', $userId)
-                      ->orWhere('tasks.assignee_id', $userId);
+                      ->orWhere('tasks.assignee_id', $userId)
+                      ->orWhereExists(function ($sub) use ($userId) {
+                          $sub->select(DB::raw(1))
+                              ->from('task_assignees')
+                              ->whereColumn('task_assignees.task_id', 'tasks.id')
+                              ->where('task_assignees.user_id', $userId);
+                      });
                 });
             }
 
@@ -616,15 +773,25 @@ class WorkspaceController extends Controller
             if ($activities->count() < 6) {
                 $commentsQuery = DB::table('task_comments')
                     ->join('tasks', 'task_comments.task_id', '=', 'tasks.id')
-                    ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-                    ->join('boards', 'kanban_columns.board_id', '=', 'boards.id')
+                    ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+                    ->leftJoin('kanban_columns as kc', 'tasks.column_id', '=', 'kc.id')
+                    ->leftJoin('kanban_columns as parent_kc', 'parent_task.column_id', '=', 'parent_kc.id')
+                    ->join('boards', function ($join) {
+                        $join->on('boards.id', '=', DB::raw('COALESCE(kc.board_id, parent_kc.board_id)'));
+                    })
                     ->leftJoin('users', 'task_comments.user_id', '=', 'users.id')
                     ->whereIn('boards.id', $boardIds);
 
                 if ($scope === 'personal') {
                     $commentsQuery->where(function($q) use ($userId) {
                         $q->where('task_comments.user_id', $userId)
-                          ->orWhere('tasks.assignee_id', $userId);
+                          ->orWhere('tasks.assignee_id', $userId)
+                          ->orWhereExists(function ($sub) use ($userId) {
+                              $sub->select(DB::raw(1))
+                                  ->from('task_assignees')
+                                  ->whereColumn('task_assignees.task_id', 'tasks.id')
+                                  ->where('task_assignees.user_id', $userId);
+                          });
                     });
                 }
 
@@ -652,6 +819,10 @@ class WorkspaceController extends Controller
             if ($activities->count() < 6) {
                 $recentTasks = $tasks->sortByDesc('updated_at')->take(6);
                 foreach ($recentTasks as $rt) {
+                    $assignees = array_values($assigneesByTask[$rt->id] ?? []);
+                    $recentAssigneeName = !empty($assignees) ? $assignees[0]['name'] : 'Hệ thống';
+                    $recentAssigneeAvatar = !empty($assignees) ? $assignees[0]['avatar'] : null;
+
                     $activities->push((object)[
                         'id' => 'task-' . $rt->id,
                         'action' => $isCompleted($rt) ? 'completed' : 'updated',
@@ -661,8 +832,8 @@ class WorkspaceController extends Controller
                         'board_id' => $rt->board_id,
                         'board_public_id' => $rt->board_public_id,
                         'board_name' => $rt->board_name,
-                        'user_name' => $rt->assignee_name ?: 'Hệ thống',
-                        'user_avatar' => $rt->assignee_avatar,
+                        'user_name' => $recentAssigneeName,
+                        'user_avatar' => $recentAssigneeAvatar,
                     ]);
                 }
             }
@@ -699,5 +870,67 @@ class WorkspaceController extends Controller
             ],
             'is_system_admin' => $isSystemAdmin,
         ]));
+    }
+
+    /**
+     * Build a map of task_id => [user_id => ['id' => int, 'name' => string, 'avatar' => ?string]]
+     * combining both modern multi-assignees (task_assignees) and legacy tasks.assignee_id.
+     */
+    protected function resolveTaskAssigneesMap($tasks): array
+    {
+        $taskIds = collect($tasks)->pluck('id')->filter()->unique()->toArray();
+        if (empty($taskIds)) {
+            return [];
+        }
+
+        $assigneeRows = DB::table('task_assignees')
+            ->join('users', 'task_assignees.user_id', '=', 'users.id')
+            ->whereIn('task_assignees.task_id', $taskIds)
+            ->select([
+                'task_assignees.task_id',
+                'users.id as user_id',
+                'users.name as user_name',
+                'users.avatar as user_avatar',
+            ])
+            ->get();
+
+        $legacyAssigneeIds = collect($tasks)
+            ->pluck('assignee_id')
+            ->filter()
+            ->unique()
+            ->toArray();
+
+        $legacyUsers = empty($legacyAssigneeIds)
+            ? collect()
+            : DB::table('users')
+                ->whereIn('id', $legacyAssigneeIds)
+                ->select(['id', 'name', 'avatar'])
+                ->get()
+                ->keyBy('id');
+
+        $assigneesByTask = [];
+        foreach ($assigneeRows as $row) {
+            $assigneesByTask[$row->task_id][$row->user_id] = [
+                'id' => (int) $row->user_id,
+                'name' => $row->user_name,
+                'avatar' => $row->user_avatar,
+            ];
+        }
+
+        foreach ($tasks as $t) {
+            $assigneeId = $t->assignee_id ?? null;
+            if ($assigneeId && isset($legacyUsers[$assigneeId])) {
+                $u = $legacyUsers[$assigneeId];
+                if (!isset($assigneesByTask[$t->id][$u->id])) {
+                    $assigneesByTask[$t->id][$u->id] = [
+                        'id' => (int) $u->id,
+                        'name' => $u->name,
+                        'avatar' => $u->avatar,
+                    ];
+                }
+            }
+        }
+
+        return $assigneesByTask;
     }
 }

@@ -1,1 +1,0 @@
-import{u as e}from"./index-tWGnj0no.js";function t(t){return+e(t)<Date.now()}export{t};

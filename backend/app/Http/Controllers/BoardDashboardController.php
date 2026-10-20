@@ -31,18 +31,30 @@ class BoardDashboardController extends Controller
 
         // 1. Identify tasks with subtasks to prevent double counting
         $parentTaskIdsWithChildren = DB::table('tasks')
-            ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-            ->where('kanban_columns.board_id', $board->id)
+            ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+            ->leftJoin('kanban_columns as kc', function ($join) {
+                $join->on('tasks.column_id', '=', 'kc.id')->whereNull('kc.deleted_at');
+            })
+            ->leftJoin('kanban_columns as parent_kc', function ($join) {
+                $join->on('parent_task.column_id', '=', 'parent_kc.id')->whereNull('parent_kc.deleted_at');
+            })
+            ->whereRaw('COALESCE(kc.board_id, parent_kc.board_id) = ?', [$board->id])
             ->whereNotNull('tasks.parent_task_id')
             ->whereNull('tasks.deleted_at')
             ->distinct()
             ->pluck('tasks.parent_task_id')
             ->toArray();
 
-        // 2. Base task query on this board
+        // 2. Base task query on this board (resilient to subtasks inheriting column/board from parent)
         $baseQuery = DB::table('tasks')
-            ->join('kanban_columns', 'tasks.column_id', '=', 'kanban_columns.id')
-            ->where('kanban_columns.board_id', $board->id)
+            ->leftJoin('tasks as parent_task', 'tasks.parent_task_id', '=', 'parent_task.id')
+            ->leftJoin('kanban_columns as kc', function ($join) {
+                $join->on('tasks.column_id', '=', 'kc.id')->whereNull('kc.deleted_at');
+            })
+            ->leftJoin('kanban_columns as parent_kc', function ($join) {
+                $join->on('parent_task.column_id', '=', 'parent_kc.id')->whereNull('parent_kc.deleted_at');
+            })
+            ->whereRaw('COALESCE(kc.board_id, parent_kc.board_id) = ?', [$board->id])
             ->whereNull('tasks.deleted_at');
 
         // Apply double-counting rule:
@@ -80,7 +92,7 @@ class BoardDashboardController extends Controller
                 'tasks.start_date',
                 'tasks.completed_at',
                 'tasks.created_at',
-                'kanban_columns.title as column_title',
+                DB::raw('COALESCE(kc.title, parent_kc.title, "Chưa phân loại") as column_title'),
             ])
             ->get();
 

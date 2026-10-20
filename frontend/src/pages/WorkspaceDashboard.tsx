@@ -63,7 +63,7 @@ interface DashboardData {
     progress: number;
     color?: string | null;
   }>;
-  workload: Array<{ name: string; tasks: number; overdue: number }>;
+  workload: Array<{ name: string; tasks: number; overdue: number; completed?: number }>;
   upcoming_deadlines: Array<{
     id: number;
     title: string;
@@ -115,7 +115,11 @@ export function WorkspaceDashboard() {
       setError('');
       try {
         const response = await api.get<DashboardData>('/analytics/overview', {
-          params: { days: range, scope },
+          params: {
+            days: range,
+            scope,
+            ...(reloadVersion > 0 ? { refresh: 1 } : {}),
+          },
           signal: controller.signal,
         });
         setData(response.data);
@@ -464,6 +468,7 @@ export function WorkspaceDashboard() {
                     <Tooltip content={<PremiumTooltip />} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey="tasks" name="Đang thực hiện" stackId="work" fill="#6F7DF4" radius={[0, 6, 6, 0]} maxBarSize={18} />
+                    <Bar dataKey="completed" name="Đã hoàn thành" stackId="completed" fill="#10B981" radius={[0, 6, 6, 0]} maxBarSize={18} />
                     <Bar dataKey="overdue" name="Quá hạn" stackId="overdue" fill="#F26B7A" radius={[0, 6, 6, 0]} maxBarSize={18} />
                   </BarChart>
                 </ResponsiveContainer>
