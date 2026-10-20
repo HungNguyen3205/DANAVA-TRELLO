@@ -116,6 +116,13 @@ class TaskExcelImportTest extends TestCase
         $responsePublic->assertStatus(200);
         $responsePublic->assertHeader('Content-Disposition', 'attachment; filename=DANAVA_WORK_TASK_IMPORT_TEMPLATE.xlsx');
 
+        // Verify template has exactly 1 sheet
+        $downloadedPath = $responsePublic->getFile()->getPathname();
+        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+        $spreadsheet = $reader->load($downloadedPath);
+        $this->assertEquals(1, $spreadsheet->getSheetCount());
+        $this->assertEquals('TASKS', $spreadsheet->getSheet(0)->getTitle());
+
         // Outsider cannot download template
         $this->actingAs($this->outsider)
             ->get("/api/boards/{$this->board->id}/tasks/import/template")
@@ -435,5 +442,60 @@ class TaskExcelImportTest extends TestCase
         $this->actingAs($this->systemAdmin)
             ->postJson("/api/boards/{$this->board->id}/tasks/import/preview", ['file' => $file])
             ->assertStatus(403);
+    }
+
+    /**
+     * Test: Support Vietnamese column headers and auto-generating external_key if empty.
+     */
+    public function test_import_with_vietnamese_headers_and_auto_generated_external_key(): void
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Sheet1'); // Generic sheet name
+
+        // Vietnamese headers
+        $sheet->setCellValue('A1', 'Tiêu đề');
+        $sheet->setCellValue('B1', 'Mô tả');
+        $sheet->setCellValue('C1', 'Cột');
+        $sheet->setCellValue('D1', 'Người thực hiện');
+
+        // Data row without external_key
+        $sheet->setCellValue('A2', 'Công việc viết bằng tiếng Việt');
+        $sheet->setCellValue('B2', 'Mô tả chi tiết bằng tiếng Việt');
+        $sheet->setCellValue('C2', 'Cần làm');
+        $sheet->setCellValue('D2', 'board_member');
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_vn_') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        $file = new UploadedFile($tempPath, 'tieng_viet.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
+
+        $previewRes = $this->actingAs($this->owner)
+            ->postJson("/api/boards/{$this->board->id}/tasks/import/preview", ['file' => $file]);
+
+        $previewRes->assertStatus(200);
+        $previewRes->assertJson([
+            'is_valid' => true,
+            'total_rows' => 1,
+            'valid_rows_count' => 1,
+            'invalid_rows_count' => 0,
+        ]);
+
+        $rows = $previewRes->json('rows');
+        $this->assertNotEmpty($rows[0]['data']['external_key']);
+        $this->assertStringStartsWith('TASK-', $rows[0]['data']['external_key']);
+        $this->assertEquals('Công việc viết bằng tiếng Việt', $rows[0]['data']['title']);
+
+        // Confirm import
+        $confirmRes = $this->actingAs($this->owner)
+            ->postJson("/api/boards/{$this->board->id}/tasks/import/confirm", [
+                'preview_token' => $previewRes->json('preview_token'),
+            ]);
+
+        $confirmRes->assertStatus(200);
+        $this->assertDatabaseHas('tasks', [
+            'title' => 'Công việc viết bằng tiếng Việt',
+        ]);
     }
 }

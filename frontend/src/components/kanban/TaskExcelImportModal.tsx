@@ -231,7 +231,7 @@ export const TaskExcelImportModal: React.FC<TaskExcelImportModalProps> = ({
                     File mẫu Excel chuẩn đã sẵn sàng với dữ liệu bảng này
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    File mẫu bao gồm 6 sheet: <strong>HUONG_DAN</strong>, <strong>TASKS</strong>, <strong>THANH_VIEN</strong> (thành viên hiện có), <strong>COT_KANBAN</strong>, <strong>NHAN</strong> và <strong>VI_DU</strong>.
+                    File mẫu Excel đơn giản <strong>1 sheet duy nhất</strong>: Điền trực tiếp danh sách công việc theo các dòng mẫu có sẵn, kèm gợi ý thành viên và cột Kanban của bảng.
                   </p>
                 </div>
                 <button

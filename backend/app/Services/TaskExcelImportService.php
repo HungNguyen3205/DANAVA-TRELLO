@@ -49,44 +49,15 @@ class TaskExcelImportService
     ];
 
     /**
-     * Generate Excel template with 6 sheets populated with board-specific metadata.
+     * Generate Excel template with 1 single sheet populated with board-specific metadata and samples.
      */
     public function generateTemplate(Board $board): string
     {
         $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('TASKS');
 
-        // 1. SHEET HUONG_DAN
-        $guideSheet = $spreadsheet->getActiveSheet();
-        $guideSheet->setTitle('HUONG_DAN');
-        $this->buildGuideSheet($guideSheet, $board);
-
-        // 2. SHEET TASKS (Primary data sheet)
-        $tasksSheet = $spreadsheet->createSheet();
-        $tasksSheet->setTitle('TASKS');
-        $this->buildTasksSheet($tasksSheet);
-
-        // 3. SHEET THANH_VIEN (Board members reference)
-        $membersSheet = $spreadsheet->createSheet();
-        $membersSheet->setTitle('THANH_VIEN');
-        $this->buildMembersSheet($membersSheet, $board);
-
-        // 4. SHEET COT_KANBAN (Board columns reference)
-        $columnsSheet = $spreadsheet->createSheet();
-        $columnsSheet->setTitle('COT_KANBAN');
-        $this->buildColumnsSheet($columnsSheet, $board);
-
-        // 5. SHEET NHAN (Board labels reference)
-        $labelsSheet = $spreadsheet->createSheet();
-        $labelsSheet->setTitle('NHAN');
-        $this->buildLabelsSheet($labelsSheet, $board);
-
-        // 6. SHEET VI_DU (Examples with parent/child and multiple assignees)
-        $examplesSheet = $spreadsheet->createSheet();
-        $examplesSheet->setTitle('VI_DU');
-        $this->buildExamplesSheet($examplesSheet, $board);
-
-        // Focus on TASKS sheet for immediate input
-        $spreadsheet->setActiveSheetIndex(1);
+        $this->buildSingleTasksSheet($sheet, $board);
 
         $tempPath = tempnam(sys_get_temp_dir(), 'danava_task_tpl_') . '.xlsx';
         $writer = new Xlsx($spreadsheet);
@@ -125,10 +96,10 @@ class TaskExcelImportService
             abort(422, 'Không thể đọc tệp Excel. Vui lòng kiểm tra lại định dạng tệp .xlsx.');
         }
 
-        $tasksSheet = $spreadsheet->getSheetByName('TASKS');
+        $tasksSheet = $spreadsheet->getSheetByName('TASKS') ?? $spreadsheet->getSheet(0);
         if (!$tasksSheet) {
             @unlink($filePath);
-            abort(422, "Không tìm thấy sheet có tên 'TASKS' trong tệp Excel.");
+            abort(422, 'Không tìm thấy dữ liệu trang tính trong tệp Excel.');
         }
 
         // 3. Pre-load Board metadata for validation
@@ -168,18 +139,120 @@ class TaskExcelImportService
             abort(422, 'Tệp vượt quá số lượng tối đa 2.000 dòng công việc.');
         }
 
+        $aliasMap = [
+            'title' => 'title',
+            'tieu_de' => 'title',
+            'tiêu_đề' => 'title',
+            'ten_cong_viec' => 'title',
+            'tên_công_việc' => 'title',
+            'tên_task' => 'title',
+            'ten_task' => 'title',
+            'task_name' => 'title',
+            'name' => 'title',
+            'external_key' => 'external_key',
+            'ma_cong_viec' => 'external_key',
+            'mã_công_việc' => 'external_key',
+            'ma_task' => 'external_key',
+            'mã_task' => 'external_key',
+            'key' => 'external_key',
+            'parent_external_key' => 'parent_external_key',
+            'parent_key' => 'parent_external_key',
+            'ma_task_cha' => 'parent_external_key',
+            'mã_task_cha' => 'parent_external_key',
+            'task_cha' => 'parent_external_key',
+            'parent' => 'parent_external_key',
+            'description' => 'description',
+            'mo_ta' => 'description',
+            'mô_tả' => 'description',
+            'desc' => 'description',
+            'column' => 'column',
+            'cot' => 'column',
+            'cột' => 'column',
+            'cot_kanban' => 'column',
+            'cột_kanban' => 'column',
+            'trang_thai' => 'column',
+            'trạng_thái' => 'column',
+            'status' => 'column',
+            'priority' => 'priority',
+            'do_uu_tien' => 'priority',
+            'độ_ưu_tiên' => 'priority',
+            'muc_do_uu_tien' => 'priority',
+            'mức_độ_ưu_tiên' => 'priority',
+            'uu_tien' => 'priority',
+            'ưu_tiên' => 'priority',
+            'complexity' => 'complexity',
+            'do_phuc_tap' => 'complexity',
+            'độ_phức_tạp' => 'complexity',
+            'estimated_points' => 'estimated_points',
+            'diem_uoc_luong' => 'estimated_points',
+            'điểm_ước_lượng' => 'estimated_points',
+            'diem' => 'estimated_points',
+            'điểm' => 'estimated_points',
+            'points' => 'estimated_points',
+            'progress_percent' => 'progress_percent',
+            'tien_do' => 'progress_percent',
+            'tiến_độ' => 'progress_percent',
+            'tien_do_%' => 'progress_percent',
+            'tiến_độ_%' => 'progress_percent',
+            'progress' => 'progress_percent',
+            'start_date' => 'start_date',
+            'ngay_bat_dau' => 'start_date',
+            'ngày_bắt_đầu' => 'start_date',
+            'start' => 'start_date',
+            'due_date' => 'due_date',
+            'ngay_han_chot' => 'due_date',
+            'ngày_hạn_chót' => 'due_date',
+            'han_chot' => 'due_date',
+            'hạn_chót' => 'due_date',
+            'deadline' => 'due_date',
+            'assignee_usernames' => 'assignee_usernames',
+            'nguoi_thuc_hien' => 'assignee_usernames',
+            'người_thực_hiện' => 'assignee_usernames',
+            'nguoi_phu_trach' => 'assignee_usernames',
+            'người_phụ_trách' => 'assignee_usernames',
+            'thanh_vien' => 'assignee_usernames',
+            'thành_viên' => 'assignee_usernames',
+            'assignees' => 'assignee_usernames',
+            'assignee' => 'assignee_usernames',
+            'contribution_percentages' => 'contribution_percentages',
+            'ty_le_dong_gop' => 'contribution_percentages',
+            'tỷ_lệ_đóng_góp' => 'contribution_percentages',
+            'ty_le_%' => 'contribution_percentages',
+            'tỷ_lệ_%' => 'contribution_percentages',
+            'contribution' => 'contribution_percentages',
+            'labels' => 'labels',
+            'nhan' => 'labels',
+            'nhãn' => 'labels',
+            'tags' => 'labels',
+            'tag' => 'labels',
+            'sprint' => 'sprint',
+            'chu_ky' => 'sprint',
+            'chu_kỳ' => 'sprint',
+            'completed' => 'completed',
+            'hoan_thanh' => 'completed',
+            'hoàn_thành' => 'completed',
+            'done' => 'completed',
+            'notes' => 'notes',
+            'ghi_chu' => 'notes',
+            'ghi_chú' => 'notes',
+            'note' => 'notes',
+        ];
+
         $headerMap = [];
         for ($col = 1; $col <= $highestColumnIndex; $col++) {
             $val = trim((string)$tasksSheet->getCell([$col, 1])->getValue());
             if ($val !== '') {
-                $cleanCol = strtolower(str_replace([' ', '-'], '_', $val));
-                $headerMap[$cleanCol] = $col;
+                $cleanCol = mb_strtolower(str_replace([' ', '-'], '_', $val));
+                $canonicalCol = $aliasMap[$cleanCol] ?? $cleanCol;
+                if (!isset($headerMap[$canonicalCol])) {
+                    $headerMap[$canonicalCol] = $col;
+                }
             }
         }
 
-        if (!isset($headerMap['external_key']) || !isset($headerMap['title'])) {
+        if (!isset($headerMap['title'])) {
             @unlink($filePath);
-            abort(422, "Sheet 'TASKS' thiếu các cột bắt buộc: 'external_key' hoặc 'title'.");
+            abort(422, "Tệp Excel thiếu cột bắt buộc: 'title' (hoặc Tiêu đề công việc).");
         }
 
         // 5. Parse Data Rows
@@ -209,6 +282,15 @@ class TaskExcelImportService
                 continue;
             }
 
+            // Auto-generate external_key if not provided
+            if (empty($rowData['external_key'])) {
+                do {
+                    $genKey = 'TASK-' . Str::upper(Str::random(6));
+                    $genLower = mb_strtolower($genKey);
+                } while (isset($encounteredFileKeys[$genLower]) || isset($existingExternalKeysInBoard[$genLower]));
+                $rowData['external_key'] = $genKey;
+            }
+
             $rowData['_row_index'] = $row;
             $parsedRows[] = $rowData;
 
@@ -222,7 +304,7 @@ class TaskExcelImportService
         @unlink($filePath);
 
         if (empty($parsedRows)) {
-            abort(422, "Sheet 'TASKS' không có dữ liệu công việc nào.");
+            abort(422, 'Tệp Excel không có dữ liệu công việc nào.');
         }
 
         // 6. Validate Each Row & Hierarchy
@@ -230,7 +312,7 @@ class TaskExcelImportService
         $validRowsCount = 0;
         $invalidRowsCount = 0;
 
-        foreach ($parsedRows as $r) {
+        foreach ($parsedRows as &$r) {
             $errors = [];
             $rowNum = $r['_row_index'];
             $extKeyRaw = $r['external_key'];
@@ -239,18 +321,14 @@ class TaskExcelImportService
             $parentKeyLower = mb_strtolower(trim($parentKeyRaw));
 
             // Validate external_key
-            if ($extKeyLower === '') {
-                $errors[] = 'external_key là bắt buộc không được để trống.';
+            if (isset($encounteredFileKeys[$extKeyLower])) {
+                $errors[] = "Mã external_key '{$extKeyRaw}' bị trùng lặp trong file (dòng {$encounteredFileKeys[$extKeyLower]} và {$rowNum}).";
             } else {
-                if (isset($encounteredFileKeys[$extKeyLower])) {
-                    $errors[] = "Mã external_key '{$extKeyRaw}' bị trùng lặp trong file (dòng {$encounteredFileKeys[$extKeyLower]} và {$rowNum}).";
-                } else {
-                    $encounteredFileKeys[$extKeyLower] = $rowNum;
-                }
+                $encounteredFileKeys[$extKeyLower] = $rowNum;
+            }
 
-                if (isset($existingExternalKeysInBoard[$extKeyLower])) {
-                    $errors[] = "Mã external_key '{$extKeyRaw}' đã tồn tại trong Board này từ trước.";
-                }
+            if (isset($existingExternalKeysInBoard[$extKeyLower])) {
+                $errors[] = "Mã external_key '{$extKeyRaw}' đã tồn tại trong Board này từ trước.";
             }
 
             // Validate title
@@ -789,282 +867,153 @@ class TaskExcelImportService
     // TEMPLATE SHEET BUILDERS
     // -------------------------------------------------------------
 
-    private function buildGuideSheet($sheet, Board $board): void
+    private function buildSingleTasksSheet($sheet, Board $board): void
     {
-        $sheet->getColumnDimension('A')->setWidth(26);
-        $sheet->getColumnDimension('B')->setWidth(80);
-
-        $sheet->setCellValue('A1', 'QUY TẮC NHẬP DỮ LIỆU CÔNG VIỆC TỪ EXCEL (DANAVA TRELLO)');
-        $sheet->mergeCells('A1:B1');
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setRGB('1E1B4B');
-        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-
-        $guidelines = [
-            ['external_key', 'Mã định danh duy nhất của task trong file (VD: TASK-001, FE-10). Bắt buộc, không được để trống và không được trùng lặp.'],
-            ['parent_external_key', 'Nếu là task con, điền external_key của task cha. Để trống nếu là task chính. Tuyệt đối không tạo Task cháu.'],
-            ['title', 'Tiêu đề công việc. Bắt buộc, tối đa 255 ký tự.'],
-            ['description', 'Mô tả chi tiết nội dung công việc (tuỳ chọn).'],
-            ['column', 'Tên cột hoặc ID cột trong Board (xem sheet COT_KANBAN). Để trống sẽ tự đưa vào cột đầu tiên của Board.'],
-            ['priority', "Mức độ ưu tiên: 'Thấp', 'Bình thường', 'Cao', 'Khẩn cấp'. Mặc định: 'Bình thường'."],
-            ['complexity', "Độ phức tạp task: 'XS' (1đ), 'S' (2đ), 'M' (3đ), 'L' (5đ), 'XL' (8đ). Mặc định: 'M'."],
-            ['estimated_points', 'Điểm ước lượng / Story point (số dương hoặc 0).'],
-            ['progress_percent', 'Tiến độ hoàn thành (từ 0 đến 100).'],
-            ['start_date', 'Ngày bắt đầu theo chuẩn YYYY-MM-DD hoặc YYYY-MM-DD HH:mm (VD: 2026-10-25 hoặc 2026-10-25 08:30).'],
-            ['due_date', 'Ngày hạn chót theo chuẩn YYYY-MM-DD hoặc YYYY-MM-DD HH:mm (VD: 2026-10-30 hoặc 2026-10-30 17:30).'],
-            ['assignee_usernames', 'Tên đăng nhập (username) các thành viên phụ trách, phân cách bằng dấu ; (VD: hung;nam). Chỉ gán người đã thuộc Board (xem sheet THANH_VIEN).'],
-            ['contribution_percentages', 'Tỷ lệ đóng góp tương ứng (%) cho mỗi người phụ trách, phân cách bằng ; (VD: 60;40). Tổng phải bằng 100%. Để trống sẽ tự chia đều.'],
-            ['labels', 'Tên các nhãn, phân cách bằng dấu ; hoặc , (VD: Frontend;Bug;UI).'],
-            ['sprint', 'Tên sprint trong Board (nếu có).'],
-            ['completed', "Trạng thái hoàn thành: '1', 'Có' hoặc 'true' nếu đã xong; để trống hoặc '0' nếu chưa."],
-            ['notes', 'Ghi chú nội bộ cho công việc.'],
-        ];
-
-        $sheet->setCellValue('A3', 'Tên cột');
-        $sheet->setCellValue('B3', 'Hướng dẫn chi tiết & Ràng buộc nghiệp vụ');
-        $sheet->getStyle('A3:B3')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A3:B3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('4F46E5');
-
-        $r = 4;
-        foreach ($guidelines as $item) {
-            $sheet->setCellValue('A' . $r, $item[0]);
-            $sheet->setCellValue('B' . $r, $item[1]);
-            $sheet->getStyle('A' . $r)->getFont()->setBold(true)->getColor()->setRGB('4338CA');
-            $sheet->getStyle("A{$r}:B{$r}")->getAlignment()->setWrapText(true);
-            $sheet->getStyle("A{$r}:B{$r}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('E2E8F0');
-            $r++;
-        }
-
-        // Safety notes
-        $r += 2;
-        $sheet->setCellValue("A{$r}", 'LƯU Ý VỀ TÍNH TOÀN VẸN & AN TOÀN:');
-        $sheet->mergeCells("A{$r}:B{$r}");
-        $sheet->getStyle("A{$r}")->getFont()->setBold(true)->getColor()->setRGB('DC2626');
-        $r++;
-
-        $notes = [
-            '1. Hệ thống áp dụng nguyên tắc nguyên tử: Nếu 1 dòng bị lỗi, toàn bộ file sẽ không được import cho đến khi bạn sửa lại.',
-            '2. Khi upload lên, hệ thống sẽ thực hiện VALIDATE và hiển thị BẢN XEM TRƯỚC (PREVIEW). Dữ liệu chỉ được tạo khi bạn bấm "Xác nhận Import".',
-            '3. Tuyệt đối không tạo tài khoản mới từ Excel hoặc gán người lạ ngoài Board này.',
-            '4. Tối đa 2.000 dòng công việc và dung lượng tệp dưới 10MB.',
-        ];
-
-        foreach ($notes as $n) {
-            $sheet->setCellValue("A{$r}", $n);
-            $sheet->mergeCells("A{$r}:B{$r}");
-            $sheet->getStyle("A{$r}")->getFont()->setItalic(true);
-            $r++;
-        }
-    }
-
-    private function buildTasksSheet($sheet): void
-    {
+        // 1. Headers
         $headers = self::COLUMNS;
         $colIdx = 1;
-
         foreach ($headers as $h) {
             $sheet->setCellValue([$colIdx, 1], $h);
             $colIdx++;
         }
 
-        // Header style
         $lastCol = Coordinate::stringFromColumnIndex(count($headers));
-        $sheet->getStyle("A1:{$lastCol}1")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+
+        // Header Styling
+        $sheet->getStyle("A1:{$lastCol}1")->getFont()->setBold(true)->setSize(11)->getColor()->setRGB('FFFFFF');
         $sheet->getStyle("A1:{$lastCol}1")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1E293B');
-        $sheet->getRowDimension(1)->setRowHeight(28);
+        $sheet->getStyle("A1:{$lastCol}1")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getRowDimension(1)->setRowHeight(32);
 
-        // Auto width
-        for ($i = 1; $i <= count($headers); $i++) {
-            $sheet->getColumnDimensionByColumn($i)->setAutoSize(true);
-        }
-    }
+        // Freeze pane at row 2 so headers remain visible when scrolling
+        $sheet->freezePane('A2');
 
-    private function buildMembersSheet($sheet, Board $board): void
-    {
-        $sheet->setCellValue('A1', 'username');
-        $sheet->setCellValue('B1', 'Họ và tên');
-        $sheet->setCellValue('C1', 'Email');
-        $sheet->setCellValue('D1', 'Vai trò trong Board');
-
-        $sheet->getStyle('A1:D1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:D1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('059669'); // Green
-
-        $r = 2;
-        if ($board->owner) {
-            $sheet->setCellValue('A' . $r, $board->owner->username);
-            $sheet->setCellValue('B' . $r, $board->owner->name);
-            $sheet->setCellValue('C' . $r, $board->owner->email);
-            $sheet->setCellValue('D' . $r, 'Owner (Chủ bảng)');
-            $r++;
-        }
-
-        $members = $board->members()->get();
-        foreach ($members as $m) {
-            if ($board->owner && $m->id === $board->owner->id) continue;
-            $sheet->setCellValue('A' . $r, $m->username);
-            $sheet->setCellValue('B' . $r, $m->name);
-            $sheet->setCellValue('C' . $r, $m->email);
-            $sheet->setCellValue('D' . $r, $m->pivot->role ?? 'member');
-            $r++;
-        }
-
-        for ($i = 1; $i <= 4; $i++) {
-            $sheet->getColumnDimensionByColumn($i)->setAutoSize(true);
-        }
-    }
-
-    private function buildColumnsSheet($sheet, Board $board): void
-    {
-        $sheet->setCellValue('A1', 'ID Cột');
-        $sheet->setCellValue('B1', 'Tên Cột Kanban');
-        $sheet->setCellValue('C1', 'Thứ tự');
-
-        $sheet->getStyle('A1:C1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:C1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('2563EB'); // Blue
-
-        $columns = KanbanColumn::where('board_id', $board->id)
+        // Preload Board Metadata
+        $boardColumns = KanbanColumn::where('board_id', $board->id)
             ->whereNull('archived_at')
             ->orderBy('order')
             ->get();
+        $colTitles = $boardColumns->pluck('title')->toArray();
+        $firstCol = $colTitles[0] ?? 'Cần làm';
 
-        $r = 2;
-        foreach ($columns as $c) {
-            $sheet->setCellValue('A' . $r, $c->id);
-            $sheet->setCellValue('B' . $r, $c->title);
-            $sheet->setCellValue('C' . $r, $c->order);
-            $r++;
+        $memberUsernames = [];
+        if ($board->owner) {
+            $memberUsernames[] = $board->owner->username . ' (Chủ bảng)';
+        }
+        foreach ($board->members as $m) {
+            if ($board->owner && $m->id === $board->owner->id) continue;
+            $memberUsernames[] = $m->username;
+        }
+        $sampleUser = $board->owner?->username ?? ($board->members->first()?->username ?? 'admin');
+
+        // 2. Add Informative Tooltip Comments on Header Cells
+        $comments = [
+            'A1' => "MÃ CÔNG VIỆC (external_key)\nMã định danh duy nhất (VD: TASK-001, FE-10).\nCó thể để trống hệ thống sẽ tự sinh mã.",
+            'B1' => "TASK CHA (parent_external_key)\nNếu là task con, điền external_key của task cha (VD: TASK-001).\nĐể trống nếu là công việc chính.",
+            'C1' => "TIÊU ĐỀ (title)\nTiêu đề công việc (BẮT BUỘC). Tối đa 255 ký tự.",
+            'D1' => "MÔ TẢ (description)\nMô tả chi tiết nội dung công việc (tuỳ chọn).",
+            'E1' => "CỘT KANBAN (column)\nCác cột hiện có trong bảng:\n" . (empty($colTitles) ? "- Cần làm" : "- " . implode("\n- ", $colTitles)) . "\n(Để trống sẽ tự động vào cột đầu tiên).",
+            'F1' => "MỨC ƯU TIÊN (priority)\nCác mức: Thấp, Bình thường, Cao, Khẩn cấp.\n(Mặc định: Bình thường).",
+            'G1' => "ĐỘ PHỨC TẠP (complexity)\nCác mức: XS (1đ), S (2đ), M (3đ), L (5đ), XL (8đ).\n(Mặc định: M).",
+            'H1' => "ĐIỂM ƯỚC LƯỢNG (estimated_points)\nStory point / Điểm đánh giá (số >= 0).",
+            'I1' => "TIẾN ĐỘ % (progress_percent)\nTiến độ hoàn thành từ 0 đến 100.",
+            'J1' => "NGÀY BẮT ĐẦU (start_date)\nĐịnh dạng: YYYY-MM-DD (VD: 2026-10-25 hoặc 2026-10-25 08:30).",
+            'K1' => "HẠN CHÓT (due_date)\nĐịnh dạng: YYYY-MM-DD (VD: 2026-10-30 hoặc 2026-10-30 17:30).",
+            'L1' => "NGƯỜI PHỤ TRÁCH (assignee_usernames)\nUsername thành viên trong bảng này:\n" . (empty($memberUsernames) ? "- {$sampleUser}" : "- @" . implode("\n- @", $memberUsernames)) . "\nPhân cách nhiều người bằng dấu ; (VD: {$sampleUser}).",
+            'M1' => "TỶ LỆ ĐÓNG GÓP % (contribution_percentages)\nTỷ lệ đóng góp tương ứng cho mỗi người (VD: 60;40).\nTổng bằng 100%. Để trống tự chia đều.",
+            'N1' => "NHÃN (labels)\nNhãn phân loại (VD: Tính năng;Giao diện;Bug).\nPhân cách bằng dấu ; hoặc ,",
+            'O1' => "SPRINT (sprint)\nTên Sprint trong bảng (nếu có).",
+            'P1' => "HOÀN THÀNH (completed)\nĐiền 1 nếu đã xong; Điền 0 hoặc để trống nếu chưa xong.",
+            'Q1' => "GHI CHÚ (notes)\nGhi chú nội bộ cho công việc.",
+        ];
+
+        foreach ($comments as $cellCoord => $commentText) {
+            $sheet->getComment($cellCoord)->getText()->createTextRun($commentText);
+            $sheet->getComment($cellCoord)->setWidth('320pt');
+            $sheet->getComment($cellCoord)->setHeight('110pt');
         }
 
-        for ($i = 1; $i <= 3; $i++) {
-            $sheet->getColumnDimensionByColumn($i)->setAutoSize(true);
-        }
-    }
-
-    private function buildLabelsSheet($sheet, Board $board): void
-    {
-        $sheet->setCellValue('A1', 'Tên Nhãn');
-        $sheet->setCellValue('B1', 'Mã màu');
-
-        $sheet->getStyle('A1:B1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:B1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('D97706'); // Amber
-
-        $labels = Label::where('board_id', $board->id)->get();
-        $r = 2;
-        foreach ($labels as $lbl) {
-            $sheet->setCellValue('A' . $r, $lbl->name);
-            $sheet->setCellValue('B' . $r, $lbl->color);
-            $r++;
-        }
-
-        $sheet->getColumnDimension('A')->setAutoSize(true);
-        $sheet->getColumnDimension('B')->setAutoSize(true);
-    }
-
-    private function buildExamplesSheet($sheet, Board $board): void
-    {
-        $headers = self::COLUMNS;
-        $colIdx = 1;
-
-        foreach ($headers as $h) {
-            $sheet->setCellValue([$colIdx, 1], $h);
-            $colIdx++;
-        }
-
-        $lastCol = Coordinate::stringFromColumnIndex(count($headers));
-        $sheet->getStyle("A1:{$lastCol}1")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle("A1:{$lastCol}1")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('475569');
-
-        $firstCol = KanbanColumn::where('board_id', $board->id)->whereNull('archived_at')->first()?->title ?? 'Cần làm';
-        $sampleUser = $board->owner?->username ?? 'admin';
+        // 3. Populate Sample Rows (Rows 2, 3, 4)
+        $today = Carbon::now()->format('Y-m-d');
+        $in3Days = Carbon::now()->addDays(3)->format('Y-m-d');
+        $in7Days = Carbon::now()->addDays(7)->format('Y-m-d');
 
         $samples = [
             [
                 'external_key' => 'TASK-001',
                 'parent_external_key' => '',
-                'title' => 'Thiết kế giao diện Dashboard và Trang thống kê',
-                'description' => 'Hoàn thiện bản vẽ Figma đầy đủ component và Dark mode.',
+                'title' => 'Phát triển tính năng và giao diện mới',
+                'description' => 'Công việc mẫu chính (Task cha). Hoàn thiện giao diện và API.',
                 'column' => $firstCol,
                 'priority' => 'Cao',
                 'complexity' => 'L',
                 'estimated_points' => '5',
                 'progress_percent' => '50',
-                'start_date' => '2026-10-20 08:00',
-                'due_date' => '2026-10-25 17:00',
+                'start_date' => $today,
+                'due_date' => $in7Days,
                 'assignee_usernames' => $sampleUser,
                 'contribution_percentages' => '100',
-                'labels' => 'UI;Design',
+                'labels' => 'Tính năng;UI',
                 'sprint' => '',
                 'completed' => '0',
-                'notes' => 'Task cha chính',
+                'notes' => 'Task cha mẫu',
             ],
             [
                 'external_key' => 'TASK-002',
                 'parent_external_key' => 'TASK-001',
-                'title' => 'Vẽ wireframe khung màn hình KPI',
-                'description' => 'Task con trực thuộc TASK-001',
+                'title' => 'Thiết kế bản vẽ mockup chi tiết',
+                'description' => 'Công việc con mẫu (trỏ tới TASK-001).',
                 'column' => $firstCol,
                 'priority' => 'Bình thường',
                 'complexity' => 'S',
                 'estimated_points' => '2',
                 'progress_percent' => '100',
-                'start_date' => '2026-10-20 08:00',
-                'due_date' => '2026-10-21 17:00',
+                'start_date' => $today,
+                'due_date' => $in3Days,
                 'assignee_usernames' => $sampleUser,
                 'contribution_percentages' => '100',
                 'labels' => 'UI',
                 'sprint' => '',
                 'completed' => '1',
-                'notes' => 'Subtask 1 của TASK-001',
+                'notes' => 'Task con mẫu đã xong',
             ],
             [
                 'external_key' => 'TASK-003',
-                'parent_external_key' => 'TASK-001',
-                'title' => 'Hoàn thiện phối màu và responsive mobile',
-                'description' => 'Task con thứ 2 trực thuộc TASK-001',
+                'parent_external_key' => '',
+                'title' => 'Kiểm thử chất lượng và hoàn thiện tài liệu',
+                'description' => 'Công việc mẫu độc lập.',
                 'column' => $firstCol,
-                'priority' => 'Cao',
+                'priority' => 'Bình thường',
                 'complexity' => 'M',
                 'estimated_points' => '3',
-                'progress_percent' => '20',
-                'start_date' => '2026-10-22 08:00',
-                'due_date' => '2026-10-25 17:00',
-                'assignee_usernames' => $sampleUser,
-                'contribution_percentages' => '100',
-                'labels' => 'Design',
-                'sprint' => '',
-                'completed' => '0',
-                'notes' => 'Subtask 2 của TASK-001',
-            ],
-            [
-                'external_key' => 'TASK-004',
-                'parent_external_key' => '',
-                'title' => 'Tối ưu hóa truy vấn cơ sở dữ liệu cho kỳ đánh giá',
-                'description' => 'Đánh chỉ mục và tối ưu aggregate queries.',
-                'column' => $firstCol,
-                'priority' => 'Khẩn cấp',
-                'complexity' => 'XL',
-                'estimated_points' => '8',
                 'progress_percent' => '0',
-                'start_date' => '2026-10-26 09:00',
-                'due_date' => '2026-10-28 18:00',
+                'start_date' => $today,
+                'due_date' => $in7Days,
                 'assignee_usernames' => $sampleUser,
                 'contribution_percentages' => '100',
-                'labels' => 'Backend;Performance',
+                'labels' => 'Testing',
                 'sprint' => '',
                 'completed' => '0',
-                'notes' => 'Task độc lập',
+                'notes' => 'Task độc lập mẫu',
             ],
         ];
 
         $r = 2;
         foreach ($samples as $sample) {
             $colIdx = 1;
-            foreach (self::COLUMNS as $colName) {
-                $sheet->setCellValue([$colIdx, $r], $sample[$colName] ?? '');
+            foreach ($headers as $h) {
+                $sheet->setCellValue([$colIdx, $r], $sample[$h] ?? '');
                 $colIdx++;
+            }
+            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setSize(10);
+            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('E2E8F0');
+            if ($r % 2 === 1) {
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('F8FAFC');
             }
             $r++;
         }
 
+        // Auto width for all columns
         for ($i = 1; $i <= count($headers); $i++) {
             $sheet->getColumnDimensionByColumn($i)->setAutoSize(true);
         }
