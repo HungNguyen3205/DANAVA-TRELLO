@@ -498,4 +498,88 @@ class TaskExcelImportTest extends TestCase
             'title' => 'Công việc viết bằng tiếng Việt',
         ]);
     }
+
+    /**
+     * Test: Guarantee that flexible Excel inputs (percents with %, decimal comma, @username/email, d/m/Y dates, priority aliases) are accurately parsed and saved.
+     */
+    public function test_import_accuracy_with_all_flexible_formats(): void
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $headers = [
+            'Mã task', 'Tiêu đề', 'Mô tả', 'Cột', 'Ưu tiên', 'Độ phức tạp',
+            'Điểm', 'Tiến độ', 'Hạn chót', 'Người thực hiện', 'Tỷ lệ đóng góp',
+            'Nhãn', 'Hoàn thành'
+        ];
+
+        foreach ($headers as $idx => $h) {
+            $sheet->setCellValue([$idx + 1, 1], $h);
+        }
+
+        // Row 2: testing with @username, email, %, d/m/Y date, decimal comma, etc.
+        $sheet->setCellValue('A2', 'ACC-001');
+        $sheet->setCellValue('B2', 'Công việc kiểm tra độ chính xác dữ liệu');
+        $sheet->setCellValue('C2', 'Mô tả nội dung công việc chi tiết');
+        $sheet->setCellValue('D2', '1'); // column by order 1
+        $sheet->setCellValue('E2', 'Gấp'); // should map to Khẩn cấp
+        $sheet->setCellValue('F2', '2'); // complexity 2 should map to S
+        $sheet->setCellValue('G2', '4,5'); // decimal comma -> 4.5
+        $sheet->setCellValue('H2', '75%'); // 75% -> 75
+        $sheet->setCellValue('I2', '25/12/2026'); // d/m/Y format
+        $sheet->setCellValue('J2', "@board_owner, {$this->adminMember->email}"); // @username and email separated by comma
+        $sheet->setCellValue('K2', '60%, 40%'); // percentages with % sign
+        $sheet->setCellValue('L2', '#Frontend; #UI'); // labels with #
+        $sheet->setCellValue('M2', 'Có'); // should map to completed = true
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_acc_') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        $file = new UploadedFile($tempPath, 'acc.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
+
+        $previewRes = $this->actingAs($this->owner)
+            ->postJson("/api/boards/{$this->board->id}/tasks/import/preview", ['file' => $file]);
+
+        $previewRes->assertStatus(200);
+        $previewRes->assertJson([
+            'is_valid' => true,
+            'total_rows' => 1,
+            'valid_rows_count' => 1,
+        ]);
+
+        $row = $previewRes->json('rows.0.data');
+        $this->assertEquals('ACC-001', $row['external_key']);
+        $this->assertEquals('Công việc kiểm tra độ chính xác dữ liệu', $row['title']);
+        $this->assertEquals($this->colTodo->id, $row['column_id']);
+        $this->assertEquals('Khẩn cấp', $row['priority']);
+        $this->assertEquals('S', $row['complexity']);
+        $this->assertEquals(4.5, $row['estimated_points']);
+        $this->assertEquals(75, $row['progress_percent']);
+        $this->assertStringStartsWith('2026-12-25', $row['due_date']);
+        $this->assertTrue($row['completed']);
+        $this->assertEquals(['Frontend', 'UI'], $row['labels']);
+        $this->assertCount(2, $row['assignees']);
+        $this->assertEquals(60, $row['assignees'][0]['contribution_percent']);
+        $this->assertEquals(40, $row['assignees'][1]['contribution_percent']);
+
+        // Confirm and verify exact DB records
+        $confirmRes = $this->actingAs($this->owner)
+            ->postJson("/api/boards/{$this->board->id}/tasks/import/confirm", [
+                'preview_token' => $previewRes->json('preview_token'),
+            ]);
+
+        $confirmRes->assertStatus(200);
+
+        $createdTask = Task::where('external_key', 'ACC-001')->first();
+        $this->assertNotNull($createdTask);
+        $this->assertEquals('Khẩn cấp', $createdTask->priority);
+        $this->assertEquals('S', $createdTask->complexity);
+        $this->assertEquals(4.5, (float)$createdTask->estimated_points);
+        $this->assertEquals(75, $createdTask->progress_percent);
+        $this->assertNotNull($createdTask->completed_at);
+        $this->assertCount(2, $createdTask->assignees);
+        $this->assertEquals(60, $createdTask->assignees[0]->pivot->contribution_percent);
+        $this->assertEquals(40, $createdTask->assignees[1]->pivot->contribution_percent);
+    }
 }

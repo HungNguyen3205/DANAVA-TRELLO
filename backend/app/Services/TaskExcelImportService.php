@@ -111,10 +111,14 @@ class TaskExcelImportService
         $defaultColumn = $boardColumns->first();
 
         $columnsByName = [];
+        $columnsBySlug = [];
         $columnsById = [];
-        foreach ($boardColumns as $col) {
+        $columnsByOrder = [];
+        foreach ($boardColumns as $idx => $col) {
             $columnsByName[mb_strtolower(trim($col->title))] = $col;
+            $columnsBySlug[Str::slug($col->title)] = $col;
             $columnsById[(string)$col->id] = $col;
+            $columnsByOrder[(string)($idx + 1)] = $col;
         }
 
         $sprintsByName = BoardSprint::where('board_id', $board->id)
@@ -266,15 +270,15 @@ class TaskExcelImportService
 
             foreach (self::COLUMNS as $colName) {
                 $colIndex = $headerMap[$colName] ?? null;
-                $val = null;
+                $val = '';
                 if ($colIndex !== null) {
                     $cell = $tasksSheet->getCell([$colIndex, $row]);
-                    $val = $cell->getValue();
-                    if ($val !== null && trim((string)$val) !== '') {
+                    $val = $this->extractCellValueSafely($cell);
+                    if ($val !== '') {
                         $hasAnyValue = true;
                     }
                 }
-                $rowData[$colName] = $val !== null ? trim((string)$val) : '';
+                $rowData[$colName] = $val;
             }
 
             // Skip blank row
@@ -342,10 +346,16 @@ class TaskExcelImportService
             $resolvedColumn = null;
             if ($r['column'] !== '') {
                 $colKeyLower = mb_strtolower(trim($r['column']));
+                $colSlug = Str::slug($r['column']);
+
                 if (isset($columnsByName[$colKeyLower])) {
                     $resolvedColumn = $columnsByName[$colKeyLower];
+                } elseif (isset($columnsBySlug[$colSlug])) {
+                    $resolvedColumn = $columnsBySlug[$colSlug];
                 } elseif (isset($columnsById[$r['column']])) {
                     $resolvedColumn = $columnsById[$r['column']];
+                } elseif (isset($columnsByOrder[$r['column']])) {
+                    $resolvedColumn = $columnsByOrder[$r['column']];
                 } else {
                     $errors[] = "Cột '{$r['column']}' không tồn tại trong Board này.";
                 }
@@ -357,28 +367,33 @@ class TaskExcelImportService
             $priority = $this->normalizePriority($r['priority']);
 
             // Validate complexity
-            $complexity = strtoupper(trim($r['complexity'] ?: 'M'));
-            if (!in_array($complexity, ['XS', 'S', 'M', 'L', 'XL'])) {
-                $errors[] = "Độ phức tạp '{$r['complexity']}' không hợp lệ. Chỉ chấp nhận: XS, S, M, L, XL.";
-            }
+            $complexity = $this->normalizeComplexity($r['complexity']);
 
             // Validate estimated_points
             $estimatedPoints = null;
             if ($r['estimated_points'] !== '') {
-                if (!is_numeric($r['estimated_points']) || (float)$r['estimated_points'] < 0) {
+                $cleanPoints = str_replace([' ', ','], ['', '.'], $r['estimated_points']);
+                if (!is_numeric($cleanPoints) || (float)$cleanPoints < 0) {
                     $errors[] = 'Điểm ước lượng (estimated_points) phải là số dương hoặc 0.';
                 } else {
-                    $estimatedPoints = round((float)$r['estimated_points'], 2);
+                    $estimatedPoints = round((float)$cleanPoints, 2);
                 }
             }
 
             // Validate progress_percent
             $progressPercent = 0;
             if ($r['progress_percent'] !== '') {
-                if (!is_numeric($r['progress_percent']) || (int)$r['progress_percent'] < 0 || (int)$r['progress_percent'] > 100) {
-                    $errors[] = 'Tiến độ (progress_percent) phải là số nguyên từ 0 đến 100.';
+                $cleanProgress = str_replace(['%', ' '], '', $r['progress_percent']);
+                $cleanProgress = str_replace(',', '.', $cleanProgress);
+
+                if (!is_numeric($cleanProgress) || (float)$cleanProgress < 0 || (float)$cleanProgress > 100) {
+                    $errors[] = 'Tiến độ (progress_percent) phải là số từ 0 đến 100.';
                 } else {
-                    $progressPercent = (int)$r['progress_percent'];
+                    $valProgress = (float)$cleanProgress;
+                    if ($valProgress > 0 && $valProgress <= 1.0 && !str_contains($cleanProgress, '100')) {
+                        $valProgress = $valProgress * 100;
+                    }
+                    $progressPercent = (int)round($valProgress);
                 }
             }
 
@@ -389,22 +404,28 @@ class TaskExcelImportService
                 $errors[] = 'Ngày bắt đầu (start_date) không được lớn hơn ngày hạn chót (due_date).';
             }
 
-            // Validate assignees
+            // Validate assignees (support comma, semicolon, newline, leading @, username, email, full name)
             $resolvedAssignees = [];
             if ($r['assignee_usernames'] !== '') {
-                $rawUsernames = array_map('trim', explode(';', $r['assignee_usernames']));
-                $seenUsernames = [];
+                $rawUsernames = preg_split('/[;,\n\r]+/', $r['assignee_usernames']);
+                $seenUserIds = [];
 
                 foreach ($rawUsernames as $rawU) {
+                    $rawU = trim($rawU);
                     if ($rawU === '') continue;
-                    $uLower = mb_strtolower($rawU);
-                    if (isset($seenUsernames[$uLower])) continue; // de-duplicate inside same task
-                    $seenUsernames[$uLower] = true;
 
-                    if (!isset($boardMembers[$uLower])) {
-                        $errors[] = "Thành viên '@{$rawU}' không thuộc Board này. Hệ thống không cho phép gán người ngoài Board.";
+                    $cleanU = ltrim($rawU, '@');
+                    $keyLower = mb_strtolower($cleanU);
+
+                    $matchedUser = $boardMembers[$keyLower] ?? null;
+
+                    if (!$matchedUser) {
+                        $errors[] = "Không tìm thấy thành viên '{$rawU}' trong Board này. Vui lòng chỉ gán thành viên đã tham gia Board.";
                     } else {
-                        $resolvedAssignees[] = $boardMembers[$uLower];
+                        if (!isset($seenUserIds[$matchedUser->id])) {
+                            $seenUserIds[$matchedUser->id] = true;
+                            $resolvedAssignees[] = $matchedUser;
+                        }
                     }
                 }
             }
@@ -427,22 +448,38 @@ class TaskExcelImportService
                         }
                     }
                 } else {
-                    $rawPercents = array_map('trim', explode(';', $r['contribution_percentages']));
+                    $rawPercents = array_map('trim', preg_split('/[;,\n\r]+/', $r['contribution_percentages']));
+                    $rawPercents = array_values(array_filter($rawPercents, fn($v) => $v !== ''));
+
                     if (count($rawPercents) !== $assigneeCount) {
                         $errors[] = "Số lượng % đóng góp (" . count($rawPercents) . ") không khớp với số lượng người phụ trách ({$assigneeCount}).";
                     } else {
-                        $sum = 0;
+                        $parsedVals = [];
+                        $rawSum = 0;
                         foreach ($rawPercents as $p) {
-                            if (!is_numeric($p) || (float)$p <= 0 || (float)$p > 100) {
-                                $errors[] = "Giá trị tỷ lệ đóng góp '{$p}' không hợp lệ (phải > 0 và <= 100).";
-                            } else {
-                                $valP = round((float)$p, 2);
-                                $resolvedContributions[] = $valP;
-                                $sum += $valP;
+                            $cleanP = str_replace(['%', ' '], '', $p);
+                            $cleanP = str_replace(',', '.', $cleanP);
+                            if (!is_numeric($cleanP) || (float)$cleanP <= 0) {
+                                $errors[] = "Giá trị tỷ lệ đóng góp '{$p}' không hợp lệ (phải là số > 0).";
+                                break;
                             }
+                            $val = (float)$cleanP;
+                            $parsedVals[] = $val;
+                            $rawSum += $val;
                         }
-                        if (abs($sum - 100) > 0.05) {
-                            $errors[] = "Tổng tỷ lệ đóng góp của các thành viên phải bằng 100% (hiện tại: {$sum}%).";
+
+                        if (empty($errors)) {
+                            // If entered as decimals like 0.6 and 0.4 (Excel percentage formatting)
+                            if ($rawSum >= 0.95 && $rawSum <= 1.05) {
+                                $parsedVals = array_map(fn($v) => round($v * 100, 2), $parsedVals);
+                                $rawSum = array_sum($parsedVals);
+                            }
+
+                            if (abs($rawSum - 100) > 0.05) {
+                                $errors[] = "Tổng tỷ lệ đóng góp của các thành viên phải bằng 100% (hiện tại: {$rawSum}%).";
+                            } else {
+                                $resolvedContributions = array_map(fn($v) => round($v, 2), $parsedVals);
+                            }
                         }
                     }
                 }
@@ -495,7 +532,10 @@ class TaskExcelImportService
             }
 
             // Completed flag
-            $isCompleted = in_array(mb_strtolower(trim($r['completed'])), ['1', 'true', 'có', 'yes', 'hoàn thành']);
+            $cleanCompleted = mb_strtolower(trim($r['completed']));
+            $isCompleted = in_array($cleanCompleted, [
+                '1', 'có', 'co', 'yes', 'y', 'true', 'xong', 'đã xong', 'da xong', 'hoàn thành', 'hoan thanh', 'x', 'v', '✓', '✔', 'ok', 'done'
+            ]);
 
             $isValid = empty($errors);
             if ($isValid) {
@@ -701,6 +741,9 @@ class TaskExcelImportService
         $completedAt = $d['completed'] ? $now : null;
         $completedBy = $d['completed'] ? $actor->id : null;
 
+        $maxOrder = Task::where('column_id', $d['column_id'])->max('order') ?? 0;
+        $nextOrder = $maxOrder + 1000;
+
         $task = Task::create([
             'external_key' => $d['external_key'],
             'parent_task_id' => $parentTaskId,
@@ -718,8 +761,8 @@ class TaskExcelImportService
             'due_date' => $d['due_date'],
             'completed_at' => $completedAt,
             'completed_by' => $completedBy,
-            'sort_order' => 0,
-            'order' => 0,
+            'sort_order' => $nextOrder,
+            'order' => $nextOrder,
         ]);
 
         // Attach assignees with contribution_percent
@@ -761,15 +804,30 @@ class TaskExcelImportService
     {
         $lookup = [];
 
-        // Owner
+        $allMembers = collect();
         if ($board->owner) {
-            $lookup[mb_strtolower(trim($board->owner->username))] = $board->owner;
+            $allMembers->push($board->owner);
+        }
+        $boardMembers = $board->members()->get();
+        foreach ($boardMembers as $m) {
+            $allMembers->push($m);
         }
 
-        // Board members
-        $members = $board->members()->get();
-        foreach ($members as $m) {
-            $lookup[mb_strtolower(trim($m->username))] = $m;
+        foreach ($allMembers as $m) {
+            $u = mb_strtolower(trim($m->username ?? ''));
+            if ($u !== '') {
+                $lookup[$u] = $m;
+            }
+
+            $e = mb_strtolower(trim($m->email ?? ''));
+            if ($e !== '') {
+                $lookup[$e] = $m;
+            }
+
+            $name = mb_strtolower(trim($m->name ?? ''));
+            if ($name !== '') {
+                $lookup[$name] = $m;
+            }
         }
 
         return $lookup;
@@ -778,39 +836,79 @@ class TaskExcelImportService
     private function parseLabels(?string $rawLabels): array
     {
         if (!$rawLabels) return [];
-        $split = preg_split('/[;,]/', $rawLabels);
+        $split = preg_split('/[;,\n\r]+/', $rawLabels);
         $result = [];
         foreach ($split as $item) {
-            $clean = trim($item);
+            $clean = ltrim(trim($item), '#');
             if ($clean !== '') {
                 $result[] = $clean;
             }
         }
-        return array_unique($result);
+        return array_values(array_unique($result));
     }
 
     private function normalizePriority(?string $priority): string
     {
         $clean = mb_strtolower(trim($priority ?? ''));
         return match ($clean) {
-            'thấp', 'low' => 'Thấp',
-            'cao', 'high' => 'Cao',
-            'khẩn cấp', 'urgent' => 'Khẩn cấp',
+            'thấp', 'thap', 'low', '1', 'nhẹ' => 'Thấp',
+            'cao', 'high', '3', 'quan trọng' => 'Cao',
+            'khẩn cấp', 'khan cap', 'urgent', 'gấp', 'gap', 'rất cao', 'rat cao', '4', 'nguy cấp' => 'Khẩn cấp',
             default => 'Bình thường',
         };
+    }
+
+    private function normalizeComplexity(?string $complexity): string
+    {
+        $clean = mb_strtolower(trim($complexity ?? ''));
+        return match ($clean) {
+            'xs', '1', 'rất nhỏ', 'rat nho' => 'XS',
+            's', '2', 'nhỏ', 'nho' => 'S',
+            'l', '5', 'lớn', 'lon' => 'L',
+            'xl', '8', '13', 'rất lớn', 'rat lon' => 'XL',
+            default => 'M',
+        };
+    }
+
+    private function extractCellValueSafely($cell): string
+    {
+        if ($cell === null) return '';
+
+        try {
+            $val = $cell->getCalculatedValue();
+        } catch (\Throwable $e) {
+            $val = $cell->getValue();
+        }
+
+        if ($val === null) return '';
+
+        if ($val instanceof \PhpOffice\PhpSpreadsheet\RichText\RichText) {
+            return trim($val->getPlainText());
+        }
+
+        if (is_bool($val)) {
+            return $val ? '1' : '0';
+        }
+
+        return trim((string)$val);
     }
 
     private function parseDateSafely(?string $dateStr, array &$errors, string $field): ?Carbon
     {
         if (!$dateStr) return null;
+        $dateStr = trim($dateStr);
+        if ($dateStr === '') return null;
 
         // Numeric Excel timestamp check
         if (is_numeric($dateStr)) {
-            try {
-                $unix = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToTimestamp((float)$dateStr);
-                return Carbon::createFromTimestamp($unix);
-            } catch (\Throwable $e) {
-                // fall through to string parsing
+            $num = (float)$dateStr;
+            if ($num > 1000 && $num < 100000) {
+                try {
+                    $dt = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($num);
+                    return Carbon::instance($dt);
+                } catch (\Throwable $e) {
+                    // fall through
+                }
             }
         }
 
@@ -821,6 +919,12 @@ class TaskExcelImportService
             'd/m/Y H:i:s',
             'd/m/Y H:i',
             'd/m/Y',
+            'd-m-Y H:i:s',
+            'd-m-Y H:i',
+            'd-m-Y',
+            'Y/m/d H:i:s',
+            'Y/m/d H:i',
+            'Y/m/d',
         ];
 
         foreach ($formats as $fmt) {
@@ -837,7 +941,7 @@ class TaskExcelImportService
         try {
             return Carbon::parse($dateStr);
         } catch (\Throwable $e) {
-            $errors[] = "Định dạng {$field} '{$dateStr}' không hợp lệ. Vui lòng sử dụng định dạng YYYY-MM-DD hoặc YYYY-MM-DD HH:mm.";
+            $errors[] = "Định dạng {$field} '{$dateStr}' không hợp lệ. Vui lòng sử dụng định dạng YYYY-MM-DD hoặc d/m/Y.";
             return null;
         }
     }
