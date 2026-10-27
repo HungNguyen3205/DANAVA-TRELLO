@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Shield, KeyRound, Bell, LogOut, Check, Smartphone, ArrowRight, UserCircle, AlertTriangle, HelpCircle, RefreshCw, Send } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
