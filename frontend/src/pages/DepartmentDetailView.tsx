@@ -3,10 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Building2, ArrowLeft, Users, UserCheck, CheckCircle2, Clock,
   AlertTriangle, Award, Edit2, ArrowRightLeft, UserMinus, Plus,
-  Calendar, Shield, ShieldAlert, Activity, RefreshCw, AlertCircle, ExternalLink, X
+  Calendar, Shield, ShieldAlert, Activity, RefreshCw, AlertCircle, ExternalLink, X, Crown
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { getDepartmentDetails, removeDepartmentEmployee, assignDepartmentEmployees } from '../lib/api/departments';
+import { getDepartmentDetails, removeDepartmentEmployee, assignDepartmentEmployees, updateDepartment } from '../lib/api/departments';
 import type { DepartmentDetailResponse } from '../lib/api/departments';
 import type { User } from '../types';
 import { DepartmentModal } from '../components/department/DepartmentModal';
@@ -73,6 +73,44 @@ export const DepartmentDetailView: React.FC = () => {
       fetchDetails();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Lỗi khi gỡ nhân viên');
+    }
+  };
+
+  const handleAssignManager = async (emp: User) => {
+    if (!data?.department) return;
+    if (!window.confirm(`Bạn có chắc muốn bổ nhiệm "${emp.name}" làm Trưởng phòng "${data.department.name}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await updateDepartment(data.department.id, {
+        name: data.department.name,
+        code: data.department.code,
+        manager_id: emp.id,
+      });
+      toast.success(res.message || `Đã bổ nhiệm ${emp.name} làm Trưởng phòng`);
+      fetchDetails();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi khi bổ nhiệm Trưởng phòng');
+    }
+  };
+
+  const handleDismissManager = async (emp: User) => {
+    if (!data?.department) return;
+    if (!window.confirm(`Bạn có chắc muốn hủy chức vụ Trưởng phòng của "${emp.name}"?`)) {
+      return;
+    }
+
+    try {
+      const res = await updateDepartment(data.department.id, {
+        name: data.department.name,
+        code: data.department.code,
+        manager_id: null,
+      });
+      toast.success(res.message || 'Đã hủy chức vụ Trưởng phòng thành công');
+      fetchDetails();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Lỗi khi hủy chức vụ Trưởng phòng');
     }
   };
 
@@ -272,9 +310,23 @@ export const DepartmentDetailView: React.FC = () => {
                         {department.manager.position && (
                           <span className="text-[11px] font-normal text-slate-400">({department.manager.position})</span>
                         )}
+                        <button
+                          onClick={() => setIsEditModalOpen(true)}
+                          className="ml-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline cursor-pointer"
+                        >
+                          (Đổi)
+                        </button>
                       </div>
                     ) : (
-                      <span className="text-slate-400 italic">Chưa chỉ định</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-400 italic">Chưa chỉ định</span>
+                        <button
+                          onClick={() => setIsEditModalOpen(true)}
+                          className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:underline cursor-pointer"
+                        >
+                          (+ Chỉ định)
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -418,8 +470,8 @@ export const DepartmentDetailView: React.FC = () => {
                                   <div className="flex items-center gap-1.5">
                                     <span className="font-bold text-slate-800 dark:text-slate-200">{emp.name}</span>
                                     {isManager && (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400">
-                                        Trưởng phòng
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                                        <Crown className="w-3 h-3" /> Trưởng phòng
                                       </span>
                                     )}
                                   </div>
@@ -456,6 +508,24 @@ export const DepartmentDetailView: React.FC = () => {
                             </td>
                             <td className="px-5 py-3 text-right">
                               <div className="flex items-center justify-end gap-1.5">
+                                {isManager ? (
+                                  <button
+                                    onClick={() => handleDismissManager(emp)}
+                                    className="p-1.5 text-amber-500 hover:text-rose-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    title="Miễn nhiệm Trưởng phòng"
+                                  >
+                                    <Crown className="w-4 h-4 fill-amber-500" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleAssignManager(emp)}
+                                    disabled={emp.account_status !== 'active'}
+                                    className="p-1.5 text-slate-400 hover:text-amber-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-30"
+                                    title={emp.account_status === 'active' ? "Bổ nhiệm làm Trưởng phòng" : "Tài khoản bị khóa không thể làm trưởng phòng"}
+                                  >
+                                    <Crown className="w-4 h-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => setTransferringEmployee(emp)}
                                   className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -577,7 +647,7 @@ function AddEmployeesToDepartmentModal({
       setLoading(true);
       try {
         const adminRes = await api.get('/admin/employees', {
-          params: { per_page: 100, status: 'active' }
+          params: { all: true, status: 'active' }
         });
         const rawUsers: User[] = adminRes.data?.data || (Array.isArray(adminRes.data) ? adminRes.data : []);
 

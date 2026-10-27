@@ -37,6 +37,11 @@ class EmployeeController extends Controller
             }
         }
 
+        if ($request->boolean('all')) {
+            $selectFields = ['id', 'name', 'username', 'email', 'position', 'avatar', 'department_id', 'department_title', 'account_status'];
+            return response()->json($query->select($selectFields)->orderBy('name', 'asc')->get());
+        }
+
         $perPage = min(max((int)$request->input('per_page', 15), 1), 200);
         return response()->json($query->orderBy('id', 'desc')->paginate($perPage));
     }

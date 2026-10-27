@@ -8,6 +8,7 @@ import { DepartmentModal } from '../src/components/department/DepartmentModal';
 import { EmployeeTransferModal } from '../src/components/department/EmployeeTransferModal';
 import { DepartmentManagementView } from '../src/pages/DepartmentManagementView';
 import * as departmentsApi from '../src/lib/api/departments';
+import api from '../src/lib/axios';
 import { useAuthStore } from '../src/store/authStore';
 
 // Mock departments API
@@ -156,6 +157,116 @@ describe('Department Module UI Tests', () => {
             name: 'Phòng Kỹ Thuật',
             code: 'TECH',
             status: 'active',
+          })
+        );
+        expect(handleSuccess).toHaveBeenCalled();
+      });
+    });
+
+    it('populates active employees in manager select dropdown and allows selecting a manager', async () => {
+      const u = userEvent.setup();
+      const handleSuccess = vi.fn();
+      (api.get as any).mockResolvedValue({
+        data: [
+          { id: 10, name: 'Nguyễn Văn Lead', username: 'lead_nv', position: 'Trưởng nhóm Backend', account_status: 'active' },
+          { id: 20, name: 'Lê Thị Dev', username: 'dev_lt', position: 'Frontend Developer', account_status: 'active' },
+        ],
+      });
+      (departmentsApi.createDepartment as any).mockResolvedValue({
+        department: { id: 1, name: 'Phòng Công Nghệ', code: 'IT', manager_id: 10 },
+        message: 'Tạo phòng ban thành công',
+      });
+
+      render(
+        <DepartmentModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSuccess={handleSuccess}
+          department={null}
+        />
+      );
+
+      // Wait for users to load in dropdown
+      await waitFor(() => {
+        expect(screen.getAllByText(/Nguyễn Văn Lead/i).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText(/Lê Thị Dev/i).length).toBeGreaterThanOrEqual(1);
+      });
+
+      // Type name and code
+      await u.type(screen.getByPlaceholderText(/Phòng Kỹ thuật & Công nghệ/i), 'Phòng Công Nghệ');
+      await u.type(screen.getByPlaceholderText(/TECH/i), 'IT');
+
+      // Select manager
+      const managerSelect = screen.getByRole('combobox');
+      await u.selectOptions(managerSelect, '10');
+
+      const submitBtn = screen.getByRole('button', { name: /Tạo phòng ban/i });
+      await u.click(submitBtn);
+
+      await waitFor(() => {
+        expect(departmentsApi.createDepartment).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Phòng Công Nghệ',
+            code: 'IT',
+            manager_id: 10,
+          })
+        );
+        expect(handleSuccess).toHaveBeenCalled();
+      });
+    });
+
+    it('allows admin to edit department and change manager', async () => {
+      const u = userEvent.setup();
+      const handleSuccess = vi.fn();
+      const existingDept: any = {
+        id: 5,
+        name: 'Phòng Kinh Doanh',
+        code: 'BIZ',
+        description: 'Phòng kinh doanh toàn quốc',
+        color: '#3b82f6',
+        status: 'active',
+        manager_id: 10,
+        manager: { id: 10, name: 'Nguyễn Văn Lead', username: 'lead_nv', position: 'Lead' },
+      };
+
+      (api.get as any).mockResolvedValue({
+        data: [
+          { id: 10, name: 'Nguyễn Văn Lead', username: 'lead_nv', position: 'Lead', account_status: 'active' },
+          { id: 30, name: 'Trần Văn Giám Đốc', username: 'giamdoc_tv', position: 'Giám đốc kinh doanh', account_status: 'active' },
+        ],
+      });
+      (departmentsApi.updateDepartment as any).mockResolvedValue({
+        department: { ...existingDept, manager_id: 30 },
+        message: 'Cập nhật phòng ban thành công',
+      });
+
+      render(
+        <DepartmentModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSuccess={handleSuccess}
+          department={existingDept}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Chỉnh sửa phòng ban')).toBeDefined();
+        expect(screen.getByText(/Trần Văn Giám Đốc/i)).toBeDefined();
+      });
+
+      const managerSelect = screen.getByRole('combobox');
+      await u.selectOptions(managerSelect, '30');
+
+      const submitBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
+      await u.click(submitBtn);
+
+      await waitFor(() => {
+        expect(departmentsApi.updateDepartment).toHaveBeenCalledWith(
+          5,
+          expect.objectContaining({
+            name: 'Phòng Kinh Doanh',
+            code: 'BIZ',
+            manager_id: 30,
           })
         );
         expect(handleSuccess).toHaveBeenCalled();

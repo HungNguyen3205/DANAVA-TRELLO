@@ -90,11 +90,17 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     async function fetchUsers() {
       setLoadingUsers(true);
       try {
-        const res = await api.get('/users/search?q=');
+        const res = await api.get('/admin/employees', {
+          params: { all: true, status: 'active' }
+        });
         if (isMounted) {
           // Exclude locked accounts
           const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
           const activeOnly = list.filter((u: User) => u.account_status !== 'locked');
+          // If editing a department with an existing manager, ensure manager is included
+          if (department?.manager && !activeOnly.some((u: User) => Number(u.id) === Number(department.manager?.id))) {
+            activeOnly.unshift(department.manager as User);
+          }
           setUsersList(activeOnly);
         }
       } catch (err) {
@@ -105,7 +111,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     }
     fetchUsers();
     return () => { isMounted = false; };
-  }, [isOpen]);
+  }, [isOpen, department]);
 
   const isDirty = useMemo(() => {
     return (
@@ -160,7 +166,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           code: code.trim().toUpperCase(),
           description: description.trim() || undefined,
           color,
-          manager_id: managerId,
+          manager_id: managerId ? Number(managerId) : null,
           status,
         });
         toast.success(res.message || 'Cập nhật phòng ban thành công');
@@ -170,7 +176,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           code: code.trim().toUpperCase(),
           description: description.trim() || undefined,
           color,
-          manager_id: managerId,
+          manager_id: managerId ? Number(managerId) : null,
           status,
           employee_ids: selectedEmployees,
         });
@@ -345,9 +351,11 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
               <select
                 value={managerId || ''}
                 onChange={(e) => setManagerId(e.target.value ? Number(e.target.value) : null)}
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                disabled={loadingUsers}
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:opacity-60"
               >
                 <option value="">-- Chưa chỉ định trưởng phòng --</option>
+                {loadingUsers && <option disabled>Đang tải danh sách nhân viên...</option>}
                 {usersList.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name} (@{u.username}) {u.position ? `- ${u.position}` : ''}
@@ -355,7 +363,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 ))}
               </select>
               <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                Chỉ những nhân viên đang hoạt động mới được chọn làm trưởng phòng.
+                {loadingUsers ? 'Đang tải danh sách nhân viên...' : `Có ${usersList.length} nhân viên khả dụng để chỉ định làm trưởng phòng.`}
               </p>
             </div>
 

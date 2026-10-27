@@ -75,6 +75,10 @@ class DepartmentController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->has('manager_id') && $request->input('manager_id') === '') {
+            $request->merge(['manager_id' => null]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:150',
             'code' => 'required|string|max:50|unique:departments,code',
@@ -304,16 +308,26 @@ class DepartmentController extends Controller
      */
     public function update(Request $request, Department $department): JsonResponse
     {
+        if ($request->has('manager_id') && $request->input('manager_id') === '') {
+            $request->merge(['manager_id' => null]);
+        }
+
+        $isPatch = $request->isMethod('patch');
         $validated = $request->validate([
-            'name' => 'required|string|max:150',
-            'code' => ['required', 'string', 'max:50', Rule::unique('departments')->ignore($department->id)],
+            'name' => ($isPatch ? 'sometimes|' : '') . 'required|string|max:150',
+            'code' => [
+                $isPatch ? 'sometimes' : 'required',
+                'string',
+                'max:50',
+                Rule::unique('departments')->ignore($department->id),
+            ],
             'description' => 'nullable|string|max:1000',
             'color' => 'nullable|string|max:50',
             'manager_id' => 'nullable|exists:users,id',
             'status' => 'nullable|in:active,inactive',
         ]);
 
-        $code = strtoupper(trim($validated['code']));
+        $code = isset($validated['code']) ? strtoupper(trim($validated['code'])) : $department->code;
 
         // Check manager status
         $newManager = null;
@@ -330,8 +344,12 @@ class DepartmentController extends Controller
 
         DB::beginTransaction();
         try {
-            $department->name = trim($validated['name']);
-            $department->code = $code;
+            if (isset($validated['name'])) {
+                $department->name = trim($validated['name']);
+            }
+            if (isset($validated['code'])) {
+                $department->code = $code;
+            }
             if (array_key_exists('description', $validated)) {
                 $department->description = $validated['description'];
             }
@@ -351,8 +369,11 @@ class DepartmentController extends Controller
             }
 
             // If manager changed or cleared
-            if ((int)$oldManagerId !== (int)($newManager?->id)) {
-                $membershipService->assignManager($department, $newManager, $request->user());
+            if (array_key_exists('manager_id', $validated)) {
+                $newManagerId = !empty($validated['manager_id']) ? (int)$validated['manager_id'] : null;
+                if ((int)$oldManagerId !== (int)$newManagerId) {
+                    $membershipService->assignManager($department, $newManager, $request->user());
+                }
             }
 
             // Record Activity Log
@@ -363,7 +384,7 @@ class DepartmentController extends Controller
             if ($oldStatus !== $department->status) {
                 $logChanges[] = "đổi trạng thái từ '{$oldStatus}' sang '{$department->status}'";
             }
-            if ((int)$oldManagerId !== (int)$department->manager_id) {
+            if (array_key_exists('manager_id', $validated) && (int)$oldManagerId !== (int)$department->manager_id) {
                 $logChanges[] = $newManager ? "chỉ định Trưởng phòng mới: {$newManager->name}" : "hủy chỉ định Trưởng phòng";
             }
 
@@ -379,7 +400,7 @@ class DepartmentController extends Controller
 
             return response()->json([
                 'message' => 'Cập nhật phòng ban thành công.',
-                'department' => $department->load(['manager:id,name,username,email,avatar,position,department_title']),
+                'department' => $department->fresh()->load(['manager:id,name,username,email,avatar,position,department_title']),
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
