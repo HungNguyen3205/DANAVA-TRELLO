@@ -161,11 +161,25 @@ class DepartmentController extends Controller
                 'creator:id,name,username',
             ]);
 
-            // Employees list in this department
-            $employees = User::where('department_id', $department->id)
+            // Employees list in this department (supports multi-department membership)
+            $memberIds = DB::table('department_members')
+                ->where('department_id', $department->id)
+                ->pluck('user_id')
+                ->toArray();
+            $directIds = User::where('department_id', $department->id)
+                ->pluck('id')
+                ->toArray();
+            $allEmployeeIds = array_values(array_unique(array_merge($memberIds, $directIds)));
+
+            $employees = User::whereIn('id', $allEmployeeIds)
                 ->withCount('boards')
-                ->select('id', 'name', 'username', 'email', 'avatar', 'position', 'department_title', 'account_status', 'phone', 'join_date')
-                ->get();
+                ->with(['departments:id,name,code,color'])
+                ->select('id', 'name', 'username', 'email', 'avatar', 'position', 'department_title', 'account_status', 'phone', 'join_date', 'department_id')
+                ->get()
+                ->map(function ($emp) use ($department) {
+                    $emp->is_department_manager = (int)$department->manager_id === (int)$emp->id;
+                    return $emp;
+                });
 
             $employeeIds = $employees->pluck('id')->toArray();
 

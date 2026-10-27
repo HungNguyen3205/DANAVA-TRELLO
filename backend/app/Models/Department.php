@@ -61,19 +61,37 @@ class Department extends Model
     }
 
     /**
-     * Relationship: Employees belonging to this department.
+     * Relationship: Employees belonging to this department (Many-to-Many).
      */
     public function employees()
     {
-        return $this->hasMany(User::class, 'department_id');
+        return $this->belongsToMany(User::class, 'department_members')
+            ->withPivot(['role', 'title', 'is_primary'])
+            ->withTimestamps();
     }
 
     /**
      * Alias for employees.
      */
-    public function users()
+    public function members()
+    {
+        return $this->employees();
+    }
+
+    /**
+     * Legacy direct users where department_id is this department.
+     */
+    public function directUsers()
     {
         return $this->hasMany(User::class, 'department_id');
+    }
+
+    /**
+     * Alias for directUsers.
+     */
+    public function users()
+    {
+        return $this->employees();
     }
 
     /**

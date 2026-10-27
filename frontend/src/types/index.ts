@@ -22,6 +22,7 @@ export interface User {
   department_id?: number | null;
   department_title?: string | null;
   department?: Department | null;
+  departments?: Department[];
 }
 export interface Department {
   id: number;

@@ -12,7 +12,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with(['department:id,name,code,color'])->withCount(['workspaces', 'boards']);
+        $query = User::with(['department:id,name,code,color', 'departments:id,name,code,color'])->withCount(['workspaces', 'boards']);
 
         if ($request->search) {
             $search = '%' . $request->search . '%';
@@ -31,9 +31,13 @@ class EmployeeController extends Controller
 
         if ($request->filled('department_id')) {
             if ($request->department_id === 'unassigned' || $request->department_id === 'null') {
-                $query->whereNull('department_id');
+                $query->whereNull('department_id')->doesntHave('departments');
             } else {
-                $query->where('department_id', $request->department_id);
+                $deptId = $request->department_id;
+                $query->where(function($q) use ($deptId) {
+                    $q->where('department_id', $deptId)
+                      ->orWhereHas('departments', fn($sub) => $sub->where('departments.id', $deptId));
+                });
             }
         }
 
@@ -197,11 +201,26 @@ class EmployeeController extends Controller
             }
         }
 
+        if ($request->has('department_ids')) {
+            $deptIds = is_array($request->department_ids) ? array_map('intval', $request->department_ids) : [];
+            $employee->departments()->sync($deptIds);
+            if (!empty($deptIds)) {
+                if (!in_array((int)$employee->department_id, $deptIds)) {
+                    $employee->department_id = $deptIds[0];
+                    $firstDept = \App\Models\Department::find($deptIds[0]);
+                    $employee->department_title = $firstDept ? "Nhân viên {$firstDept->name}" : null;
+                }
+            } else {
+                $employee->department_id = null;
+                $employee->department_title = null;
+            }
+        }
+
         $employee->save();
 
         return response()->json([
             'message' => 'Cập nhật thông tin nhân viên thành công',
-            'user' => $employee->load('department:id,name,code,color')
+            'user' => $employee->load(['department:id,name,code,color', 'departments:id,name,code,color'])
         ]);
     }
 

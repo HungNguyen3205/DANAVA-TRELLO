@@ -42,28 +42,40 @@ class DepartmentMembershipService
                     throw new InvalidArgumentException('Không thể chỉ định nhân viên đã bị khóa làm Trưởng phòng.');
                 }
 
-                // If department already had a different manager, demote old manager to employee title if still in department
+                // If department already had a different manager, demote old manager in this department
                 if ($oldManager && (int)$oldManager->id !== (int)$manager->id) {
+                    DB::table('department_members')
+                        ->where('department_id', $department->id)
+                        ->where('user_id', $oldManager->id)
+                        ->update([
+                            'role' => 'member',
+                            'title' => $this->getEmployeeTitle($department->name),
+                            'updated_at' => now(),
+                        ]);
+
                     if ((int)$oldManager->department_id === (int)$department->id) {
                         $oldManager->department_title = $this->getEmployeeTitle($department->name);
                         $oldManager->save();
                     }
                 }
 
-                // If new manager came from another department, handle transfer
-                $oldDept = $manager->department;
-                if ($oldDept && (int)$oldDept->id !== (int)$department->id) {
-                    if ((int)$oldDept->manager_id === (int)$manager->id) {
-                        $oldDept->manager_id = null;
-                        $oldDept->save();
-                    }
-                    $manager->notify(new DepartmentTransferNotification($oldDept->name, $department->name, $actor));
-                }
+                // Add or update manager in department_members pivot for this department
+                DB::table('department_members')->updateOrInsert(
+                    ['department_id' => $department->id, 'user_id' => $manager->id],
+                    [
+                        'role' => 'manager',
+                        'title' => $this->getManagerTitle($department->name),
+                        'is_primary' => empty($manager->department_id),
+                        'updated_at' => now(),
+                    ]
+                );
 
-                // Assign manager to this department and give manager title
-                $manager->department_id = $department->id;
-                $manager->department_title = $this->getManagerTitle($department->name);
-                $manager->save();
+                // If this is the manager's primary department OR manager has no primary department
+                if (empty($manager->department_id) || (int)$manager->department_id === (int)$department->id) {
+                    $manager->department_id = $department->id;
+                    $manager->department_title = $this->getManagerTitle($department->name);
+                    $manager->save();
+                }
 
                 $department->manager_id = $manager->id;
                 $department->save();
@@ -80,6 +92,15 @@ class DepartmentMembershipService
             } else {
                 // Clearing manager
                 if ($oldManager) {
+                    DB::table('department_members')
+                        ->where('department_id', $department->id)
+                        ->where('user_id', $oldManager->id)
+                        ->update([
+                            'role' => 'member',
+                            'title' => $this->getEmployeeTitle($department->name),
+                            'updated_at' => now(),
+                        ]);
+
                     if ((int)$oldManager->department_id === (int)$department->id) {
                         $oldManager->department_title = $this->getEmployeeTitle($department->name);
                         $oldManager->save();
@@ -102,6 +123,7 @@ class DepartmentMembershipService
 
     /**
      * Add multiple employees to a department with automatic title assignment.
+     * Supports employees belonging to multiple departments simultaneously.
      */
     public function addEmployees(Department $department, array $userIds, ?User $actor = null): array
     {
@@ -114,33 +136,36 @@ class DepartmentMembershipService
             $added = [];
 
             foreach ($users as $user) {
-                $oldDept = $user->department;
-
-                // If user was manager of old department, clear old manager
-                if ($oldDept && (int)$oldDept->id !== (int)$department->id && (int)$oldDept->manager_id === (int)$user->id) {
-                    $oldDept->manager_id = null;
-                    $oldDept->save();
-                }
-
                 // Determine appropriate title
                 $isManager = (int)$department->manager_id === (int)$user->id;
+                $role = $isManager ? 'manager' : 'member';
                 $title = $isManager
                     ? $this->getManagerTitle($department->name)
                     : $this->getEmployeeTitle($department->name);
 
-                $user->department_id = $department->id;
-                $user->department_title = $title;
-                $user->save();
+                // Add or update in department_members pivot without removing from other departments
+                DB::table('department_members')->updateOrInsert(
+                    ['department_id' => $department->id, 'user_id' => $user->id],
+                    [
+                        'role' => $role,
+                        'title' => $title,
+                        'is_primary' => empty($user->department_id),
+                        'updated_at' => now(),
+                    ]
+                );
 
-                if ($oldDept && (int)$oldDept->id !== (int)$department->id) {
-                    $user->notify(new DepartmentTransferNotification($oldDept->name, $department->name, $actor));
+                // If user had no primary department, set this as primary
+                if (empty($user->department_id)) {
+                    $user->department_id = $department->id;
+                    $user->department_title = $title;
+                    $user->save();
                 }
 
                 ActivityLog::create([
                     'department_id' => $department->id,
                     'user_id' => $actor?->id,
                     'action' => 'thêm nhân viên vào phòng ban',
-                    'old_value' => $oldDept ? "Từ {$oldDept->name}" : 'Chưa phân phòng',
+                    'old_value' => null,
                     'new_value' => "Gán {$user->name} vào {$department->name} ({$title})",
                 ]);
 
@@ -244,20 +269,43 @@ class DepartmentMembershipService
      */
     public function removeEmployee(Department $department, User $employee, ?User $actor = null): void
     {
-        if ((int)$employee->department_id !== (int)$department->id) {
+        $isPivotMember = DB::table('department_members')
+            ->where('department_id', $department->id)
+            ->where('user_id', $employee->id)
+            ->exists();
+
+        if ((int)$employee->department_id !== (int)$department->id && !$isPivotMember) {
             throw new InvalidArgumentException('Nhân viên này không thuộc phòng ban đã chọn.');
         }
 
         DB::transaction(function () use ($department, $employee, $actor) {
+            // Remove from department_members pivot
+            DB::table('department_members')
+                ->where('department_id', $department->id)
+                ->where('user_id', $employee->id)
+                ->delete();
+
             // If employee was manager, clear manager_id
             if ((int)$department->manager_id === (int)$employee->id) {
                 $department->manager_id = null;
                 $department->save();
             }
 
-            $employee->department_id = null;
-            $employee->department_title = null;
-            $employee->save();
+            // If this was primary department_id, switch to another department they belong to, or null
+            if ((int)$employee->department_id === (int)$department->id) {
+                $other = DB::table('department_members')
+                    ->where('user_id', $employee->id)
+                    ->first();
+
+                if ($other) {
+                    $employee->department_id = $other->department_id;
+                    $employee->department_title = $other->title;
+                } else {
+                    $employee->department_id = null;
+                    $employee->department_title = null;
+                }
+                $employee->save();
+            }
 
             $employee->notify(new DepartmentTransferNotification($department->name, null, $actor));
 

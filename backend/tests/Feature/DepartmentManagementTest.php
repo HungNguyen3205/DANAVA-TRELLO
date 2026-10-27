@@ -426,4 +426,56 @@ class DepartmentManagementTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    /**
+     * Test employee can belong to multiple departments and be manager of another department.
+     */
+    public function test_employee_can_belong_to_multiple_departments_and_manage_another_department()
+    {
+        // 1. Create Department A (Kỹ thuật) and Department B (Marketing)
+        $deptA = Department::create(['name' => 'Kỹ thuật', 'code' => 'TECH', 'status' => 'active']);
+        $deptB = Department::create(['name' => 'Marketing', 'code' => 'MKT', 'status' => 'active']);
+        $deptC = Department::create(['name' => 'Kinh doanh', 'code' => 'SALES', 'status' => 'active']);
+
+        // Employee starts in Department A
+        $this->activeEmployee->department_id = $deptA->id;
+        $this->activeEmployee->department_title = 'Nhân viên Kỹ thuật';
+        $this->activeEmployee->save();
+
+        // 2. Add employee to Department B via API
+        $responseAdd = $this->actingAs($this->admin, 'sanctum')->postJson("/api/admin/departments/{$deptB->id}/employees", [
+            'user_ids' => [$this->activeEmployee->id],
+        ]);
+        $responseAdd->assertStatus(200);
+
+        // Employee should now belong to both Department A and Department B
+        $this->activeEmployee->refresh();
+        $deptIds = $this->activeEmployee->departments->pluck('id')->toArray();
+        $this->assertContains($deptA->id, $deptIds);
+        $this->assertContains($deptB->id, $deptIds);
+
+        // 3. Appoint this employee as Manager of Department C (Kinh doanh)
+        $responseManager = $this->actingAs($this->admin, 'sanctum')->patchJson("/api/admin/departments/{$deptC->id}", [
+            'manager_id' => $this->activeEmployee->id,
+        ]);
+        $responseManager->assertStatus(200);
+
+        // Department C manager is now activeEmployee
+        $this->assertEquals($this->activeEmployee->id, $deptC->fresh()->manager_id);
+
+        // Active employee still belongs to Dept A, Dept B, and Dept C
+        $this->activeEmployee->refresh();
+        $allDeptIds = $this->activeEmployee->departments->pluck('id')->toArray();
+        $this->assertContains($deptA->id, $allDeptIds);
+        $this->assertContains($deptB->id, $allDeptIds);
+        $this->assertContains($deptC->id, $allDeptIds);
+
+        // Viewing Department C details shows activeEmployee as manager
+        $resShowC = $this->actingAs($this->admin, 'sanctum')->getJson("/api/admin/departments/{$deptC->id}");
+        $resShowC->assertStatus(200);
+        $employeesInC = collect($resShowC->json('employees'));
+        $this->assertTrue($employeesInC->contains('id', $this->activeEmployee->id));
+        $this->assertEquals($this->activeEmployee->id, $resShowC->json('department.manager.id'));
+    }
 }
+

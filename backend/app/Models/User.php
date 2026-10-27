@@ -87,14 +87,43 @@ class User extends Authenticatable
         return app(\App\Services\BoardAccessService::class)->canManage($this, $board);
     }
 
+    protected static function booted()
+    {
+        static::saved(function ($user) {
+            if ($user->department_id && !empty($user->id)) {
+                \Illuminate\Support\Facades\DB::table('department_members')->updateOrInsert(
+                    ['department_id' => $user->department_id, 'user_id' => $user->id],
+                    [
+                        'role' => 'member',
+                        'title' => $user->department_title,
+                        'is_primary' => true,
+                        'updated_at' => now(),
+                    ]
+                );
+            }
+        });
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class, 'department_id');
     }
 
+    public function departments()
+    {
+        return $this->belongsToMany(Department::class, 'department_members')
+            ->withPivot(['role', 'title', 'is_primary'])
+            ->withTimestamps();
+    }
+
     public function managedDepartment()
     {
         return $this->hasOne(Department::class, 'manager_id');
+    }
+
+    public function managedDepartments()
+    {
+        return $this->hasMany(Department::class, 'manager_id');
     }
 }
 

@@ -265,8 +265,25 @@ export function EmployeeManagementView() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 min-w-[160px] max-w-[200px]">
-                      {emp.department ? (
+                    <td className="px-5 py-4 min-w-[180px] max-w-[260px]">
+                      {emp.departments && emp.departments.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {emp.departments.map((dept: any) => (
+                            <span
+                              key={dept.id}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-semibold shadow-2xs"
+                              style={{
+                                backgroundColor: dept.color ? `${dept.color}18` : '#6366f118',
+                                color: dept.color || '#6366f1',
+                              }}
+                              title={dept.name}
+                            >
+                              <Building2 size={12} className="shrink-0" />
+                              <span className="truncate max-w-[140px]">{dept.name}</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : emp.department ? (
                         <span
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold max-w-full truncate"
                           style={{
@@ -633,7 +650,10 @@ function EditEmployeeModal({
   const [phone, setPhone] = useState(employee.phone || '');
   const [role, setRole] = useState(employee.system_role || 'user');
   const [status, setStatus] = useState(employee.account_status || 'active');
-  const [departmentId, setDepartmentId] = useState<string>(employee.department_id ? String(employee.department_id) : '');
+  const initialDeptIds = (employee.departments && employee.departments.length > 0)
+    ? employee.departments.map((d: any) => d.id)
+    : (employee.department_id ? [employee.department_id] : []);
+  const [selectedDeptIds, setSelectedDeptIds] = useState<number[]>(initialDeptIds);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -648,7 +668,8 @@ function EditEmployeeModal({
         phone: phone.trim() ? phone.trim() : null,
         system_role: role,
         account_status: status,
-        department_id: departmentId ? Number(departmentId) : null,
+        department_ids: selectedDeptIds,
+        department_id: selectedDeptIds.length > 0 ? selectedDeptIds[0] : null,
       });
       toast.success('Cập nhật tài khoản thành công');
       onUpdated();
@@ -733,20 +754,44 @@ function EditEmployeeModal({
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Phòng ban</label>
-              <select
-                value={departmentId}
-                onChange={e => setDepartmentId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              >
-                <option value="">-- Chưa phân phòng --</option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
-                ))}
-              </select>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-foreground">Phòng ban tham gia (1 nhân viên có thể thuộc nhiều phòng)</label>
+              <span className="text-[11px] text-primary font-medium">Đã chọn {selectedDeptIds.length} phòng</span>
+            </div>
+            <div className="max-h-36 overflow-y-auto border border-border rounded-xl p-2 space-y-1 bg-background/50 custom-scrollbar">
+              {departments.length === 0 ? (
+                <div className="text-xs text-muted-foreground p-2 text-center">Chưa có phòng ban nào trong hệ thống</div>
+              ) : (
+                departments.map(d => {
+                  const isChecked = selectedDeptIds.includes(d.id);
+                  return (
+                    <label
+                      key={d.id}
+                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                        isChecked ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted text-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {
+                            setSelectedDeptIds(prev =>
+                              isChecked ? prev.filter(id => id !== d.id) : [...prev, d.id]
+                            );
+                          }}
+                          className="rounded text-primary focus:ring-primary cursor-pointer"
+                        />
+                        <span>{d.name} <span className="text-muted-foreground font-mono">({d.code})</span></span>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
             </div>
           </div>
+        </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

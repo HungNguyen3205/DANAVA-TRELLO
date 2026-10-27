@@ -356,14 +356,19 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
               >
                 <option value="">-- Chưa chỉ định trưởng phòng --</option>
                 {loadingUsers && <option disabled>Đang tải danh sách nhân viên...</option>}
-                {usersList.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} (@{u.username}) {u.position ? `- ${u.position}` : ''}
-                  </option>
-                ))}
+                {usersList.map((u) => {
+                  const depts = u.departments && u.departments.length > 0 
+                    ? u.departments.map(d => d.name).join(', ') 
+                    : u.department?.name || '';
+                  return (
+                    <option key={u.id} value={u.id}>
+                      {u.name} (@{u.username}) {depts ? `[Thuộc: ${depts}]` : ''} {u.position ? `- ${u.position}` : ''}
+                    </option>
+                  );
+                })}
               </select>
               <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                {loadingUsers ? 'Đang tải danh sách nhân viên...' : `Có ${usersList.length} nhân viên khả dụng để chỉ định làm trưởng phòng.`}
+                {loadingUsers ? 'Đang tải danh sách nhân viên...' : `Có ${usersList.length} nhân viên khả dụng (có thể chọn nhân viên từ phòng ban khác).`}
               </p>
             </div>
 

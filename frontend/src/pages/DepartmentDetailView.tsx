@@ -475,7 +475,26 @@ export const DepartmentDetailView: React.FC = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <span className="text-[11px] text-slate-400 font-mono">@{emp.username}</span>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[11px] text-slate-400 font-mono">@{emp.username}</span>
+                                    {emp.departments && emp.departments.filter(d => Number(d.id) !== Number(department.id)).length > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-slate-400">• Thuộc thêm:</span>
+                                        {emp.departments.filter(d => Number(d.id) !== Number(department.id)).map(d => (
+                                          <span
+                                            key={d.id}
+                                            className="text-[10px] font-semibold px-1.5 py-0.2 rounded"
+                                            style={{
+                                              backgroundColor: d.color ? `${d.color}18` : '#6366f118',
+                                              color: d.color || '#6366f1'
+                                            }}
+                                          >
+                                            {d.name}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </td>
@@ -735,8 +754,23 @@ function AddEmployeesToDepartmentModal({
                     }`}
                   >
                     <div>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{u.name}</span>
-                      <span className="text-slate-400 ml-1.5 font-mono">@{u.username}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{u.name}</span>
+                        <span className="text-slate-400 font-mono">@{u.username}</span>
+                      </div>
+                      {u.departments && u.departments.length > 0 ? (
+                        <div className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5">
+                          Đang thuộc: {u.departments.map(d => d.name).join(', ')}
+                        </div>
+                      ) : u.department ? (
+                        <div className="text-[10px] text-indigo-600 dark:text-indigo-400 mt-0.5">
+                          Đang thuộc: {u.department.name}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 mt-0.5 italic">
+                          Chưa phân phòng
+                        </div>
+                      )}
                     </div>
                     <input
                       type="checkbox"
