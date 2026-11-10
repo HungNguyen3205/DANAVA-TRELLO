@@ -149,11 +149,9 @@ export const SettingsPage = () => {
       setNewPassword('');
       setConfirmPassword('');
     } catch (e: any) {
-      if (e.response?.data?.errors?.current_password) {
-        toast.error(e.response.data.errors.current_password[0]);
-      } else {
-        toast.error('Lỗi khi đổi mật khẩu');
-      }
+      const errors = e.response?.data?.errors;
+      const firstError = errors ? (Object.values(errors)[0] as string[])?.[0] : null;
+      toast.error(firstError || e.response?.data?.message || 'Lỗi khi đổi mật khẩu');
     } finally {
       setLoadingPassword(false);
     }

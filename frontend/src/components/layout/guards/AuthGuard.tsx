@@ -30,6 +30,7 @@ export function AuthGuard() {
 
 function ForceChangePasswordModal() {
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const checkAuth = useAuthStore(state => state.checkAuth);
   const logout = useAuthStore(state => state.logout);
@@ -40,13 +41,22 @@ function ForceChangePasswordModal() {
       toast.error('Mật khẩu mới phải có tối thiểu 8 ký tự');
       return;
     }
+    if (password !== confirmPassword) {
+      toast.error('Mật khẩu xác nhận không khớp');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await api.post('/auth/change-password', { password });
+      await api.post('/auth/change-password', {
+        password,
+        password_confirmation: confirmPassword,
+      });
       toast.success('Đổi mật khẩu thành công!');
       await checkAuth(); // refresh user info
     } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Lỗi khi đổi mật khẩu');
+      const errors = e.response?.data?.errors;
+      const firstError = errors ? (Object.values(errors)[0] as string[])?.[0] : null;
+      toast.error(firstError || e.response?.data?.message || 'Lỗi khi đổi mật khẩu');
     } finally {
       setIsSubmitting(false);
     }
@@ -74,6 +84,18 @@ function ForceChangePasswordModal() {
               onChange={e => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
               placeholder="Nhập ít nhất 8 ký tự..."
+            />
+          </div>
+          <div className="text-left">
+            <label className="block text-sm font-medium text-foreground mb-1">Xác nhận mật khẩu mới</label>
+            <input 
+              required 
+              type="password" 
+              minLength={8}
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+              placeholder="Nhập lại mật khẩu mới..."
             />
           </div>
           <button 
