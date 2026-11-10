@@ -50,8 +50,49 @@ class EmployeeController extends Controller
         return response()->json($query->orderBy('id', 'desc')->paginate($perPage));
     }
 
+    /**
+     * Rename the username/email of a soft-deleted account so they can be reused.
+     * The record itself (and its task history) is kept.
+     */
+    private function releaseDeletedIdentifiers(User $user): void
+    {
+        $suffix = '__deleted_' . $user->id;
+        $changes = [];
+        if ($user->username && !str_ends_with($user->username, $suffix)) {
+            $changes['username'] = $user->username . $suffix;
+        }
+        if ($user->email && !str_ends_with($user->email, $suffix)) {
+            $changes['email'] = $user->email . $suffix;
+        }
+        if ($changes) {
+            User::withTrashed()->whereKey($user->id)->update($changes);
+        }
+    }
+
+    /**
+     * Free a username/email still held by previously deleted accounts.
+     */
+    private function releaseIdentifiersHeldByDeletedUsers(Request $request): void
+    {
+        $values = array_filter([
+            $request->input('username') ? trim($request->input('username')) : null,
+            $request->input('username') ? preg_replace('/[^a-z0-9._-]/', '', str_replace('@danava.vn', '', strtolower(trim($request->input('username'))))) : null,
+            $request->filled('email') ? trim($request->input('email')) : null,
+        ]);
+        if (!$values) {
+            return;
+        }
+
+        User::onlyTrashed()
+            ->where(fn ($q) => $q->whereIn('username', $values)->orWhereIn('email', $values))
+            ->get()
+            ->each(fn (User $u) => $this->releaseDeletedIdentifiers($u));
+    }
+
     public function store(Request $request)
     {
+        $this->releaseIdentifiersHeldByDeletedUsers($request);
+
         $request->validate([
             'name' => 'required|string|max:100',
             'username' => 'required|string|min:3|max:50|unique:users,username',
@@ -141,6 +182,8 @@ class EmployeeController extends Controller
 
     public function update(Request $request, User $employee)
     {
+        $this->releaseIdentifiersHeldByDeletedUsers($request);
+
         $request->validate([
             'name' => 'required|string|max:100',
             'username' => ['required', 'string', 'min:3', 'max:50', Rule::unique('users')->ignore($employee->id)],
@@ -275,6 +318,8 @@ class EmployeeController extends Controller
         // Revoke tokens and soft delete user
         $employee->tokens()->delete();
         $employee->delete();
+        // Free the username/email so the same account name can be created again later
+        $this->releaseDeletedIdentifiers($employee);
 
         return response()->json(['message' => 'Đã xóa mềm tài khoản nhân viên thành công']);
     }

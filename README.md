@@ -443,6 +443,39 @@ Các nhóm test quan trọng bao phủ:
 
 ## 📦 Triển khai production
 
+### 🔄 Cập nhật lên cPanel (dùng mỗi lần update)
+
+**1. Trên máy local** — đẩy code lên GitHub:
+
+```bash
+# Nếu có sửa frontend thì build lại trước (frontend/dist được commit vào git)
+cd frontend && npm run build && cd ..
+
+git add -A
+git commit -m "mô tả thay đổi"
+git push                    # lên repo cá nhân (origin)
+git push company main       # (tùy chọn) lên repo công ty
+```
+
+**2. Trên Terminal cPanel** — kéo code về và deploy:
+
+```bash
+cd /home/khoaluan/danava-work
+git remote set-url origin https://github.com/HungNguyen3205/DANAVA-TRELLO.git
+git remote -v
+git fetch origin
+git status
+bash update.sh
+git log --oneline -1
+```
+
+- `git status` phải sạch (*working tree clean*); nếu có file bị sửa trên server thì dừng lại kiểm tra trước khi chạy `update.sh`.
+- `git log --oneline -1` phải trùng commit mới nhất vừa push.
+- Mở `workspace.danava.com.vn` và nhấn **Ctrl+F5** để trình duyệt nhận bản mới (PWA cache).
+- Rollback nếu lỗi: `git reset --hard <commit-cũ> && cp -a frontend/dist/. /home/khoaluan/workspace.danava.com.vn/`
+
+### Tài liệu chi tiết
+
 Tài liệu cPanel đầy đủ:
 
 **[docs/CPANEL_PRODUCTION_DEPLOYMENT.md](docs/CPANEL_PRODUCTION_DEPLOYMENT.md)**
