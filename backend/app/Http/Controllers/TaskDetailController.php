@@ -184,11 +184,18 @@ class TaskDetailController extends Controller
             $task->update($updateData);
 
             if ($newAssigneeIds !== null) {
+                $existing = $task->assignees()->get()->keyBy('id');
                 $syncData = [];
                 foreach ($newAssigneeIds as $uid) {
-                    $percent = isset($contributionPercents[$uid]) ? (float)$contributionPercents[$uid] : null;
+                    $current = $existing->get($uid)?->pivot;
+                    if (isset($contributionPercents[$uid])) {
+                        $percent = (float)$contributionPercents[$uid];
+                    } else {
+                        // Not sent by the client: keep the existing split instead of wiping it
+                        $percent = $current?->contribution_percent;
+                    }
                     $syncData[$uid] = [
-                        'assigned_by' => $request->user()->id,
+                        'assigned_by' => $current?->assigned_by ?? $request->user()->id,
                         'contribution_percent' => $percent,
                     ];
                 }

@@ -92,10 +92,15 @@ try {
                 $wsUsers = DB::table('workspace_members')->where('workspace_id', $cWs->id)->pluck('user_id');
                 foreach ($wsUsers as $uId) {
                     foreach ($wsBoards as $b) {
-                        DB::table('board_members')->updateOrInsert(
-                            ['board_id' => $b->id, 'user_id' => $uId],
-                            ['role' => 'member', 'is_starred' => false, 'updated_at' => now()]
-                        );
+                        // Only add missing memberships; never demote admins or reset stars of existing ones
+                        $exists = DB::table('board_members')
+                            ->where('board_id', $b->id)->where('user_id', $uId)->exists();
+                        if (!$exists) {
+                            DB::table('board_members')->insert([
+                                'board_id' => $b->id, 'user_id' => $uId, 'role' => 'member',
+                                'is_starred' => false, 'created_at' => now(), 'updated_at' => now(),
+                            ]);
+                        }
                     }
                 }
             }

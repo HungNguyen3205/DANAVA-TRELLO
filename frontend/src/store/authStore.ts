@@ -27,7 +27,18 @@ export const useAuthStore = create<AuthState>()(
         set({ user, token, isAuthenticated: true });
       },
       logout: () => {
+        const currentToken = localStorage.getItem('auth_token');
         localStorage.removeItem('auth_token');
+        if (currentToken) {
+          // Revoke the token on the server too (fire-and-forget; local state is cleared regardless)
+          try {
+            void Promise.resolve(
+              api.post('/logout', null, { headers: { Authorization: `Bearer ${currentToken}` } })
+            ).catch(() => {});
+          } catch {
+            // Logging out locally must never fail because the revoke call failed
+          }
+        }
         set({ user: null, token: null, isAuthenticated: false });
         
         // Clear all memory caches securely and synchronously
@@ -48,7 +59,10 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('Dữ liệu tài khoản không hợp lệ');
           }
           set({ user: res.data, isAuthenticated: true, token });
-        } catch (e) {
+        } catch (e: any) {
+          const status = e?.response?.status;
+          // Keep the session on network errors / server errors; only drop it when auth is really invalid
+          if (!e?.response || (status && status >= 500)) return;
           localStorage.removeItem('auth_token');
           set({ user: null, token: null, isAuthenticated: false });
         }

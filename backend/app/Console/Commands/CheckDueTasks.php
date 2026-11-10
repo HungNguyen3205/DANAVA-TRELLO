@@ -15,11 +15,11 @@ class CheckDueTasks extends Command
 
     public function handle()
     {
-        date_default_timezone_set('Asia/Ho_Chi_Minh');
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
         $tasks = Task::with(['column.board', 'assignees', 'assignee'])
             ->whereNotNull('due_date')
+            ->whereNull('archived_at')
             ->whereNull('completed_at')
             ->get();
 

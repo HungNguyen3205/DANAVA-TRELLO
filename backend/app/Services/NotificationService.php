@@ -48,6 +48,10 @@ class NotificationService
             if (isset($prefs[$type]) && $prefs[$type] === false) {
                 return false;
             }
+            // Settings page stores the due-soon toggle as "approaching_due"
+            if ($type === 'due_soon' && isset($prefs['approaching_due']) && $prefs['approaching_due'] === false) {
+                return false;
+            }
             // Category mapped checks
             $categoryMap = [
                 'assigned' => 'assigned',
@@ -99,7 +103,11 @@ class NotificationService
             $exists = DB::table('notifications')
                 ->where('notifiable_id', $recipient->id)
                 ->where('notifiable_type', get_class($recipient))
-                ->where('data', 'LIKE', '%"task_id":' . $openTaskId . '%')
+                ->where(function ($q) use ($openTaskId) {
+                    // Exact match: "task_id":12 must not match 120 or 1234
+                    $q->where('data', 'LIKE', '%"task_id":' . $openTaskId . ',%')
+                      ->orWhere('data', 'LIKE', '%"task_id":' . $openTaskId . '}%');
+                })
                 ->where('data', 'LIKE', '%"type":"' . $type . '"%')
                 ->exists();
 

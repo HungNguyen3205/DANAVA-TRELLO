@@ -222,6 +222,14 @@ class DepartmentMembershipService
                 }
             }
 
+            // A transfer moves the employee out of the old department, so drop that membership row
+            if ($oldDept) {
+                DB::table('department_members')
+                    ->where('department_id', $oldDept->id)
+                    ->where('user_id', $employee->id)
+                    ->delete();
+            }
+
             if ($targetDepartment) {
                 $isManager = (int)$targetDepartment->manager_id === (int)$employee->id;
                 $title = $isManager

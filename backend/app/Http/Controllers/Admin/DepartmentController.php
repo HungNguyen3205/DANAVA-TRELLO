@@ -536,10 +536,6 @@ class DepartmentController extends Controller
      */
     public function removeEmployee(Request $request, Department $department, User $user): JsonResponse
     {
-        if ((int)$user->department_id !== (int)$department->id) {
-            return response()->json(['message' => 'Nhân viên này không thuộc phòng ban đã chọn.'], 422);
-        }
-
         try {
             $membershipService = app(\App\Services\DepartmentMembershipService::class);
             $membershipService->removeEmployee($department, $user, $request->user());

@@ -206,12 +206,21 @@ export function BoardView() {
     }
   };
   
-  const handleSave = async (b: Board, _text: string, taskMoveData?: { taskId: string, columnId: string, prevId?: string, nextId?: string }) => { 
+  const handleSave = async (
+    b: Board,
+    _text: string,
+    moveData?: { taskId: string, columnId: string, prevId?: string, nextId?: string } | { reorderColumns: true },
+  ) => {
     setBoard(b);
     try {
       const id = boardId?.replace('board-', '') || '1';
-      
-      if (taskMoveData) {
+      const taskMoveData = moveData && 'taskId' in moveData ? moveData : undefined;
+
+      if (moveData && 'reorderColumns' in moveData) {
+        // Column drag-and-drop: persist only the column order
+        const columns = b.columns.map((c, idx) => ({ id: Number(c.id), order: (idx + 1) * 1000 }));
+        await api.put(`/boards/${id}/columns/reorder`, { columns });
+      } else if (taskMoveData) {
         // Trello-style single task move (Fractional Indexing)
         const payload = {
           column_id: Number(taskMoveData.columnId),

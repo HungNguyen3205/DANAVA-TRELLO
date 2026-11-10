@@ -13,7 +13,6 @@ class DueTaskService
      */
     public static function checkDueTasksForUser(User $user): void
     {
-        date_default_timezone_set('Asia/Ho_Chi_Minh');
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
         $tasks = Task::with('column.board')
@@ -22,6 +21,7 @@ class DueTaskService
                   ->orWhereHas('assignees', fn($sq) => $sq->where('users.id', $user->id));
             })
             ->whereNotNull('due_date')
+            ->whereNull('archived_at')
             ->get();
 
         foreach ($tasks as $task) {

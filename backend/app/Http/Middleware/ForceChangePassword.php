@@ -29,7 +29,8 @@ class ForceChangePassword
 
             $isAllowed = false;
             foreach ($allowedPaths as $path) {
-                if ($request->is($path)) {
+                $isProfileUpdate = in_array($path, ['api/me', 'api/auth/me'], true) && !$request->isMethod('GET');
+                if ($request->is($path) && !$isProfileUpdate) {
                     $isAllowed = true;
                     break;
                 }

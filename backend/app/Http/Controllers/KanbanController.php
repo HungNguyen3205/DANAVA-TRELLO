@@ -531,7 +531,7 @@ class KanbanController extends Controller
      */
     public function reorderColumns(Request $request, Board $board): JsonResponse
     {
-        Gate::authorize('view', $board);
+        Gate::authorize('manageColumns', $board);
 
         $request->validate([
             'columns' => 'required|array',

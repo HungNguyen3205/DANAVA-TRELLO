@@ -80,7 +80,7 @@ class LabelController extends Controller
         Gate::authorize('update', $task);
 
         $request->validate([
-            'label_ids' => 'required|array',
+            'label_ids' => 'present|array',
             'label_ids.*' => 'integer|exists:labels,id'
         ]);
 

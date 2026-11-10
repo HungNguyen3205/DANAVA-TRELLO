@@ -236,10 +236,10 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::get('/tasks/subtasks/{subtask}', [SubtaskController::class, 'show']);
     Route::get('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'show']);
     Route::patch('/tasks/subtasks/{subtask}', [SubtaskController::class, 'update']);
+    Route::patch('/tasks/{task}/subtasks/reorder', [SubtaskController::class, 'reorder']);
     Route::patch('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'update']);
     Route::delete('/tasks/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
     Route::delete('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
-    Route::patch('/tasks/{task}/subtasks/reorder', [SubtaskController::class, 'reorder']);
 
     // Board Workload Dashboard
     Route::get('/boards/{board}/dashboard/member-workload', [BoardDashboardController::class, 'memberWorkload']);

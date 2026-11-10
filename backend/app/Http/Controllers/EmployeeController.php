@@ -60,6 +60,8 @@ class EmployeeController extends Controller
             'position' => 'nullable|string|max:100',
             'system_role' => 'nullable|in:system_admin,admin,user',
             'department_id' => 'nullable|exists:departments,id',
+            'department_ids' => 'nullable|array',
+            'department_ids.*' => 'integer|exists:departments,id',
         ]);
 
         $cleanUsername = strtolower(trim($request->username));
@@ -181,18 +183,22 @@ class EmployeeController extends Controller
         if ($request->has('address')) $employee->address = $request->address;
         if ($request->has('join_date')) $employee->join_date = $request->join_date;
 
-        if ($request->has('system_role')) {
+        if ($request->filled('system_role')) {
             $employee->system_role = ($request->system_role === 'system_admin' || $request->system_role === 'admin') ? 'system_admin' : 'user';
         }
 
-        if ($request->has('account_status')) {
+        if ($request->filled('account_status')) {
             $employee->account_status = $request->account_status;
             if ($employee->account_status === 'locked') {
                 $employee->tokens()->delete();
             }
         }
 
-        if ($request->has('department_id')) {
+        $keepsCurrentPrimary = $request->has('department_ids') && is_array($request->department_ids)
+            && $employee->department_id
+            && in_array((int)$employee->department_id, array_map('intval', $request->department_ids), true);
+
+        if ($request->has('department_id') && !$keepsCurrentPrimary) {
             $newDeptId = $request->department_id;
             if ((int)$employee->department_id !== (int)$newDeptId) {
                 $targetDept = $newDeptId ? \App\Models\Department::find($newDeptId) : null;

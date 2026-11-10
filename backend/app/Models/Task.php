@@ -57,6 +57,16 @@ class Task extends Model
         ];
     }
 
+    protected static function booted()
+    {
+        // Subtasks store their own column_id; keep it in sync when the parent moves
+        static::updated(function (Task $task) {
+            if ($task->parent_task_id === null && $task->wasChanged('column_id')) {
+                static::where('parent_task_id', $task->id)->update(['column_id' => $task->column_id]);
+            }
+        });
+    }
+
     public function parent()
     {
         return $this->belongsTo(Task::class, 'parent_task_id');

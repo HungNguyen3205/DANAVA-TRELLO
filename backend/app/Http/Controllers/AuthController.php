@@ -27,11 +27,14 @@ class AuthController extends Controller
         $cleanUsername = str_replace('@danava.vn', '', strtolower($loginInput));
         $fullEmail = str_contains($loginInput, '@') ? $loginInput : $loginInput . '@danava.vn';
 
-        $user = User::where('email', $loginInput)
-                    ->orWhere('email', $fullEmail)
-                    ->orWhere('username', $loginInput)
-                    ->orWhere('username', $cleanUsername)
-                    ->first();
+        // Look up by priority so an ambiguous input never checks the password of the wrong account
+        $user = null;
+        foreach ([['username', $loginInput], ['username', $cleanUsername], ['email', $loginInput], ['email', $fullEmail]] as [$column, $value]) {
+            $user = User::where($column, $value)->first();
+            if ($user) {
+                break;
+            }
+        }
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -131,6 +134,7 @@ class AuthController extends Controller
         $user->password = Hash::make($validated['password']);
         $user->must_change_password = false;
         $user->save();
+        $this->revokeOtherTokens($user);
 
         \Illuminate\Support\Facades\Log::info("Security Event: User #{$user->id} ({$user->username}) changed forced initial password.");
 
@@ -155,10 +159,24 @@ class AuthController extends Controller
         $user->password = Hash::make($request->new_password);
         $user->must_change_password = false;
         $user->save();
+        $this->revokeOtherTokens($user);
 
         \Illuminate\Support\Facades\Log::info("Security Event: User #{$user->id} ({$user->username}) changed account password.");
 
         return response()->json(['message' => 'Đổi mật khẩu thành công']);
+    }
+
+    /**
+     * Revoke every API token of the user except the one used for the current request.
+     */
+    private function revokeOtherTokens(User $user): void
+    {
+        $current = $user->currentAccessToken();
+        $query = $user->tokens();
+        if ($current instanceof \Laravel\Sanctum\PersonalAccessToken) {
+            $query->where('id', '!=', $current->id);
+        }
+        $query->delete();
     }
 
     public function updateNotificationPreferences(Request $request)

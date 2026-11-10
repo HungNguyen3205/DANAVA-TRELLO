@@ -73,7 +73,7 @@ export function KanbanBoard({
           ? over.data.current.task.columnId
           : overId;
       const next = moveColumn(board, draggedId, target);
-      if (next !== board) void onSave(next, "Sắp xếp các cột");
+      if (next !== board) void (onSave as any)(next, "Sắp xếp các cột", { reorderColumns: true });
     } else if (data?.type === "Task") {
       const target =
         over.data.current?.type === "Task"
