@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Plus, Columns, Users, Search, Shield, UserCheck } from 'lucide-react';
-import { PromptModal } from '../components/ui/PromptModal';
+import { Star, Plus, Columns, Users, Search, Shield, UserCheck, Briefcase, CalendarClock } from 'lucide-react';
+import { NewBoardModal, type NewBoardPayload } from '../components/workspace/NewBoardModal';
+import { formatDateVi, projectStatusLabel } from '../lib/boardType';
+import { getAvatarUrl } from '../lib/avatar';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
@@ -11,8 +13,8 @@ export function WorkspaceHome() {
   const user = useAuthStore(state => state.user);
   const [boards, setBoards] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [filterTab, setFilterTab] = useState<'all' | 'starred' | 'created' | 'joined'>('all');
-  const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
+  const [filterTab, setFilterTab] = useState<'all' | 'starred' | 'created' | 'joined' | 'projects'>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchBoards = async () => {
@@ -31,12 +33,12 @@ export function WorkspaceHome() {
     fetchBoards();
   }, []);
 
-  const handleCreateBoard = async (name: string) => {
-    if (!name.trim()) return;
+  const handleCreateBoard = async (payload: NewBoardPayload) => {
+    if (!payload.name.trim()) return;
     try {
-      const res = await api.post('/boards', { name: name.trim() });
-      toast.success('Đã tạo bảng mới thành công');
-      setPromptData(null);
+      const res = await api.post('/boards', payload);
+      toast.success(payload.type === 'project' ? 'Đã tạo dự án mới thành công' : 'Đã tạo bảng mới thành công');
+      setIsCreateOpen(false);
       await fetchBoards();
       if (res.data?.public_id) {
         navigate(`/${res.data.public_id}/kanban`);
@@ -65,12 +67,14 @@ export function WorkspaceHome() {
     if (filterTab === 'starred') return b.is_starred;
     if (filterTab === 'created') return b.my_role === 'admin';
     if (filterTab === 'joined') return b.my_role === 'member';
+    if (filterTab === 'projects') return b.type === 'project';
     return true;
   });
 
   const starredCount = boards.filter(b => b.is_starred).length;
   const createdCount = boards.filter(b => b.my_role === 'admin').length;
   const joinedCount = boards.filter(b => b.my_role === 'member').length;
+  const projectCount = boards.filter(b => b.type === 'project').length;
 
   if (loading) {
     return (
@@ -103,11 +107,7 @@ export function WorkspaceHome() {
             </div>
 
             <button 
-              onClick={() => setPromptData({ 
-                isOpen: true, 
-                title: 'Nhập tên bảng mới:', 
-                onConfirm: (name) => handleCreateBoard(name)
-              })}
+              onClick={() => setIsCreateOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-orange-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm shrink-0 self-start md:self-auto"
             >
               <Plus size={18} />
@@ -164,6 +164,19 @@ export function WorkspaceHome() {
                   Được mời ({joinedCount})
                 </button>
               )}
+              {projectCount > 0 && (
+                <button
+                  onClick={() => setFilterTab('projects')}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
+                    filterTab === 'projects' 
+                      ? 'bg-primary text-primary-foreground shadow-xs' 
+                      : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                >
+                  <Briefcase size={12} />
+                  Dự án ({projectCount})
+                </button>
+              )}
             </div>
 
             {/* Search Input */}
@@ -197,11 +210,7 @@ export function WorkspaceHome() {
               </div>
               {!search && (
                 <button 
-                  onClick={() => setPromptData({ 
-                    isOpen: true, 
-                    title: 'Nhập tên bảng mới:', 
-                    onConfirm: (name) => handleCreateBoard(name)
-                  })}
+                  onClick={() => setIsCreateOpen(true)}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-xl text-xs font-semibold hover:bg-primary/90 transition-all shadow-xs"
                 >
                   <Plus size={15} />
@@ -225,11 +234,7 @@ export function WorkspaceHome() {
 
               {/* Add Board Card */}
               <button 
-                onClick={() => setPromptData({ 
-                  isOpen: true, 
-                  title: 'Nhập tên bảng mới:', 
-                  onConfirm: (name) => handleCreateBoard(name)
-                })}
+                onClick={() => setIsCreateOpen(true)}
                 className="h-32 rounded-2xl bg-card/60 border border-border border-dashed flex flex-col items-center justify-center text-sm font-medium text-muted-foreground hover:bg-accent/60 hover:border-primary/50 hover:text-foreground transition-all group shadow-xs hover:shadow-md gap-2"
               >
                 <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-transform group-hover:bg-primary/10 group-hover:text-primary">
@@ -243,12 +248,11 @@ export function WorkspaceHome() {
         </div>
       </main>
 
-      {promptData && (
-        <PromptModal 
-          isOpen={promptData.isOpen}
-          title={promptData.title}
-          onConfirm={promptData.onConfirm}
-          onCancel={() => setPromptData(null)}
+      {isCreateOpen && (
+        <NewBoardModal
+          isOpen
+          onClose={() => setIsCreateOpen(false)}
+          onSubmit={handleCreateBoard}
         />
       )}
     </div>
@@ -266,29 +270,40 @@ function BoardCard({
 }) {
   const bgClass = board.color || 'bg-gradient-to-br from-blue-600 to-cyan-500';
   const isOwner = board.my_role === 'admin';
+  const isProject = board.type === 'project';
 
   return (
     <div 
       onClick={onClick}
       className={`relative h-32 rounded-2xl overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${bgClass} flex flex-col justify-between p-4`}
+      style={board.background_image ? { backgroundImage: `url("${getAvatarUrl(board.background_image)}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
     >
       {/* Background shading overlay */}
       <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors pointer-events-none" />
 
       {/* Top Header Row in Card */}
       <div className="relative z-10 flex items-start justify-between gap-2">
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs backdrop-blur-xs ${
-          isOwner 
-            ? 'bg-amber-400/90 text-amber-950 font-extrabold' 
-            : 'bg-white/20 text-white'
-        }`}>
-          {isOwner ? <Shield size={10} /> : <UserCheck size={10} />}
-          {isOwner ? 'Chủ bảng' : 'Thành viên'}
-        </span>
+        {/* Badges wrap as whole pills; text inside a pill never breaks */}
+        <div className="flex flex-wrap items-center gap-1 min-w-0">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap shadow-xs backdrop-blur-xs ${
+            isOwner
+              ? 'bg-amber-400/90 text-amber-950 font-extrabold'
+              : 'bg-white/20 text-white'
+          }`}>
+            {isOwner ? <Shield size={10} /> : <UserCheck size={10} />}
+            {isOwner ? 'Chủ bảng' : 'Thành viên'}
+          </span>
+          {isProject && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap bg-white/90 text-slate-900 shadow-xs" title={`Dự án · ${projectStatusLabel(board.project_status)}`}>
+              <Briefcase size={10} />
+              {projectStatusLabel(board.project_status)}
+            </span>
+          )}
+        </div>
 
-        <button 
+        <button
           type="button"
-          className="p-1 rounded-full hover:bg-black/20 transition-colors text-white relative z-20" 
+          className="p-1 rounded-full hover:bg-black/20 transition-colors text-white relative z-20 shrink-0"
           onClick={onToggleStar}
           title={board.is_starred ? 'Bỏ gắn sao' : 'Gắn sao bảng này'}
         >
@@ -307,6 +322,13 @@ function BoardCard({
         <div className="flex items-center gap-1.5 text-[11px] text-white/80 font-medium">
           <Users size={12} />
           <span>{board.members_count || 1} thành viên</span>
+          {isProject && board.end_date && (
+            <>
+              <span className="opacity-60">·</span>
+              <CalendarClock size={12} />
+              <span>Hạn {formatDateVi(board.end_date)}</span>
+            </>
+          )}
         </div>
       </div>
     </div>

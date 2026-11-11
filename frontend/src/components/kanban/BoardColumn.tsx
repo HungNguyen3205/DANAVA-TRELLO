@@ -164,6 +164,8 @@ export function BoardColumn({
     else if (t.includes("done") || t.includes("hoàn thành") || column.completed) theme = PREDEFINED_THEMES.green;
   }
 
+  const toneKey = Object.keys(PREDEFINED_THEMES).find((k) => PREDEFINED_THEMES[k] === theme) ?? 'gray';
+
   const updateColor = async (colorKey: string) => {
     setCurrentColor(colorKey);
     setShowColorPicker(false);
@@ -184,7 +186,8 @@ export function BoardColumn({
           transition,
           opacity: isDragging ? 0.4 : 1,
         }}
-        className={`flex flex-col w-[85vw] sm:w-[300px] max-w-[340px] h-full min-h-0 overflow-hidden shrink-0 ${theme.bg} rounded-[16px] snap-center ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
+        data-tone={toneKey}
+        className={`kanban-col board-glass-col flex flex-col w-[85vw] max-w-[340px] h-full min-h-0 overflow-hidden shrink-0 ${theme.bg} rounded-[16px] snap-center ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
         aria-label={column.title}
       >
         <header className={`px-4 pt-4 pb-3 flex items-center justify-between group sticky top-0 z-10 transition-colors ${
@@ -373,7 +376,7 @@ export function BoardColumn({
         </SortableContext>
         
         {tasks.length === 0 && !isAddingTask && (
-          <div className={`text-center py-8 border border-dashed ${theme.border} rounded-xl text-[13px] text-muted-foreground bg-card/30`}>
+          <div className={`board-glass-empty text-center py-8 border border-dashed ${theme.border} rounded-xl text-[13px] text-muted-foreground bg-card/30`}>
             Chưa có công việc
           </div>
         )}

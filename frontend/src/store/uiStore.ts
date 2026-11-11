@@ -5,6 +5,9 @@ interface UIState {
   isMobileSidebarOpen: boolean;
   toggleMobileSidebar: () => void;
   closeMobileSidebar: () => void;
+  /** Desktop sidebar shows icons only */
+  isSidebarCollapsed: boolean;
+  toggleSidebarCollapsed: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
   setTheme: (isDark: boolean) => void;
@@ -16,6 +19,8 @@ export const useUIStore = create<UIState>()(
       isMobileSidebarOpen: false,
       toggleMobileSidebar: () => set((state) => ({ isMobileSidebarOpen: !state.isMobileSidebarOpen })),
       closeMobileSidebar: () => set({ isMobileSidebarOpen: false }),
+      isSidebarCollapsed: false,
+      toggleSidebarCollapsed: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
       isDarkMode: false, // Default to light mode
       toggleTheme: () => {
         set((state) => {
@@ -33,7 +38,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'danava-ui-store',
-      partialize: (state) => ({ isDarkMode: state.isDarkMode }),
+      partialize: (state) => ({ isDarkMode: state.isDarkMode, isSidebarCollapsed: state.isSidebarCollapsed }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           if (state.isDarkMode) document.documentElement.classList.add('dark');

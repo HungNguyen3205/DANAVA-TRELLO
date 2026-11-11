@@ -163,7 +163,7 @@ export const DepartmentTelegramCard: React.FC<DepartmentTelegramCardProps> = ({
                 Telegram của phòng ban
               </h3>
               {/* Status Badge */}
-              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${
+              <span className={`whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${
                 status === 'connected'
                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
                   : status === 'pending'

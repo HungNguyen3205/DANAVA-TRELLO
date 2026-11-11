@@ -150,8 +150,8 @@ export function KanbanBoard({
       onDragCancel={() => setActive(null)}
       onDragEnd={finish}
     >
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar snap-x snap-mandatory">
-        <div className="flex h-full min-h-0 gap-4 sm:gap-6 min-w-max items-stretch px-4 sm:px-6">
+      <div className="kanban-scroll flex-1 min-h-0 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar snap-x snap-mandatory">
+        <div className="flex h-full min-h-0 gap-3 min-w-max items-stretch px-3 sm:px-4">
           <SortableContext
             items={board.columns.map((c) => `col-${c.id}`)}
             strategy={horizontalListSortingStrategy}
@@ -170,7 +170,7 @@ export function KanbanBoard({
             ))}
           </SortableContext>
           <button 
-            className="flex items-center justify-center gap-2 w-[280px] shrink-0 border-2 border-dashed border-border/50 text-muted-foreground bg-card/10 hover:bg-card/40 hover:border-border hover:text-foreground rounded-xl py-4 transition-colors font-medium text-sm"
+            className="board-glass-add flex items-center justify-center gap-2 w-[280px] shrink-0 border-2 border-dashed border-border/50 text-muted-foreground bg-card/10 hover:bg-card/40 hover:border-border hover:text-foreground rounded-xl py-4 transition-colors font-medium text-sm"
             onClick={() => onColumn(null)}
           >
             <Plus size={18} />

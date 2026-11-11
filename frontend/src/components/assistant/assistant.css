@@ -1,0 +1,244 @@
+/* ---------- Assistant avatar animation ---------- */
+.asst-avatar { overflow: visible; display: block; }
+.asst-avatar g, .asst-avatar path, .asst-avatar ellipse { transform-box: fill-box; }
+
+/* Breathing */
+.asst-torso { transform-origin: 50% 100%; animation: asst-breathe 4.2s ease-in-out infinite; }
+@keyframes asst-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.012) translateY(-0.6px); } }
+
+/* Gentle idle head sway, hair follows */
+.asst-head { transform-origin: 50% 92%; animation: asst-sway 7s ease-in-out infinite; transition: transform .4s ease; }
+.asst-hair-front, .asst-hair-back { transform-origin: 50% 0%; animation: asst-hair 7s ease-in-out infinite; }
+@keyframes asst-sway { 0%, 100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.4deg); } }
+@keyframes asst-hair { 0%, 100% { transform: skewX(-0.8deg); } 50% { transform: skewX(0.9deg); } }
+
+/* Blinking (both eyes), every ~5s with a double blink now and then */
+.asst-eye { transform-origin: center; animation: asst-blink 5.6s infinite; }
+@keyframes asst-blink {
+  0%, 44%, 48%, 92%, 100% { transform: scaleY(1); }
+  46% { transform: scaleY(0.08); }
+  94% { transform: scaleY(0.08); }
+  96% { transform: scaleY(1); }
+  97.5% { transform: scaleY(0.08); }
+}
+
+/* Eye tracking (vars set from the pointer position) */
+.asst-pupil { transform: translate(var(--look-x, 0), var(--look-y, 0)); transition: transform .12s ease-out; }
+
+/* Mouth: smile by default, animated mouth while talking */
+.asst-mouth-talk { opacity: 0; transform-origin: center; }
+.asst-mood-talking .asst-mouth-smile { opacity: 0; }
+.asst-mood-talking .asst-mouth-talk { opacity: 1; animation: asst-talk .26s ease-in-out infinite alternate; }
+@keyframes asst-talk { from { transform: scaleY(0.35); } to { transform: scaleY(1.05); } }
+
+/* Pointing / waving arm, hidden unless greeting */
+.asst-arm-wave { opacity: 0; transform-origin: 8% 90%; transform: rotate(40deg); transition: opacity .25s ease, transform .35s cubic-bezier(.3,1.4,.6,1); }
+.asst-mood-waving .asst-arm-wave { opacity: 1; transform: rotate(0deg); }
+.asst-mood-waving .asst-hand-wave { transform-origin: 50% 100%; animation: asst-wave .55s ease-in-out 3 alternate; }
+@keyframes asst-wave { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+.asst-mood-waving .asst-head { animation: none; transform: rotate(-4deg); }
+
+/* Thinking: look up, bubble with bouncing dots */
+.asst-think { opacity: 0; transition: opacity .2s ease; }
+.asst-mood-thinking .asst-think { opacity: 1; }
+.asst-mood-thinking .asst-pupil { transform: translate(2.4px, -2.6px); }
+.asst-mood-thinking .asst-head { animation: none; transform: rotate(3deg); }
+.asst-dot { animation: asst-dot 1s ease-in-out infinite; }
+.asst-dot:nth-child(5) { animation-delay: .15s; }
+.asst-dot:nth-child(6) { animation-delay: .3s; }
+@keyframes asst-dot { 0%, 100% { transform: translateY(0); opacity: .45; } 50% { transform: translateY(-2.5px); opacity: 1; } }
+
+/* Hands on the screen edge only while peeking */
+.asst-edge-hands { opacity: 0; transition: opacity .2s ease; }
+.asst-mood-peek .asst-edge-hands { opacity: 1; }
+.asst-mood-peek .asst-head { animation: asst-peek-look 9s ease-in-out infinite; }
+@keyframes asst-peek-look {
+  0%, 30%, 100% { transform: rotate(0deg) translateX(0); }
+  40%, 55% { transform: rotate(-5deg) translateX(-2px); }
+  65%, 80% { transform: rotate(5deg) translateX(2px); }
+}
+
+/* ---------- Widget dock: small floating robot button (bottom-right) ---------- */
+.asst-dock {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  cursor: pointer;
+  border-radius: 9999px;
+  transition: transform .3s cubic-bezier(.34,1.4,.64,1);
+  -webkit-tap-highlight-color: transparent;
+}
+.asst-dock:hover { transform: scale(1.1); }
+.asst-dock:active { transform: scale(.95); }
+.asst-dock:focus-visible { outline: none; }
+.asst-dock:focus-visible .asst-avatar { filter: drop-shadow(0 0 0 #6C5CE7) drop-shadow(0 0 5px rgba(108,92,231,.8)); }
+.asst-dock .asst-avatar { filter: drop-shadow(0 6px 12px rgba(10, 42, 122, .3)); }
+@media (max-width: 640px) {
+  .asst-dock { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+
+.asst-mini-tab {
+  position: fixed; right: 0; bottom: 96px; z-index: 60;
+  writing-mode: vertical-rl;
+  background: #1E2A5E; color: #fff; font-size: 12px; font-weight: 700;
+  padding: 10px 5px; border-radius: 10px 0 0 10px;
+  box-shadow: 0 4px 12px rgba(15,22,56,.25);
+}
+
+/* ---------- Chat panel ---------- */
+.asst-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 61;
+  width: min(380px, calc(100vw - 32px));
+  height: min(560px, calc(100dvh - 96px));
+  display: flex;
+  flex-direction: column;
+  animation: asst-panel-in .28s cubic-bezier(.2,.9,.3,1.1);
+}
+@keyframes asst-panel-in { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
+.asst-backdrop { display: none; }
+
+/* Phones: bottom sheet across the full width, clear of the notch and home bar */
+@media (max-width: 640px) {
+  .asst-panel {
+    left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: min(86dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 16px));
+    animation-name: asst-sheet-in;
+  }
+  .asst-panel .asst-panel-inner { border-radius: 18px 18px 0 0 !important; border-bottom: 0; }
+  .asst-panel .asst-composer { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .asst-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 60;
+    background: rgba(15, 23, 42, .45); animation: asst-fade .2s ease;
+  }
+}
+@keyframes asst-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes asst-fade { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .asst-avatar *, .asst-dock, .asst-panel { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Extra lively moods ---------- */
+/* Celebrate: hop, both-hands-up feel via pointing arm, sparkles twinkle */
+.asst-sparkles { opacity: 0; }
+.asst-mood-celebrate { animation: asst-hop .5s cubic-bezier(.3,1.6,.6,1) 3; }
+.asst-mood-celebrate .asst-arm-wave { opacity: 1; transform: rotate(-6deg); }
+.asst-mood-celebrate .asst-hand-wave { transform-origin: 50% 100%; animation: asst-wave .3s ease-in-out infinite alternate; }
+.asst-mood-celebrate .asst-sparkles { opacity: 1; }
+.asst-mood-celebrate .asst-spark { transform-origin: center; animation: asst-twinkle .7s ease-in-out infinite alternate; }
+.asst-mood-celebrate .asst-spark:nth-child(2n) { animation-delay: .25s; }
+.asst-mood-celebrate .asst-spark:nth-child(3n) { animation-delay: .45s; }
+.asst-mood-celebrate .asst-eye { animation: none; transform: scaleY(.55); }
+@keyframes asst-hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px); } 70% { transform: translateY(2px) scaleY(.98); } }
+@keyframes asst-twinkle { from { transform: scale(.4) rotate(0deg); opacity: .3; } to { transform: scale(1.15) rotate(25deg); opacity: 1; } }
+
+/* Nod: acknowledges a message */
+.asst-mood-nod .asst-head { animation: asst-nod .45s ease-in-out 2; }
+@keyframes asst-nod { 0%, 100% { transform: rotate(0) translateY(0); } 50% { transform: rotate(2deg) translateY(3px); } }
+
+/* Wink */
+.asst-mood-wink .asst-eye-r { animation: asst-wink 1.1s ease-in-out 1; }
+.asst-mood-wink .asst-head { animation: none; transform: rotate(-3deg); }
+@keyframes asst-wink { 0%, 100% { transform: scaleY(1); } 25%, 70% { transform: scaleY(.08); } }
+
+/* Look around: eyes and head glance left then right */
+.asst-mood-lookaround .asst-head { animation: asst-glance 2.4s ease-in-out 1; }
+.asst-mood-lookaround .asst-pupil { animation: asst-glance-eyes 2.4s ease-in-out 1; }
+@keyframes asst-glance { 0%, 100% { transform: rotate(0); } 25%, 40% { transform: rotate(-6deg); } 60%, 80% { transform: rotate(6deg); } }
+@keyframes asst-glance-eyes { 0%, 100% { transform: translate(0, 0); } 25%, 40% { transform: translate(-3px, 0); } 60%, 80% { transform: translate(3px, 0); } }
+
+/* Entrance: slide up from the edge with a little bounce */
+.asst-dock[data-enter='true'] { animation: asst-enter .6s cubic-bezier(.34,1.6,.64,1) backwards; }
+@keyframes asst-enter { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+
+/* ---------- Daily Gemini key reminder ---------- */
+.asst-reminder {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 62;
+  width: min(380px, calc(100vw - 32px));
+  animation: asst-panel-in .35s cubic-bezier(.2,.9,.3,1.1);
+}
+@media (max-width: 640px) {
+  .asst-reminder { right: 8px; left: 8px; width: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ---------- Robot assistant ---------- */
+.asst-robot { overflow: visible; }
+/* Gentle float */
+.asst-robot.asst-mood-idle, .asst-robot.asst-mood-talking, .asst-robot.asst-mood-thinking,
+.asst-robot.asst-mood-nod, .asst-robot.asst-mood-wink, .asst-robot.asst-mood-lookaround {
+  animation: asst-float 3.6s ease-in-out infinite;
+}
+@keyframes asst-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+/* The robot has no torso: breathing becomes a soft halo / eye glow pulse */
+.asst-robot .asst-r-halo { animation: asst-halo 3.2s ease-in-out infinite; }
+@keyframes asst-halo { 0%, 100% { opacity: .22; } 50% { opacity: .5; } }
+.asst-robot .asst-r-eye-open, .asst-robot .asst-r-earlight { animation: asst-eye-glow 2.6s ease-in-out infinite; }
+@keyframes asst-eye-glow { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+
+/* Head follows the pointer a little */
+.asst-robot .asst-r-headpos { transform: translate(var(--head-x, 0), var(--head-y, 0)); transition: transform .15s ease-out; }
+.asst-robot .asst-pupil { transition: transform .1s ease-out; }
+
+/* Happy eyes ^ ^ (hidden by default) */
+.asst-robot .asst-r-eye-happy { opacity: 0; }
+.asst-robot.asst-mood-waving .asst-r-eye-open,
+.asst-robot.asst-mood-celebrate .asst-r-eye-open,
+.asst-robot.asst-mood-wink .asst-eye-r .asst-r-eye-open { opacity: 0; animation: none; }
+.asst-robot.asst-mood-waving .asst-r-eye-happy,
+.asst-robot.asst-mood-celebrate .asst-r-eye-happy,
+.asst-robot.asst-mood-wink .asst-eye-r .asst-r-eye-happy { opacity: 1; }
+.asst-robot.asst-mood-wink .asst-eye-r { animation: none; }
+
+/* Greeting: the bubble wiggles hello */
+.asst-robot.asst-mood-waving .asst-r-bubble,
+.asst-robot.asst-mood-waving .asst-head { transform-origin: 50% 60%; animation: asst-r-wiggle .5s ease-in-out 4 alternate; }
+@keyframes asst-r-wiggle { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+
+/* Talking: mouth pulses, eyes brighten */
+.asst-robot .asst-r-mouth { transform-origin: center; transition: transform .2s ease; }
+.asst-robot.asst-mood-talking .asst-r-mouth { animation: asst-r-talk .22s ease-in-out infinite alternate; }
+@keyframes asst-r-talk { from { transform: scale(1, .6); } to { transform: scale(1.9, 1.5); } }
+.asst-robot.asst-mood-talking .asst-r-eye-open { animation: asst-eye-glow .5s ease-in-out infinite; }
+
+/* Thinking: eyes look up-right (rule above in moods), mouth flattens */
+.asst-robot.asst-mood-thinking .asst-r-mouth { transform: scale(1.8, .5); }
+
+/* Peeking from the corner: glance around */
+.asst-robot.asst-mood-peek .asst-pupil { animation: asst-glance-eyes 6s ease-in-out infinite; }
+
+/* Surprised: wide eyes */
+.asst-robot.asst-mood-surprised .asst-eye { animation: none; transform: scale(1.35); }
+
+/* ---------- Calm mode: the robot only follows the pointer and blinks ---------- */
+.asst-robot,
+.asst-robot .asst-r-bubble,
+.asst-robot .asst-head,
+.asst-robot .asst-r-halo,
+.asst-robot .asst-r-eye-open,
+.asst-robot .asst-r-earlight,
+.asst-robot .asst-sparkles,
+.asst-robot .asst-spark {
+  animation: none !important;
+}
+.asst-robot .asst-sparkles { opacity: 0 !important; }
+/* Gentle, non-bouncy dock: soft fade in, slight lift on hover */
+.asst-dock { transition: transform .2s ease, filter .2s ease; }
+.asst-dock:hover { transform: translateY(-2px); }
+.asst-dock:active { transform: none; }
+.asst-dock[data-enter='true'] { animation: asst-fade .4s ease backwards; }
+
+/* ---------- Chat attachments & pickers ---------- */
+.asst-pop { animation: asst-pop-in .14s ease-out; transform-origin: top; }
+@keyframes asst-pop-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+.asst-audio { color-scheme: light; max-width: 100%; }
+@media (prefers-reduced-motion: reduce) { .asst-pop { animation: none; } }

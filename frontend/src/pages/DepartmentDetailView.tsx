@@ -296,7 +296,7 @@ export const DepartmentDetailView: React.FC = () => {
                 {/* Manager & Created Info */}
                 <div className="flex items-center gap-6 mt-4 text-xs flex-wrap">
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400 font-medium">Trưởng phòng:</span>
+                    <span className="text-slate-400 font-medium whitespace-nowrap">Trưởng phòng:</span>
                     {department.manager ? (
                       <div className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
                         <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center font-bold text-[10px]">
@@ -414,8 +414,8 @@ export const DepartmentDetailView: React.FC = () => {
           {/* Main: Employees List (Col Span 2) */}
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div>
+              <div className="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                <div className="min-w-0">
                   <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-indigo-500" />
                     Danh sách nhân viên ({employees.length})
@@ -426,7 +426,7 @@ export const DepartmentDetailView: React.FC = () => {
                 <button
                   onClick={() => setIsAddEmployeesModalOpen(true)}
                   disabled={department.status !== 'active'}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                 >
                   <Plus className="w-4 h-4 stroke-[3]" />
                   <span>Thêm nhân viên</span>
@@ -441,7 +441,7 @@ export const DepartmentDetailView: React.FC = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full min-w-[720px] text-left text-xs">
                     <thead>
                       <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                         <th className="px-5 py-3">Nhân sự</th>
@@ -470,7 +470,7 @@ export const DepartmentDetailView: React.FC = () => {
                                   <div className="flex items-center gap-1.5">
                                     <span className="font-bold text-slate-800 dark:text-slate-200">{emp.name}</span>
                                     {isManager && (
-                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                                      <span className="whitespace-nowrap px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
                                         <Crown className="w-3 h-3" /> Trưởng phòng
                                       </span>
                                     )}

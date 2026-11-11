@@ -1,18 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
 import { 
-  Filter, Search, Share2, LayoutDashboard, 
-  ChevronRight, Plus, List as ListIcon, Calendar as CalendarIcon,
-  Clock, LayoutGrid, BarChart3, FileSpreadsheet
+  Filter, Search, Plus, List as ListIcon,
+  Clock, FileSpreadsheet
 } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
 import { getAvatarUrl } from '../lib/avatar';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
-import { BoardMembersHeader } from '../components/layout/BoardMembersHeader';
+import { BoardHeaderBar } from '../components/board/BoardHeaderBar';
 import { CustomSelect } from '../components/ui/CustomSelect';
 import { StatusSelect } from '../components/ui/StatusSelect';
 import { TaskExcelImportModal } from '../components/kanban/TaskExcelImportModal';
@@ -25,41 +23,10 @@ const THEME_HEX_MAP: Record<string, string> = {
   gray: '#94A3B8',
 };
 
-// Tab Component for Header
-function BoardTabs({ basePath, activeTab }: { basePath: string, activeTab: 'kanban' | 'list' | 'calendar' | 'dashboard' }) {
-  return (
-    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-      <Link 
-        to={`${basePath}/kanban`}
-        className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-      >
-        <LayoutGrid size={16} /> Kanban
-      </Link>
-      <Link 
-        to={`${basePath}/list`}
-        className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-      >
-        <ListIcon size={16} /> Danh sách
-      </Link>
-      <Link 
-        to={`${basePath}/calendar`}
-        className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'calendar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-      >
-        <CalendarIcon size={16} /> Lịch
-      </Link>
-      <Link 
-        to={`${basePath}/dashboard`}
-        className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'dashboard' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-      >
-        <BarChart3 size={16} /> Thống kê
-      </Link>
-    </div>
-  );
-}
 import { useBoardStore } from '../store/boardStore';
 
 export function ListView() {
-  const { boardId, basePath } = useBoardRoute();
+  const { boardId } = useBoardRoute();
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
@@ -184,26 +151,7 @@ export function ListView() {
 
   return (
     <div className="flex-1 overflow-hidden h-full flex flex-col relative bg-background">
-      {/* Top Header / Breadcrumb */}
-      <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50">
-        <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium">
-          <Link to="/boards" className="hover:text-primary transition-colors flex items-center gap-1.5">
-            <LayoutDashboard size={14} /> Bảng công việc
-          </Link>
-          <ChevronRight size={14} className="opacity-50" />
-          <span className="text-foreground font-semibold">{board.title}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <BoardTabs basePath={basePath} activeTab="list" />
-          
-          <div className="flex items-center gap-3 border-l border-border pl-4">
-            <BoardMembersHeader users={board.users} basePath={basePath} />
-            <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent">
-              <Share2 size={18} />
-            </button>
-          </div>
-        </div>
-      </header>
+      <BoardHeaderBar board={board} />
 
       {/* Main Board Container */}
       <div className="flex-1 overflow-hidden relative z-0 flex flex-col bg-card">
@@ -312,7 +260,7 @@ export function ListView() {
                         />
                         <h3 className="text-sm font-bold text-foreground flex items-center gap-2 uppercase tracking-wide">
                           {group.title}
-                          <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
+                          <span className="whitespace-nowrap text-xs font-normal text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
                             {group.tasks.length}
                           </span>
                         </h3>

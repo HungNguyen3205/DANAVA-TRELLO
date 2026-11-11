@@ -543,7 +543,7 @@ export function WorkspaceDashboard() {
                       </p>
                     </div>
 
-                    <span className="shrink-0 rounded-full bg-card px-2.5 py-1 text-[11px] font-bold text-muted-foreground shadow-xs border border-border/60">
+                    <span className="whitespace-nowrap shrink-0 rounded-full bg-card px-2.5 py-1 text-[11px] font-bold text-muted-foreground shadow-xs border border-border/60">
                       {formatDate(task.due_date)}
                     </span>
                   </div>
@@ -636,7 +636,7 @@ function MetricCard({
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl font-black tracking-tight text-foreground">{value}</span>
             {suffix && (
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="whitespace-nowrap rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                 {suffix}
               </span>
             )}

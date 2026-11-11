@@ -141,15 +141,15 @@ export function EmployeeManagementView() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
+        <div className="flex items-center gap-3 flex-wrap w-full md:w-auto">
+          <div className="relative w-full sm:w-auto">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input 
               type="text" 
               placeholder="Tìm theo tên, username, chức vụ..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-56 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+              className="w-full sm:w-56 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
             />
           </div>
 
@@ -157,7 +157,7 @@ export function EmployeeManagementView() {
           <select 
             value={filterDepartment}
             onChange={(e) => setFilterDepartment(e.target.value)}
-            className="py-2 px-3 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
+            className="flex-1 sm:flex-none min-w-0 py-2 px-3 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
           >
             <option value="">Tất cả phòng ban</option>
             <option value="unassigned">Chưa phân phòng</option>
@@ -169,7 +169,7 @@ export function EmployeeManagementView() {
           <select 
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="py-2 px-3 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
+            className="flex-1 sm:flex-none min-w-0 py-2 px-3 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
           >
             <option value="">Tất cả trạng thái</option>
             <option value="active">Hoạt động</option>
@@ -182,7 +182,7 @@ export function EmployeeManagementView() {
                 const selected = employees.filter((e) => selectedEmployeeIds.includes(String(e.id)));
                 setTransferringEmployees(selected);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800 rounded-xl transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold whitespace-nowrap text-indigo-700 bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800 rounded-xl transition-all shadow-xs"
             >
               <ArrowRightLeft size={15} />
               Chuyển phòng ban ({selectedEmployeeIds.length})
@@ -191,7 +191,7 @@ export function EmployeeManagementView() {
 
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-primary/90 rounded-xl transition-all shadow-sm shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold whitespace-nowrap text-white bg-primary hover:bg-primary/90 rounded-xl transition-all shadow-sm shrink-0"
           >
             <UserPlus size={16} />
             Tạo tài khoản

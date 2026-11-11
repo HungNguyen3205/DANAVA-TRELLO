@@ -260,7 +260,7 @@ export const NotificationPage = () => {
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-bold text-foreground">Thông báo</h1>
               {unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                <span className="whitespace-nowrap bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                   {unreadCount} chưa đọc
                 </span>
               )}

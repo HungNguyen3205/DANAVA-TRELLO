@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
+import { AssistantSettingsCard } from '../components/assistant/AssistantSettingsCard';
 
 export const SettingsPage = () => {
   const { user, logout } = useAuthStore();
@@ -229,6 +230,9 @@ export const SettingsPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Card: Trợ lý AI */}
+          <AssistantSettingsCard />
 
           {/* Card: Đổi mật khẩu */}
           <div className="bg-card border border-border shadow-sm rounded-2xl overflow-hidden">

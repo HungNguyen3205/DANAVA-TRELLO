@@ -1,94 +1,56 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Briefcase, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined, Columns, Trash2, Building2 } from 'lucide-react';
-import React, { useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { Home, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined, Columns, Trash2, Building2, CalendarClock, BarChart3 } from 'lucide-react';
+import { useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
+import { SidebarItem, SidebarSection, SidebarShell } from './Sidebar';
 
 export function PersonalLayout() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
-  const { isMobileSidebarOpen, closeMobileSidebar } = useUIStore();
+  const { closeMobileSidebar } = useUIStore();
+  const path = location.pathname;
 
   // Close mobile sidebar on route change
   useEffect(() => {
     closeMobileSidebar();
-  }, [location.pathname]);
+  }, [path, closeMobileSidebar]);
 
   return (
     <div className="flex flex-1 overflow-hidden w-full h-full relative">
-      {/* Overlay for mobile */}
-      {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
-          onClick={closeMobileSidebar}
-        />
-      )}
+      <SidebarShell>
+        <SidebarSection>Chung</SidebarSection>
+        <SidebarItem icon={<ChartNoAxesCombined size={18} />} label="Tổng quan" to="/dashboard" active={path === '/dashboard'} />
 
-      {/* Sidebar Cá nhân */}
-      <aside className={`w-64 border-r border-border bg-card flex flex-col transition-transform duration-300 shrink-0 absolute md:relative z-50 h-full ${
-        isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}>
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-          {/* Mục CHUNG */}
-          <div className="mt-6 mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            Chung
-          </div>
-          <SidebarItem 
-            icon={<ChartNoAxesCombined size={18} />} 
-            label="Tổng quan" 
-            to="/dashboard" 
-            active={location.pathname === '/dashboard'} 
-          />
+        <SidebarSection>Khu vực làm việc</SidebarSection>
+        <SidebarItem icon={<Home size={18} />} label="Trang chủ của tôi" to="/home" active={path === '/home'} />
+        <SidebarItem icon={<Columns size={18} />} label="Bảng công việc" to="/boards" active={path === '/boards'} />
+        <SidebarItem icon={<CheckSquare size={18} />} label="Công việc của tôi" to="/my-tasks" active={path === '/my-tasks'} />
+        <SidebarItem icon={<CalendarClock size={18} />} label="Chấm công" to="/attendance" active={path === '/attendance'} />
+        <SidebarItem icon={<Bell size={18} />} label="Thông báo" to="/notifications" active={path === '/notifications'} />
+        <SidebarItem icon={<Search size={18} />} label="Tìm kiếm" to="/search" active={path === '/search'} />
+        <SidebarItem icon={<Trash2 size={18} />} label="Thùng rác" to="/trash" active={path === '/trash'} />
 
-          <div className="mt-6 mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            Khu vực làm việc
-          </div>
-          
-          <SidebarItem icon={<Home size={18} />} label="Trang chủ của tôi" to="/home" active={location.pathname === '/home'} />
-          <SidebarItem icon={<Columns size={18} />} label="Bảng công việc" to="/boards" active={location.pathname === '/boards'} />
-          <SidebarItem icon={<CheckSquare size={18} />} label="Công việc của tôi" to="/my-tasks" active={location.pathname === '/my-tasks'} />
-          <SidebarItem icon={<Bell size={18} />} label="Thông báo" to="/notifications" active={location.pathname === '/notifications'} />
-          <SidebarItem icon={<Search size={18} />} label="Tìm kiếm" to="/search" active={location.pathname === '/search'} />
-          <SidebarItem icon={<Trash2 size={18} />} label="Thùng rác" to="/trash" active={location.pathname === '/trash'} />
-          
-          <div className="mt-8 mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            Tài khoản
-          </div>
-          <SidebarItem icon={<User size={18} />} label="Hồ sơ cá nhân" to="/profile" active={location.pathname === '/profile'} />
-          <SidebarItem icon={<Settings size={18} />} label="Cài đặt tài khoản" to="/account/settings" active={location.pathname === '/account/settings'} />
+        <SidebarSection>Tài khoản</SidebarSection>
+        <SidebarItem icon={<User size={18} />} label="Hồ sơ cá nhân" to="/profile" active={path === '/profile'} />
+        <SidebarItem icon={<Settings size={18} />} label="Cài đặt tài khoản" to="/account/settings" active={path === '/account/settings'} />
 
-          {(user?.system_role === 'system_admin' || user?.system_role === 'admin') && (
-            <>
-              <div className="mt-8 mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-600 dark:text-amber-500 flex items-center gap-1.5">
-                <ShieldAlert size={14} /> Quản trị hệ thống
-              </div>
-              <SidebarItem icon={<Users size={18} />} label="Quản lý nhân viên" to="/admin/employees" active={location.pathname === '/admin/employees'} />
-              <SidebarItem icon={<Building2 size={18} />} label="Phòng ban" to="/admin/departments" active={location.pathname.startsWith('/admin/departments')} />
-            </>
-          )}
-        </nav>
-      </aside>
+        {(user?.system_role === 'system_admin' || user?.system_role === 'admin') && (
+          <>
+            <SidebarSection className="!text-amber-600 dark:!text-amber-500 flex items-center gap-1.5">
+              <ShieldAlert size={14} /> Quản trị hệ thống
+            </SidebarSection>
+            <SidebarItem icon={<Users size={18} />} label="Quản lý nhân viên" to="/admin/employees" active={path === '/admin/employees'} />
+            <SidebarItem icon={<Building2 size={18} />} label="Phòng ban" to="/admin/departments" active={path.startsWith('/admin/departments')} />
+            <SidebarItem icon={<BarChart3 size={18} />} label="Thống kê chấm công" to="/attendance/report" active={path === '/attendance/report'} />
+          </>
+        )}
+      </SidebarShell>
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden bg-background flex flex-col relative">
         <Outlet />
       </main>
     </div>
-  );
-}
-
-function SidebarItem({ icon, label, to, active = false }: { icon: React.ReactNode, label: string, to: string, active?: boolean }) {
-  return (
-    <Link 
-      to={to}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
-        active 
-          ? 'bg-primary/10 text-primary font-medium' 
-          : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </Link>
   );
 }

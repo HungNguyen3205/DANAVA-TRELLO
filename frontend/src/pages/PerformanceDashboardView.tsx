@@ -573,7 +573,7 @@ export const PerformanceDashboardView: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
                   {selectedDeptInfo ? `Phòng ban: ${selectedDeptInfo.name} (${selectedDeptInfo.code})` : 'Nhân sự chưa phân phòng'}
                 </span>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold border border-indigo-200/50 dark:border-indigo-800">
+                <span className="whitespace-nowrap text-[11px] px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold border border-indigo-200/50 dark:border-indigo-800">
                   {filteredScores.length} nhân sự tham gia
                 </span>
               </div>
@@ -1074,7 +1074,7 @@ export const PerformanceDashboardView: React.FC = () => {
                   {(!selectedMemberLineage.score.task_details || selectedMemberLineage.score.task_details.length === 0) ? (
                     <p className="text-xs text-slate-400 italic">Không có công việc nào trong kỳ này.</p>
                   ) : (
-                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-slate-100/70 dark:bg-slate-800 text-slate-500 font-bold uppercase">
                           <tr>

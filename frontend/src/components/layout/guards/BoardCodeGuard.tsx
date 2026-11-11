@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, Outlet, useParams } from 'react-router-dom';
 import { ShieldAlert, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import api from '../../../lib/axios';
 import { BoardRouteProvider, type BoardRouteInfo } from '../BoardRouteContext';
+import type { BoardType } from '../../../lib/boardType';
+
+type RouteBase = Omit<BoardRouteInfo, 'boardType' | 'setBoardType'>;
 
 export function BoardCodeGuard() {
   const { boardCode } = useParams();
-  const [routeInfo, setRouteInfo] = useState<BoardRouteInfo | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteBase | null>(null);
+  const [boardType, setBoardType] = useState<BoardType>('task');
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   useEffect(() => {
@@ -28,6 +32,7 @@ export function BoardCodeGuard() {
           workspaceId: String(data.workspace_id || ''),
           basePath: `/${data.public_id}`,
         });
+        setBoardType(data.type === 'project' ? 'project' : 'task');
       })
       .catch((err) => {
         if (!cancelled) {
@@ -39,6 +44,11 @@ export function BoardCodeGuard() {
       cancelled = true;
     };
   }, [boardCode]);
+
+  const contextValue = useMemo<BoardRouteInfo | null>(
+    () => (routeInfo ? { ...routeInfo, boardType, setBoardType } : null),
+    [routeInfo, boardType],
+  );
 
   if (errorStatus === 403) {
     return (
@@ -82,12 +92,12 @@ export function BoardCodeGuard() {
 
   if (errorStatus) return <Navigate to="/boards" replace />;
 
-  if (!routeInfo) {
+  if (!contextValue) {
     return <div className="flex flex-1 items-center justify-center text-primary font-medium animate-pulse">Đang mở bảng...</div>;
   }
 
   return (
-    <BoardRouteProvider value={routeInfo}>
+    <BoardRouteProvider value={contextValue}>
       <Outlet />
     </BoardRouteProvider>
   );

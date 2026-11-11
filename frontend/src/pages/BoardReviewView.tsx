@@ -250,15 +250,15 @@ export const BoardReviewView = () => {
                 Tổng kết dự án
               </h1>
               {isLocked ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                   <Lock size={12} /> Đã khóa
                 </span>
               ) : isPublished ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   <CheckCircle2 size={12} /> Đã công bố
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                   <Clock size={12} /> Bản nháp
                 </span>
               )}
@@ -379,7 +379,7 @@ export const BoardReviewView = () => {
 
         {/* 1. Automated Project Metrics (KPI Cards) */}
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <Award className="text-primary" size={20} />
               Số liệu công việc tổng quan
@@ -713,7 +713,7 @@ export const BoardReviewView = () => {
                       </td>
 
                       <td className="px-4 py-4 text-center">
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                        <span className="whitespace-nowrap inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
                           {m.completion_rate}%
                         </span>
                       </td>

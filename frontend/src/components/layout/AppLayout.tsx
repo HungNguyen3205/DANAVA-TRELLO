@@ -1,10 +1,10 @@
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, Grid, ChevronDown, LogOut, Sun, Moon, Briefcase, Clock, Star, Plus, User, Settings, LayoutTemplate, LayoutDashboard, Menu } from 'lucide-react';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { AssistantWidget } from '../assistant/AssistantWidget';
+import { Search, LogOut, Sun, Moon, Star, User, LayoutDashboard, Menu } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
-import api from '../../lib/axios';
 import { getPersonalDashboard } from '../../lib/personalDashboard';
 import { getAvatarUrl } from '../../lib/avatar';
 
@@ -20,19 +20,16 @@ export function AppLayout() {
 
   // Dropdown states
   const [wsDropdownOpen, setWsDropdownOpen] = useState(false);
-  const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [searchOpenMobile, setSearchOpenMobile] = useState(false);
 
   // Data for workspaces
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [boards, setBoards] = useState<any[]>([]);
   const [starredBoards, setStarredBoards] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Refs for click outside
   const wsRef = useRef<HTMLDivElement>(null);
-  const createRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -56,7 +53,6 @@ export function AppLayout() {
     try {
       const data = await getPersonalDashboard();
       if (data) {
-        setWorkspaces(data.recent_workspaces || []);
         setBoards(data.recent_boards || []);
         setStarredBoards(data.starred_boards || []);
       }
@@ -68,13 +64,11 @@ export function AppLayout() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wsRef.current && !wsRef.current.contains(event.target as Node)) setWsDropdownOpen(false);
-      if (createRef.current && !createRef.current.contains(event.target as Node)) setCreateDropdownOpen(false);
       if (avatarRef.current && !avatarRef.current.contains(event.target as Node)) setAvatarMenuOpen(false);
     }
     function handleEscape(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         setWsDropdownOpen(false);
-        setCreateDropdownOpen(false);
         setAvatarMenuOpen(false);
       }
     }
@@ -86,7 +80,6 @@ export function AppLayout() {
     };
   }, []);
 
-  const filteredWorkspaces = workspaces.filter(w => w.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredBoards = boards.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredStarredBoards = starredBoards.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -98,38 +91,36 @@ export function AppLayout() {
         </div>
       )}
       {/* Top Navigation */}
-      <header className="h-14 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-3 md:px-4 z-[50] shrink-0 shadow-sm relative">
-        <div className="flex items-center gap-1 md:gap-3 shrink-0">
+      <header className="h-12 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between gap-2 px-3 md:px-4 z-[50] shrink-0 relative">
+        <div className="flex items-center gap-1 md:gap-2 shrink-0">
           <button 
             className="p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground rounded-md transition-colors shrink-0 md:hidden"
             onClick={toggleMobileSidebar}
           >
             <Menu size={18} />
           </button>
-          <button className="p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground rounded-md transition-colors shrink-0 hidden md:block">
-            <Grid size={18} />
-          </button>
-          
-          <Link to="/home" className="flex items-center gap-2 cursor-pointer shrink-0 mr-1 md:mr-3">
+          <Link to="/home" className="flex items-center gap-2 cursor-pointer shrink-0 mr-1 md:mr-2">
             <div className="w-7 h-7 rounded flex items-center justify-center overflow-hidden shrink-0">
               <img src="/logo.jpg" alt="DANAVA" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-base md:text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent whitespace-nowrap hidden sm:block">
+            <h1 className="app-brand-text text-base font-bold tracking-tight bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent whitespace-nowrap hidden sm:block">
               DANAVA WORK
             </h1>
           </Link>
 
           {/* Boards Dropdown */}
-          <div className="relative" ref={wsRef}>
-            <button 
+          <div className="app-board-switch relative" ref={wsRef}>
+            <button
               onClick={() => {
                 if (!wsDropdownOpen) fetchData(); // Refresh when opening
                 setWsDropdownOpen(!wsDropdownOpen);
               }}
-              className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-md transition-colors whitespace-nowrap text-sm font-medium ${wsDropdownOpen ? 'bg-accent text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+              title="Chuyển nhanh đến bảng"
+              aria-label="Chuyển nhanh đến bảng"
+              aria-expanded={wsDropdownOpen}
+              className={`w-8 h-8 grid place-items-center rounded-full transition-colors ${wsDropdownOpen ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
             >
-              Bảng của tôi
-              <ChevronDown size={14} className={`transition-transform duration-200 ${wsDropdownOpen ? 'rotate-180' : ''}`} />
+              <LayoutDashboard size={17} />
             </button>
             
             {wsDropdownOpen && (
@@ -202,8 +193,8 @@ export function AppLayout() {
           </div>
 
           {/* Global Search - Hidden on mobile unless toggled */}
-          <div className="relative hidden md:block w-48 lg:w-64 ml-1">
-            <Search className="absolute left-2.5 top-[7px] h-4 w-4 text-muted-foreground" />
+          <div className="app-global-search relative hidden md:block w-56 lg:w-72 ml-1">
+            <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Tìm kiếm"
@@ -216,61 +207,26 @@ export function AppLayout() {
                   setSearchOpenMobile(false);
                 }
               }}
-              className="h-[30px] w-full rounded-md border border-input bg-background/50 pl-8 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+              className="h-8 w-full rounded-full border border-input bg-background/50 pl-8 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
             />
           </div>
 
-          {/* Create New Dropdown */}
-          <div className="relative ml-1" ref={createRef}>
-            <button 
-              onClick={() => setCreateDropdownOpen(!createDropdownOpen)}
-              className="bg-primary/10 text-primary hover:bg-primary/20 px-2 md:px-3 py-1.5 rounded-md transition-colors text-sm font-medium flex items-center gap-1.5"
-            >
-              <span className="hidden sm:inline">Tạo mới</span>
-              <Plus size={16} className="sm:hidden" />
-              <ChevronDown size={14} className={`hidden sm:block transition-transform duration-200 ${createDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {createDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in slide-in-from-top-2 duration-200 py-1.5">
-                <button className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-accent text-left group">
-                  <LayoutDashboard size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div>
-                    <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Tạo bảng mới</div>
-                    <div className="text-[11px] text-muted-foreground">Bảng trắng với các cột tùy chỉnh</div>
-                  </div>
-                </button>
-                <button className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-accent text-left group">
-                  <LayoutTemplate size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div>
-                    <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Tạo từ mẫu</div>
-                    <div className="text-[11px] text-muted-foreground">Bắt đầu nhanh với mẫu có sẵn</div>
-                  </div>
-                </button>
-                <div className="my-1 h-px bg-border/50" />
-                <button className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-accent text-left group">
-                  <Briefcase size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div>
-                    <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Tạo Không gian</div>
-                    <div className="text-[11px] text-muted-foreground">Nhóm các bảng và thành viên</div>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
         </div>
+
+        {/* Board pages put their own tools here (title, search tasks, add, members, ⋯) — see BoardHeaderBar */}
+        <div id="app-header-slot" className="flex-1 min-w-0 flex items-center" />
 
         <div className="flex items-center gap-1 md:gap-2 shrink-0 relative">
           <button 
             onClick={() => setSearchOpenMobile(!searchOpenMobile)}
-            className="md:hidden p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-accent transition-colors"
+            className="app-global-search md:hidden p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-accent transition-colors"
           >
             <Search size={18} />
           </button>
 
           {/* Mobile Search Input Overlay */}
           {searchOpenMobile && (
-            <div className="absolute top-[48px] right-0 w-64 p-2 bg-card border border-border rounded-xl shadow-xl z-50 md:hidden">
+            <div className="absolute top-[44px] right-0 w-64 p-2 bg-card border border-border rounded-xl shadow-xl z-50 md:hidden">
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
@@ -368,6 +324,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <AssistantWidget />
     </div>
   );
 }

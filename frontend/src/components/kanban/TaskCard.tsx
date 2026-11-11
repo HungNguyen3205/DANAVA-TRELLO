@@ -169,7 +169,7 @@ export function TaskCard({
         transition,
         opacity: isDragging ? 0 : 1,
       }}
-      className={`relative group shrink-0 bg-card border border-border/60 rounded-[12px] shadow-sm hover:shadow hover:border-primary/30 hover:-translate-y-px transition-all duration-200 overflow-hidden ${isDragging ? "opacity-0" : ""}`}
+      className={`board-glass-card relative group shrink-0 bg-card border border-border/60 rounded-[12px] shadow-sm hover:shadow hover:border-primary/30 hover:-translate-y-px transition-all duration-200 overflow-hidden ${isDragging ? "opacity-0" : ""}`}
     >
       <button
         className="w-full text-left p-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"

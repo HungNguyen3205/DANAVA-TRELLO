@@ -6,7 +6,7 @@ import { lazy, Suspense } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { PersonalLayout } from './components/layout/PersonalLayout';
 import { WorkspaceLayout } from './components/layout/WorkspaceLayout';
-import { BoardLayout } from './components/layout/BoardLayout';
+import { BoardLayout, ProjectOnlyRoute } from './components/layout/BoardLayout';
 
 // Guards
 import { AuthGuard } from './components/layout/guards/AuthGuard';
@@ -31,6 +31,8 @@ const DepartmentDetailView = lazy(() => import('./pages/DepartmentDetailView').t
 const WorkspaceHome = lazy(() => import('./pages/WorkspaceHome').then((m) => ({ default: m.WorkspaceHome })));
 const NotificationPage = lazy(() => import('./pages/NotificationPage').then((m) => ({ default: m.NotificationPage })));
 const MyTasksPage = lazy(() => import('./pages/MyTasksPage').then((m) => ({ default: m.MyTasksPage })));
+const AttendancePage = lazy(() => import('./pages/AttendancePage').then((m) => ({ default: m.AttendancePage })));
+const AttendanceReportPage = lazy(() => import('./pages/AttendanceReportPage').then((m) => ({ default: m.AttendanceReportPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const SearchPage = lazy(() => import('./pages/SearchPage').then((m) => ({ default: m.SearchPage })));
 const BoardSettingsView = lazy(() => import('./pages/BoardSettingsView').then((m) => ({ default: m.BoardSettingsView })));
@@ -91,6 +93,8 @@ function App() {
               <Route path="/boards" element={<WorkspaceHome />} />
               <Route path="/workspaces" element={<Navigate to="/boards" replace />} />
               <Route path="/my-tasks" element={<MyTasksPage />} />
+              <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/attendance/report" element={<AttendanceReportPage />} />
               <Route path="/notifications" element={<NotificationPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/profile" element={<ProfilePage />} />
@@ -124,9 +128,9 @@ function App() {
                 <Route path="calendar" element={<CalendarView />} />
                 <Route path="dashboard" element={<BoardWorkloadDashboard />} />
                 <Route path="members" element={<BoardMembersView />} />
-                <Route path="review" element={<BoardReviewView />} />
-                <Route path="performance" element={<PerformanceDashboardView />} />
-                <Route path="performance-policy" element={<PerformancePolicyView />} />
+                <Route path="review" element={<ProjectOnlyRoute><BoardReviewView /></ProjectOnlyRoute>} />
+                <Route path="performance" element={<ProjectOnlyRoute><PerformanceDashboardView /></ProjectOnlyRoute>} />
+                <Route path="performance-policy" element={<ProjectOnlyRoute><PerformancePolicyView /></ProjectOnlyRoute>} />
                 <Route path="settings" element={<BoardSettingsView />} />
                 <Route path="trash" element={<TrashView />} />
                 <Route index element={<Navigate to="kanban" replace />} />

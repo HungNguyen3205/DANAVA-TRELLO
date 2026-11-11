@@ -25,6 +25,12 @@ use App\Http\Controllers\BoardDashboardController;
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
+// Chat attachments are shown with <img>/<audio>, which cannot send the auth header,
+// so they are served through short-lived signed links handed out to the owner only.
+Route::get('/assistant/files/{message}/{file}', [\App\Http\Controllers\AssistantController::class, 'file'])
+    ->name('assistant.file')
+    ->middleware(['signed:relative', 'throttle:120,1']);
+
 // ==========================================
 // PROTECTED ROUTES (Requires Authentication)
 // ==========================================
@@ -60,6 +66,11 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
         Route::post('/departments/{department}/telegram/verify', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'verify']);
         Route::post('/departments/{department}/telegram/test', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'test']);
         Route::delete('/departments/{department}/telegram', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'destroy']);
+
+        // Company Gemini key for the AI assistant
+        Route::put('/assistant/settings', [\App\Http\Controllers\AssistantSettingsController::class, 'update'])->middleware('throttle:10,1');
+        Route::delete('/assistant/settings/key', [\App\Http\Controllers\AssistantSettingsController::class, 'destroyKey']);
+        Route::get('/assistant/models', [\App\Http\Controllers\AssistantSettingsController::class, 'models'])->middleware('throttle:20,1');
     });
 
     // Minimal options for dropdowns (any authenticated user)
@@ -81,6 +92,22 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     // Personal Area
     Route::get('/me/dashboard', [PersonalDashboardController::class, 'index']);
     Route::get('/me/tasks', [MyTaskController::class, 'index']);
+
+    // AI assistant (chat + create tasks from pasted assignment messages)
+    Route::get('/assistant', [\App\Http\Controllers\AssistantController::class, 'index']);
+    Route::get('/assistant/settings', [\App\Http\Controllers\AssistantSettingsController::class, 'show']);
+    Route::post('/assistant/chat', [\App\Http\Controllers\AssistantController::class, 'chat'])->middleware('throttle:30,1');
+    Route::delete('/assistant/history', [\App\Http\Controllers\AssistantController::class, 'clear']);
+    Route::post('/assistant/tasks/preview', [\App\Http\Controllers\AssistantController::class, 'preview'])->middleware('throttle:30,1');
+    Route::post('/assistant/tasks/apply', [\App\Http\Controllers\AssistantController::class, 'apply'])->middleware('throttle:20,1');
+
+    // Attendance (check-in / check-out and statistics)
+    Route::get('/attendance/today', [\App\Http\Controllers\AttendanceController::class, 'today']);
+    Route::post('/attendance/check-in', [\App\Http\Controllers\AttendanceController::class, 'checkIn'])->middleware('throttle:10,1');
+    Route::post('/attendance/check-out', [\App\Http\Controllers\AttendanceController::class, 'checkOut'])->middleware('throttle:10,1');
+    Route::get('/attendance/me', [\App\Http\Controllers\AttendanceController::class, 'myMonth']);
+    Route::get('/attendance/report', [\App\Http\Controllers\AttendanceController::class, 'report']);
+    Route::get('/attendance/report/users/{user}', [\App\Http\Controllers\AttendanceController::class, 'userMonth']);
     Route::get('/search', [SearchController::class, 'index']);
     
     // Notifications
@@ -139,6 +166,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::post('/boards/{board}/toggle-star', [BoardController::class, 'toggleStar']);
     Route::post('/boards/{board}/evaluation/publish', [BoardController::class, 'publishEvaluation']);
     Route::post('/boards/{board}/transfer-ownership', [BoardController::class, 'transferOwnership']);
+    Route::post('/boards/{board}/background', [BoardController::class, 'uploadBackground'])->middleware('throttle:20,1');
+    Route::delete('/boards/{board}/background', [BoardController::class, 'removeBackground']);
 
     // Board Telegram Management
     Route::get('/boards/{board}/telegram', [\App\Http\Controllers\BoardTelegramController::class, 'show']);

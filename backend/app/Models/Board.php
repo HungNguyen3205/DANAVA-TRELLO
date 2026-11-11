@@ -17,12 +17,32 @@ class Board extends Model
         'allow_department_notification',
         'public_id',
         'name',
+        'type',
+        'project_status',
+        'start_date',
+        'end_date',
+        'manager_id',
+        'budget',
         'description',
         'color',
+        'background_image',
         'deleted_by',
     ];
 
+    public const TYPE_TASK = 'task';
+    public const TYPE_PROJECT = 'project';
+    public const TYPES = [self::TYPE_TASK, self::TYPE_PROJECT];
+
+    public const PROJECT_STATUSES = ['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'];
+
+    protected $attributes = [
+        'type' => self::TYPE_TASK,
+    ];
+
     protected $casts = [
+        'start_date' => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
+        'budget' => 'decimal:2',
         'allow_department_notification' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -70,6 +90,16 @@ class Board extends Model
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    public function isProject(): bool
+    {
+        return $this->type === self::TYPE_PROJECT;
     }
 
     public function workspace()

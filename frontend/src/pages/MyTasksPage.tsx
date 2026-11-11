@@ -291,11 +291,11 @@ export const MyTasksPage = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                           {task.is_subtask || task.type === 'Task con' ? (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-200/40 dark:border-purple-900/40">
+                            <span className="whitespace-nowrap px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-200/40 dark:border-purple-900/40">
                               Task con
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-200/40 dark:border-blue-900/40">
+                            <span className="whitespace-nowrap px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-200/40 dark:border-blue-900/40">
                               Task chính
                             </span>
                           )}

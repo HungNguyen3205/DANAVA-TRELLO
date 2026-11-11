@@ -20,7 +20,7 @@ class BoardController extends Controller
               ->orWhereHas('members', function ($sub) use ($userId) {
                   $sub->where('users.id', $userId);
               });
-        })->with('owner')->orderBy('updated_at', 'desc')->get();
+        })->with(['owner', 'manager:id,name,avatar'])->orderBy('updated_at', 'desc')->get();
 
         $boardIds = $boards->pluck('id')->toArray();
 
@@ -50,22 +50,33 @@ class BoardController extends Controller
     // Tạo bảng trực tiếp hoàn toàn Board-first, không tạo Không gian làm việc nền
     public function storeDirect(Request $request)
     {
-        $request->validate([
+        $request->validate(array_merge([
             'name' => 'required|string|max:255',
             'color' => 'nullable|string|max:50',
             'description' => 'nullable|string',
-        ]);
+        ], $this->projectRules()));
 
         $userId = $request->user()->id;
+        $type = $request->input('type', Board::TYPE_TASK);
+        $projectFields = $type === Board::TYPE_PROJECT
+            ? $this->resolveProjectFields($request, null)
+            : [];
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $userId) {
-            $board = Board::create([
+        if ($type === Board::TYPE_PROJECT) {
+            // The creator is the only member at creation time, so they manage the project by default.
+            $projectFields['manager_id'] = $userId;
+            $projectFields['project_status'] = $projectFields['project_status'] ?? 'planning';
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $userId, $type, $projectFields) {
+            $board = Board::create(array_merge([
                 'owner_id' => $userId,
                 'workspace_id' => null,
                 'name' => $request->name,
+                'type' => $type,
                 'description' => $request->description,
                 'color' => $request->color ?? 'bg-gradient-to-br from-blue-500 to-cyan-400',
-            ]);
+            ], $projectFields));
 
             // Người tạo là Quản trị viên (Chủ sở hữu) của bảng
             \Illuminate\Support\Facades\DB::table('board_members')->updateOrInsert(
@@ -138,6 +149,7 @@ class BoardController extends Controller
 
         $relations = [
             'owner', 
+            'manager:id,name,avatar',
             'sprints', 
             'labels', 
             'columns' => function ($q) {
@@ -178,15 +190,122 @@ class BoardController extends Controller
     {
         Gate::authorize('update', $board);
 
-        $request->validate([
+        $request->validate(array_merge([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'color' => 'nullable|string|max:50',
+        ], $this->projectRules()));
+
+        $data = $request->only(['name', 'description', 'color']);
+        $type = $request->input('type', $board->type);
+
+        if ($request->has('type')) {
+            $data['type'] = $type;
+        }
+
+        // Project fields are kept when a project is turned back into a simple board,
+        // so switching back later restores them.
+        if ($type === Board::TYPE_PROJECT) {
+            $data = array_merge($data, $this->resolveProjectFields($request, $board));
+
+            if ($board->type !== Board::TYPE_PROJECT) {
+                $data['project_status'] = $data['project_status'] ?? $board->project_status ?? 'planning';
+                $data['manager_id'] = $data['manager_id'] ?? $board->manager_id ?? $board->owner_id;
+            }
+        }
+
+        $board->update($data);
+
+        return response()->json($board->fresh(['manager:id,name,avatar']));
+    }
+
+    private function projectRules(): array
+    {
+        return [
+            'type' => 'sometimes|in:' . implode(',', Board::TYPES),
+            'project_status' => 'nullable|in:' . implode(',', Board::PROJECT_STATUSES),
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'manager_id' => 'nullable|integer|exists:users,id',
+            'budget' => 'nullable|numeric|min:0|max:9999999999999',
+        ];
+    }
+
+    /**
+     * Collect project fields from the request, validating cross-field rules
+     * against the board's current values for fields that were not sent.
+     */
+    private function resolveProjectFields(Request $request, ?Board $board): array
+    {
+        $fields = $request->only(['project_status', 'start_date', 'end_date', 'manager_id', 'budget']);
+
+        $start = array_key_exists('start_date', $fields) ? $fields['start_date'] : $board?->start_date?->toDateString();
+        $end = array_key_exists('end_date', $fields) ? $fields['end_date'] : $board?->end_date?->toDateString();
+
+        if ($start && $end && strtotime($end) < strtotime($start)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'end_date' => ['Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.'],
+            ]);
+        }
+
+        if (!empty($fields['manager_id']) && $board) {
+            $managerId = (int) $fields['manager_id'];
+            $isMember = $managerId === (int) $board->owner_id || \Illuminate\Support\Facades\DB::table('board_members')
+                ->where('board_id', $board->id)
+                ->where('user_id', $managerId)
+                ->exists();
+
+            if (!$isMember) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'manager_id' => ['Người quản lý dự án phải là thành viên của bảng.'],
+                ]);
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * POST /api/boards/{board}/background — upload a custom background image (board admins).
+     * SVG is not accepted (it can carry scripts).
+     */
+    public function uploadBackground(Request $request, Board $board)
+    {
+        Gate::authorize('update', $board);
+
+        $request->validate([
+            'image' => 'required|file|mimes:jpg,jpeg,png,webp|mimetypes:image/jpeg,image/png,image/webp|max:5120',
+        ], [
+            'image.mimes' => 'Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.',
+            'image.mimetypes' => 'Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.',
+            'image.max' => 'Ảnh tối đa 5MB.',
         ]);
 
-        $board->update($request->only(['name', 'description', 'color']));
+        $old = $board->background_image;
+        $path = $request->file('image')->store('board-backgrounds', 'public');
+        $board->update(['background_image' => '/storage/' . $path]);
+        $this->deleteBackgroundFile($old);
 
-        return response()->json($board);
+        return response()->json($board->fresh());
+    }
+
+    /** DELETE /api/boards/{board}/background */
+    public function removeBackground(Board $board)
+    {
+        Gate::authorize('update', $board);
+
+        $old = $board->background_image;
+        $board->update(['background_image' => null]);
+        $this->deleteBackgroundFile($old);
+
+        return response()->json($board->fresh());
+    }
+
+    private function deleteBackgroundFile(?string $publicPath): void
+    {
+        if ($publicPath && str_starts_with($publicPath, '/storage/board-backgrounds/')) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete(substr($publicPath, strlen('/storage/')));
+        }
     }
 
     // Xóa bảng

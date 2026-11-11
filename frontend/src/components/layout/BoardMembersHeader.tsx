@@ -164,11 +164,11 @@ export function BoardMembersHeader({ users = [], basePath }: BoardMembersHeaderP
 
                     <div className="shrink-0 ml-2">
                       {isAdmin ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                        <span className="whitespace-nowrap inline-flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
                           <Shield size={10} /> Quản trị viên
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                        <span className="whitespace-nowrap inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                           <User size={10} /> Thành viên
                         </span>
                       )}

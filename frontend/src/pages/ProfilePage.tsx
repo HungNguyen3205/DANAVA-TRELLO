@@ -215,7 +215,7 @@ export function ProfilePage() {
           <div className="z-10 flex-1 min-w-0">
             <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground truncate">{user?.name}</h1>
             <div className="flex flex-wrap items-center gap-2 mt-1.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
                 <Shield size={12} />
                 {getRoleLabel(user?.system_role || '')}
               </span>
@@ -237,7 +237,7 @@ export function ProfilePage() {
                   {user.department.name}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
+                <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
                   <Building2 size={12} />
                   Chưa phân phòng
                 </span>

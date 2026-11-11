@@ -120,17 +120,17 @@ export const PerformancePolicyView: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 md:p-8 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
-            <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1.5">
+            <span className="whitespace-nowrap px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5" />
               Phiên Bản {policy?.version}
             </span>
             {isAcked ? (
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+              <span className="whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Đã Xác Nhận
               </span>
             ) : (
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+              <span className="whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 Chờ Xác Nhận
               </span>
@@ -142,7 +142,7 @@ export const PerformancePolicyView: React.FC = () => {
           <p className="text-xs text-slate-400 flex items-center gap-4">
             <span>Cập nhật lần cuối: {new Date(policy?.updated_at || '').toLocaleDateString('vi-VN')}</span>
             <span>•</span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <Users className="w-3.5 h-3.5 text-indigo-500" />
               {policyData?.total_acknowledged} / {policyData?.total_members} thành viên đã xác nhận
             </span>

@@ -1,10 +1,14 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import type { BoardType } from '../../lib/boardType';
 
 export interface BoardRouteInfo {
   boardId: string;
   boardCode: string;
   workspaceId: string;
   basePath: string;
+  /** Simple task board or project; decides which menu items and pages are available. */
+  boardType: BoardType;
+  setBoardType: (type: BoardType) => void;
 }
 
 const BoardRouteContext = createContext<BoardRouteInfo | null>(null);

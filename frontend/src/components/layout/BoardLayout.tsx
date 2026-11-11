@@ -1,65 +1,53 @@
 import React, { useEffect } from 'react';
-import { LayoutDashboard, Grid, Calendar, Users, Settings, ArrowLeft, BarChart3, FileText, Award, ShieldCheck, Trash2 } from 'lucide-react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Grid, Calendar, Users, Settings, BarChart3, FileText, Award, ShieldCheck, Trash2 } from 'lucide-react';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useBoardStore } from '../../store/boardStore';
 import { useBoardRoute } from './BoardRouteContext';
+import { SidebarBack, SidebarItem, SidebarSection, SidebarShell } from './Sidebar';
 
 export function BoardLayout() {
   const location = useLocation();
-  const { basePath } = useBoardRoute();
-  const { isMobileSidebarOpen, closeMobileSidebar } = useUIStore();
+  const { basePath, boardType } = useBoardRoute();
+  const isProject = boardType === 'project';
+  const { closeMobileSidebar } = useUIStore();
   const board = useBoardStore((state) => state.board);
   const isOwnerOrAdmin = board?.is_owner || board?.my_role === 'owner' || board?.my_role === 'admin';
-  
+  const path = location.pathname;
+
   // Close mobile sidebar on route change
   useEffect(() => {
     closeMobileSidebar();
-  }, [location.pathname]);
+  }, [path, closeMobileSidebar]);
 
   return (
     <div className="flex flex-1 overflow-hidden w-full h-full relative">
-      {/* Overlay for mobile */}
-      {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
-          onClick={closeMobileSidebar}
-        />
-      )}
+      <SidebarShell>
+        <SidebarBack to="/boards" label="Quay lại danh sách bảng" />
 
-      {/* Sidebar Bảng */}
-      <aside className={`w-64 border-r border-border bg-card flex flex-col transition-transform duration-300 shrink-0 absolute md:relative z-50 h-full ${
-        isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}>
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
-          
-          <Link 
-            to="/boards"
-            className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
-          >
-            <ArrowLeft size={16} />
-            Quay lại danh sách bảng
-          </Link>
-          
-          <div className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            Bảng công việc
-          </div>
-          
-          <SidebarItem icon={<Grid size={18} />} label="Kanban" to={`${basePath}/kanban`} active={location.pathname.includes('/kanban')} />
-          <SidebarItem icon={<LayoutDashboard size={18} />} label="Danh sách" to={`${basePath}/list`} active={location.pathname.includes('/list')} />
-          <SidebarItem icon={<Calendar size={18} />} label="Lịch" to={`${basePath}/calendar`} active={location.pathname.includes('/calendar')} />
-          <SidebarItem icon={<BarChart3 size={18} />} label="Thống kê" to={`${basePath}/dashboard`} active={location.pathname.includes('/dashboard')} />
-          <SidebarItem icon={<Award size={18} />} label="Điểm hiệu suất" to={`${basePath}/performance`} active={location.pathname.includes('/performance')} />
-          <SidebarItem icon={<ShieldCheck size={18} />} label="Nội quy hiệu suất" to={`${basePath}/performance-policy`} active={location.pathname.includes('/performance-policy')} />
-          <SidebarItem icon={<Users size={18} />} label="Thành viên" to={`${basePath}/members`} active={location.pathname.includes('/members')} />
-          <SidebarItem icon={<FileText size={18} />} label="Tổng kết dự án" to={`${basePath}/review`} active={location.pathname.includes('/review')} />
-          <SidebarItem icon={<Settings size={18} />} label="Cài đặt bảng" to={`${basePath}/settings`} active={location.pathname.includes('/settings')} />
-          {isOwnerOrAdmin && (
-            <SidebarItem icon={<Trash2 size={18} />} label="Thùng rác" to={`${basePath}/trash`} active={location.pathname.includes('/trash')} />
-          )}
-          
-        </nav>
-      </aside>
+        <SidebarSection>{isProject ? 'Dự án' : 'Bảng công việc'}</SidebarSection>
+        <SidebarItem icon={<Grid size={18} />} label="Kanban" to={`${basePath}/kanban`} active={path.includes('/kanban')} />
+        <SidebarItem icon={<LayoutDashboard size={18} />} label="Danh sách" to={`${basePath}/list`} active={path.includes('/list')} />
+        <SidebarItem icon={<Calendar size={18} />} label="Lịch" to={`${basePath}/calendar`} active={path.includes('/calendar')} />
+        <SidebarItem icon={<BarChart3 size={18} />} label="Thống kê" to={`${basePath}/dashboard`} active={path.includes('/dashboard')} />
+        <SidebarItem icon={<Users size={18} />} label="Thành viên" to={`${basePath}/members`} active={path.includes('/members')} />
+
+        {/* Advanced features only appear on project boards to keep simple boards easy to use */}
+        {isProject && (
+          <>
+            <SidebarSection>Quản lý dự án</SidebarSection>
+            <SidebarItem icon={<Award size={18} />} label="Điểm hiệu suất" to={`${basePath}/performance`} active={path.includes('/performance') && !path.includes('/performance-policy')} />
+            <SidebarItem icon={<ShieldCheck size={18} />} label="Nội quy hiệu suất" to={`${basePath}/performance-policy`} active={path.includes('/performance-policy')} />
+            <SidebarItem icon={<FileText size={18} />} label="Tổng kết dự án" to={`${basePath}/review`} active={path.includes('/review')} />
+          </>
+        )}
+
+        <SidebarSection>Thiết lập</SidebarSection>
+        <SidebarItem icon={<Settings size={18} />} label={isProject ? 'Cài đặt dự án' : 'Cài đặt bảng'} to={`${basePath}/settings`} active={path.includes('/settings')} />
+        {isOwnerOrAdmin && (
+          <SidebarItem icon={<Trash2 size={18} />} label="Thùng rác" to={`${basePath}/trash`} active={path.includes('/trash')} />
+        )}
+      </SidebarShell>
 
       {/* Main Content */}
       <main className="flex-1 min-h-0 overflow-y-auto bg-background flex flex-col relative">
@@ -69,18 +57,11 @@ export function BoardLayout() {
   );
 }
 
-function SidebarItem({ icon, label, to, active = false }: { icon: React.ReactNode, label: string, to: string, active?: boolean }) {
-  return (
-    <Link 
-      to={to}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
-        active 
-          ? 'bg-primary/10 text-primary font-medium' 
-          : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </Link>
-  );
+/** Redirects to the Kanban view when a project-only page is opened on a simple task board. */
+export function ProjectOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { basePath, boardType } = useBoardRoute();
+  if (boardType !== 'project') {
+    return <Navigate to={`${basePath}/kanban`} replace />;
+  }
+  return <>{children}</>;
 }

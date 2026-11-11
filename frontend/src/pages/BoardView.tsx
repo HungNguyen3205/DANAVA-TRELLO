@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
-import { Users, Filter, Search, Share2, MoreHorizontal, LayoutDashboard, ChevronRight, Play, Star, Plus, BarChart3, Archive, FileSpreadsheet } from 'lucide-react';
+import { Search, Plus, Archive, FileSpreadsheet } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
@@ -11,19 +11,17 @@ import { useBoardStore } from '../store/boardStore';
 import { useAuthStore } from '../store/authStore';
 import { getAvatarUrl } from '../lib/avatar';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
-import { BoardMembersHeader } from '../components/layout/BoardMembersHeader';
 import { ArchivedColumnsModal } from '../components/kanban/ArchivedColumnsModal';
-import { ShareBoardModal } from '../components/kanban/ShareBoardModal';
+import { BoardHeaderBar } from '../components/board/BoardHeaderBar';
 import { TaskExcelImportModal } from '../components/kanban/TaskExcelImportModal';
 
 export function BoardView() {
-  const { boardId, basePath } = useBoardRoute();
+  const { boardId } = useBoardRoute();
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const user = useAuthStore((state) => state.user);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
   const [showArchivedModal, setShowArchivedModal] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isStarred, setIsStarred] = useState(false);
@@ -250,134 +248,54 @@ export function BoardView() {
   if (!board) return <div className="p-8 text-primary flex justify-center items-center h-full font-medium animate-pulse">Đang tải dữ liệu Bảng...</div>;
 
   return (
-    <div className="flex-1 min-h-0 overflow-hidden h-full flex flex-col relative bg-background">
-      <header className="px-6 py-3 flex items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50">
-        <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium">
-          <Link to="/boards" className="hover:text-primary transition-colors flex items-center gap-1.5">
-            <LayoutDashboard size={14} /> Bảng công việc
-          </Link>
-          <ChevronRight size={14} className="opacity-50" />
-          <span className="text-foreground font-semibold">{board.title}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-            <Link 
-              to={`${basePath}/kanban`}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors bg-background shadow-sm text-foreground"
-            >
-              <LayoutDashboard size={16} /> Kanban
-            </Link>
-            <Link 
-              to={`${basePath}/list`}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <LayoutDashboard size={16} /> Danh sách
-            </Link>
-            <Link 
-              to={`${basePath}/calendar`}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <LayoutDashboard size={16} /> Lịch
-            </Link>
-            <Link 
-              to={`${basePath}/dashboard`}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <BarChart3 size={16} /> Thống kê
-            </Link>
-          </div>
-          
-          <div className="flex items-center gap-3 border-l border-border pl-4">
-            <BoardMembersHeader users={board.users} basePath={basePath} />
-            <button 
-              onClick={() => setShowShareModal(true)}
-              title="Chia sẻ bảng công việc"
-              aria-label="Chia sẻ bảng công việc"
-              className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border hover:shadow-2xs"
-            >
-              <Share2 size={18} />
-            </button>
-            <button className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border hover:shadow-sm">
-              <MoreHorizontal size={18} />
-            </button>
-          </div>
-        </div>
-      </header>
+    <div
+      className={`flex-1 min-h-0 overflow-hidden h-full flex flex-col relative bg-background ${board.background_image ? 'board-glass' : ''}`}
+      style={board.background_image ? {
+        // Trello-style: the photo fills the board, only the toolbar and the lists sit on top of it.
+        backgroundImage: `linear-gradient(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.12)), url("${getAvatarUrl(board.background_image)}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      } : undefined}
+    >
 
       {/* Main Board Container */}
-      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6 relative z-0 flex flex-col">
-        <div className="bg-card border border-border shadow-sm rounded-[20px] p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden px-3 sm:px-5 pt-3 sm:pt-4 pb-3 sm:pb-5 relative z-0 flex flex-col">
+        <div className="board-glass-panel bg-card border border-border shadow-sm rounded-[20px] p-3 sm:p-5 flex-1 min-h-0 flex flex-col overflow-hidden">
           
-          {/* Board Internal Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mb-6 shrink-0">
-            <div className="flex items-center gap-3.5 min-w-0 flex-1 max-w-full sm:max-w-xl">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F0EDFF] to-[#E8E1FF] dark:from-purple-950/40 dark:to-indigo-900/30 flex items-center justify-center text-primary shadow-xs border border-primary/15 shrink-0">
-                <LayoutDashboard size={20} className="text-primary" />
-              </div>
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <h2 className="text-lg lg:text-xl font-bold tracking-tight text-foreground truncate" title={board.title}>
-                  {board.title}
-                </h2>
-                <button
-                  type="button"
-                  onClick={handleToggleStar}
-                  title={isStarred ? "Bỏ yêu thích" : "Đánh dấu yêu thích"}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap shrink-0 shadow-2xs select-none active:scale-95 ${
-                    isStarred
-                      ? "bg-amber-500/15 border-amber-500/35 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
-                      : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
-                  }`}
-                >
-                  <Star size={12} className="fill-amber-500 text-amber-500 shrink-0" />
-                  <span className="whitespace-nowrap font-medium">Yêu thích</span>
-                </button>
-              </div>
+          {/* One compact header: title + favourite, search, members, add task, ⋯ menu */}
+          <BoardHeaderBar
+            board={board}
+            star={{ active: isStarred, onToggle: handleToggleStar }}
+            menuItems={[
+              { icon: <FileSpreadsheet size={16} className="text-emerald-600 dark:text-emerald-400" />, label: 'Nhập từ Excel', hint: 'Tạo nhiều công việc từ file', onClick: () => setShowExcelImportModal(true) },
+              { icon: <Archive size={16} className="text-amber-600 dark:text-amber-400" />, label: 'Cột lưu trữ', hint: 'Xem và khôi phục cột đã lưu trữ', onClick: () => setShowArchivedModal(true) },
+            ]}
+          >
+            {/* Search: an icon on phones that opens when tapped, a box on larger screens */}
+            <div className="relative overflow-hidden rounded-full h-8 w-8 min-w-8 sm:w-44 lg:w-56 focus-within:w-40 sm:focus-within:w-44 lg:focus-within:w-56 transition-[width] duration-200 shrink-0" title="Tìm kiếm công việc">
+              <Search size={15} className="absolute z-10 left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Tìm công việc…"
+                aria-label="Tìm kiếm công việc"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`absolute inset-0 m-0 w-full h-8 pl-8 pr-3 text-[13px] bg-background/60 border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground/70 ${searchQuery ? '' : 'max-sm:placeholder:text-transparent max-sm:cursor-pointer'}`}
+              />
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+            {board.columns && board.columns.length > 0 && (
               <button
                 type="button"
-                onClick={() => setShowExcelImportModal(true)}
-                className="h-9 px-3.5 inline-flex items-center gap-2 text-xs lg:text-[13px] font-medium text-slate-700 dark:text-slate-200 bg-background hover:bg-muted/80 active:bg-muted rounded-xl border border-border/80 shadow-2xs hover:shadow-xs transition-all whitespace-nowrap shrink-0"
-                title="Nhập công việc từ Excel"
+                onClick={() => handleAdd(board.columns[0]?.id)}
+                title="Thêm công việc"
+                className="h-8 w-8 sm:w-auto sm:px-3.5 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] active:scale-[0.98] rounded-full transition-all shadow-xs whitespace-nowrap shrink-0"
               >
-                <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="whitespace-nowrap">Nhập từ Excel</span>
+                <Plus size={16} className="shrink-0 stroke-[2.5]" />
+                <span className="hidden sm:inline">Thêm việc</span>
               </button>
-
-              <button
-                type="button"
-                onClick={() => setShowArchivedModal(true)}
-                className="h-9 px-3.5 inline-flex items-center gap-2 text-xs lg:text-[13px] font-medium text-slate-700 dark:text-slate-200 bg-background hover:bg-muted/80 active:bg-muted rounded-xl border border-border/80 shadow-2xs hover:shadow-xs transition-all whitespace-nowrap shrink-0"
-                title="Xem các cột đã lưu trữ"
-              >
-                <Archive size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="whitespace-nowrap">Cột lưu trữ</span>
-              </button>
-
-              <div className="relative w-40 sm:w-48 lg:w-56 shrink min-w-[140px]">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground shrink-0 pointer-events-none" />
-                <input 
-                  type="text" 
-                  placeholder="Tìm kiếm công việc..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-9 pl-9 pr-3 text-xs lg:text-[13px] bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-2xs placeholder:text-muted-foreground/70"
-                />
-              </div>
-
-              {board.columns && board.columns.length > 0 && (
-                <button 
-                  type="button"
-                  onClick={() => handleAdd(board.columns[0]?.id)}
-                  className="h-9 px-4 inline-flex items-center gap-1.5 text-xs lg:text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] active:scale-[0.98] rounded-xl transition-all shadow-xs hover:shadow-sm hover:-translate-y-[0.5px] whitespace-nowrap shrink-0"
-                >
-                  <Plus size={16} className="shrink-0 stroke-[2.5]" />
-                  <span className="whitespace-nowrap">Thêm công việc</span>
-                </button>
-              )}
-            </div>
-          </div>
+            )}
+          </BoardHeaderBar>
 
           {/* Kanban Board Render */}
           <div className="flex-1 min-h-0 overflow-hidden relative">
@@ -446,21 +364,6 @@ export function BoardView() {
             (user && board.users?.some(u => String(u.id) === String(user.id) && (u.role === 'admin' || u.role === 'owner')))
           )}
           onClose={() => setShowArchivedModal(false)}
-        />
-      )}
-
-      {showShareModal && (
-        <ShareBoardModal
-          isOpen={showShareModal}
-          board={board}
-          canManage={Boolean(
-            board.is_owner ||
-            board.my_role === 'owner' ||
-            board.my_role === 'admin' ||
-            (user && board.owner_id && String(board.owner_id) === String(user.id)) ||
-            (user && board.users?.some(u => String(u.id) === String(user.id) && (u.role === 'admin' || u.role === 'owner')))
-          )}
-          onClose={() => setShowShareModal(false)}
         />
       )}
 

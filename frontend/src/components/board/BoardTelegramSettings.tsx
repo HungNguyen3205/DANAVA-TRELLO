@@ -229,7 +229,7 @@ export const BoardTelegramSettings: React.FC<BoardTelegramSettingsProps> = ({
     if (!data) return null;
     if (deliveryMode === 'disabled') {
       return (
-        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+        <span className="whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
           Đã tắt
         </span>
       );
@@ -237,34 +237,34 @@ export const BoardTelegramSettings: React.FC<BoardTelegramSettingsProps> = ({
     switch (data.status) {
       case 'connected':
         return (
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
+          <span className="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             Đã kết nối
           </span>
         );
       case 'error':
         return (
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
+          <span className="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
             <AlertCircle className="w-3.5 h-3.5" />
             Lỗi kết nối
           </span>
         );
       case 'pending':
         return (
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+          <span className="whitespace-nowrap flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             Đang kiểm tra
           </span>
         );
       case 'disabled':
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+          <span className="whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
             Đã tắt
           </span>
         );
       default:
         return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+          <span className="whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
             Chưa kết nối
           </span>
         );
@@ -293,7 +293,7 @@ export const BoardTelegramSettings: React.FC<BoardTelegramSettingsProps> = ({
               <h2 className="text-lg font-bold text-foreground">Tích hợp Telegram Board</h2>
               {getStatusBadge()}
               {!canManage && (
-                <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded-md text-[10px] font-bold uppercase tracking-wider">
+                <span className="whitespace-nowrap px-2 py-0.5 bg-muted text-muted-foreground rounded-md text-[10px] font-bold uppercase tracking-wider">
                   Chỉ xem
                 </span>
               )}

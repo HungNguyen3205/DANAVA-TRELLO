@@ -255,7 +255,7 @@ export function BoardWorkloadDashboard() {
               <Filter size={16} className="text-primary" />
               <span>Bộ lọc thống kê</span>
               {hasActiveFilters && (
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                <span className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
                   Đang lọc
                 </span>
               )}
@@ -425,8 +425,8 @@ export function BoardWorkloadDashboard() {
           {/* Total Tasks */}
           <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase tracking-wider">Tổng công việc</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-wider whitespace-nowrap">Tổng công việc</span>
+              <div className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
                 <Layers size={18} />
               </div>
             </div>
@@ -440,8 +440,8 @@ export function BoardWorkloadDashboard() {
           {/* Completed */}
           <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase tracking-wider">Đã hoàn thành</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-wider whitespace-nowrap">Đã hoàn thành</span>
+              <div className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
                 <CheckCircle2 size={18} />
               </div>
             </div>
@@ -459,8 +459,8 @@ export function BoardWorkloadDashboard() {
           {/* Incomplete */}
           <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase tracking-wider">Đang thực hiện</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-wider whitespace-nowrap">Đang thực hiện</span>
+              <div className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-500">
                 <Clock3 size={18} />
               </div>
             </div>
@@ -480,7 +480,7 @@ export function BoardWorkloadDashboard() {
               : 'border-border bg-card'
           }`}>
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase tracking-wider">Quá hạn</span>
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-wider whitespace-nowrap">Quá hạn</span>
               <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
                 summary.overdue_tasks > 0
                   ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
@@ -505,8 +505,8 @@ export function BoardWorkloadDashboard() {
           {/* Completion Rate */}
           <div className="col-span-2 sm:col-span-2 lg:col-span-1 rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase tracking-wider">Tỷ lệ hoàn thành</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-wider whitespace-nowrap">Tỷ lệ hoàn thành</span>
+              <div className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
                 <TrendingUp size={18} />
               </div>
             </div>
@@ -739,7 +739,7 @@ export function BoardWorkloadDashboard() {
                           {/* Role badge */}
                           <td className="py-3 px-4 text-center">
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold ${
                                 member.role === 'admin' || member.role === 'owner'
                                   ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
                                   : 'bg-muted text-muted-foreground'

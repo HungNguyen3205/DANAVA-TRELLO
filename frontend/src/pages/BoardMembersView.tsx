@@ -75,18 +75,18 @@ export function BoardMembersView() {
 
   return (
     <div className="flex-1 overflow-hidden h-full flex flex-col relative bg-background">
-      <header className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50 gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium mb-1">
-            <Link to="/boards" className="hover:text-primary transition-colors flex items-center gap-1.5">
-              <LayoutDashboard size={14} /> Bảng công việc
+      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between shrink-0 bg-transparent relative z-10 border-b border-border/50 gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground font-medium mb-1 min-w-0">
+            <Link to="/boards" className="hover:text-primary transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+              <LayoutDashboard size={14} /> <span className="hidden sm:inline">Bảng công việc</span>
             </Link>
-            <ChevronRight size={14} className="opacity-50" />
-            <Link to={`${basePath}/kanban`} className="hover:text-primary transition-colors">
+            <ChevronRight size={14} className="opacity-50 shrink-0" />
+            <Link to={`${basePath}/kanban`} className="hover:text-primary transition-colors truncate">
               {board?.title || board?.name || 'Bảng'}
             </Link>
-            <ChevronRight size={14} className="opacity-50" />
-            <span className="text-foreground font-semibold">Thành viên bảng</span>
+            <ChevronRight size={14} className="opacity-50 shrink-0 hidden sm:block" />
+            <span className="text-foreground font-semibold whitespace-nowrap hidden sm:inline">Thành viên bảng</span>
           </div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <Users size={24} className="text-primary" /> Thành viên bảng
@@ -96,7 +96,7 @@ export function BoardMembersView() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input 
@@ -104,12 +104,12 @@ export function BoardMembersView() {
               placeholder="Tìm kiếm thành viên..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-56 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+              className="w-full sm:w-56 pl-9 pr-3 py-2 text-[13px] bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
             />
           </div>
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-4 py-2 text-[13px] font-semibold whitespace-nowrap text-white bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm"
           >
             <UserPlus size={16} />
             Thêm thành viên vào bảng
@@ -117,7 +117,7 @@ export function BoardMembersView() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-6 bg-background">
+      <div className="flex-1 overflow-auto p-4 md:p-6 bg-background">
         {isLoading ? (
           <div className="text-center p-8 text-muted-foreground animate-pulse">Đang tải...</div>
         ) : filteredMembers.length === 0 ? (
@@ -135,8 +135,8 @@ export function BoardMembersView() {
             </button>
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full text-left border-collapse">
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-border bg-muted/20 text-xs uppercase tracking-wider text-muted-foreground font-semibold">
                   <th className="px-6 py-3">Thành viên</th>
@@ -149,7 +149,7 @@ export function BoardMembersView() {
                 {filteredMembers.map((member) => (
                   <tr key={member.id} className="hover:bg-muted/10 transition-colors group">
                     <td className="px-6 py-4 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                      <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
                         {member.avatar ? <img src={getAvatarUrl(member.avatar)} alt="avatar" className="w-full h-full object-cover" /> : member.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -158,7 +158,7 @@ export function BoardMembersView() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${member.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
+                      <span className={`whitespace-nowrap inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${member.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
                         {member.role === 'admin' ? <ShieldAlert size={12} /> : <Shield size={12} />}
                         {member.role === 'admin' ? 'Quản trị viên' : 'Thành viên'}
                       </span>

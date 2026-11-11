@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import api from '../lib/axios';
 import { getPersonalDashboard } from '../lib/personalDashboard';
+import { CheckInCard } from '../components/attendance/CheckInCard';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 
@@ -211,6 +212,9 @@ export function HomePage() {
           </div>
         </section>
 
+        {/* Quick check-in / check-out */}
+        <CheckInCard compact />
+
         {/* 12-Column Grid Layout */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           
@@ -303,7 +307,7 @@ export function HomePage() {
                   <h2 className="text-base font-bold flex items-center gap-2 text-foreground">
                     <Briefcase className="text-indigo-500" size={18} />
                     Không gian của bạn
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-semibold">
+                    <span className="whitespace-nowrap text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-semibold">
                       {recentWorkspaces.length}
                     </span>
                   </h2>
@@ -353,7 +357,7 @@ export function HomePage() {
                     <Activity className="text-emerald-500" size={18} />
                     Hoạt động gần đây
                   </h2>
-                  <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  <span className="whitespace-nowrap flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                     Mới nhất
                   </span>
@@ -422,7 +426,7 @@ export function HomePage() {
                   <AlertTriangle size={16} /> Cần tôi chú ý
                 </h3>
                 {attentionItems.length > 0 && (
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-700 dark:text-orange-300">
+                  <span className="whitespace-nowrap text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-700 dark:text-orange-300">
                     {attentionItems.length}
                   </span>
                 )}
@@ -482,7 +486,7 @@ export function HomePage() {
                   <Calendar size={16} className="text-primary" /> Lịch trình hôm nay
                 </h3>
                 {todaySchedule.length > 0 && (
-                  <span className="text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
+                  <span className="whitespace-nowrap text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
                     {todaySchedule.length}
                   </span>
                 )}

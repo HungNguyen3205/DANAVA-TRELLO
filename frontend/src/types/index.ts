@@ -191,6 +191,15 @@ export interface Board {
   name?: string;
   description?: string;
   color?: string;
+  /** Uploaded background image path ("/storage/board-backgrounds/..."). */
+  background_image?: string | null;
+  type?: 'task' | 'project';
+  project_status?: 'planning' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled' | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  manager_id?: string | null;
+  manager?: User | null;
+  budget?: string | number | null;
   owner_id?: string;
   owner?: User;
   my_role?: 'owner' | 'admin' | 'member' | string;
