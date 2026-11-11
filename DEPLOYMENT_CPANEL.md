@@ -3,6 +3,35 @@
 
 ---
 
+## ⚡ CẬP NHẬT NHANH (dùng hằng ngày)
+
+Hosting hiện tại: code ở `~/danava-work`, web ở `~/workspace.danava.com.vn`, API ở `api-work.danava.com.vn`.
+Hosting **không có Node.js**, nên frontend phải build trên máy rồi đưa lên git.
+
+**Trên máy dev:**
+```bash
+cd frontend
+npm run build          # dùng .env.production (API: https://api-work.danava.com.vn/api)
+cd ..
+git add -A && git commit -m "..." && git push origin main && git push company main
+```
+
+**Trên cPanel (Terminal), chỉ 1 lệnh:**
+```bash
+bash ~/danava-work/deploy.sh
+```
+Script tự sao lưu database vào `~/backups/` (dừng lại nếu sao lưu lỗi), rồi chạy `update.sh`
+(kéo code, composer, migrate, chép giao diện) và làm mới cache. Xong mở web và bấm Ctrl + F5.
+
+**Khôi phục nếu lỗi:**
+```bash
+cd ~/danava-work && git checkout $(cat ~/backups/last_deployed_commit.txt)
+gunzip < ~/backups/workspace_<THỜI_GIAN>.sql.gz | mysql -u <DB_USER> -p <DB_NAME>
+cp -a frontend/dist/. ~/workspace.danava.com.vn/ && cd backend && php artisan optimize:clear
+```
+
+---
+
 ## 1. YÊU CẦU MÔI TRƯỜNG TRÊN CPANEL
 
 Trước khi triển khai, hãy đảm bảo tài khoản cPanel đáp ứng các thông số kỹ thuật sau:
