@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useBoardStore } from '../store/boardStore';
-import { Settings, Info, Shield, Trash2, Users, Palette, Save, Send, Briefcase, Columns } from 'lucide-react';
-import { PROJECT_STATUS_OPTIONS, type BoardType } from '../lib/boardType';
+import { Settings, Info, Shield, Trash2, Users, Palette, Save, Send, FolderKanban } from 'lucide-react';
+import { projectsApi, type ProjectSummary } from '../lib/api/projects';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '../store/authStore';
@@ -10,13 +10,8 @@ import { useBoardRoute } from '../components/layout/BoardRouteContext';
 import { BoardTelegramSettings } from '../components/board/BoardTelegramSettings';
 import { BoardBackgroundUploader } from '../components/board/BoardBackgroundUploader';
 
-const BOARD_TYPE_OPTIONS: { value: BoardType; title: string; desc: string }[] = [
-  { value: 'task', title: 'Bảng công việc', desc: 'Giao diện đơn giản, chỉ gồm các tính năng cơ bản.' },
-  { value: 'project', title: 'Dự án', desc: 'Thêm thời hạn, trạng thái, người quản lý, ngân sách, chấm điểm hiệu suất và tổng kết.' },
-];
-
 export function BoardSettingsView() {
-  const { boardId, basePath, setBoardType } = useBoardRoute();
+  const { boardId, basePath } = useBoardRoute();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { board, fetchBoard, loading } = useBoardStore();
@@ -31,13 +26,13 @@ export function BoardSettingsView() {
     name: '',
     description: '',
     color: '',
-    type: 'task' as BoardType,
-    project_status: 'planning',
-    start_date: '',
-    end_date: '',
-    manager_id: '',
-    budget: '',
+    project_id: '' as number | '',
   });
+  const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
+
+  useEffect(() => {
+    projectsApi.list().then(setProjects).catch(() => setProjects([]));
+  }, []);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -53,21 +48,17 @@ export function BoardSettingsView() {
         name: board.name || '',
         description: board.description || '',
         color: board.color || 'bg-gradient-to-br from-blue-500 to-cyan-400',
-        type: board.type === 'project' ? 'project' : 'task',
-        project_status: board.project_status || 'planning',
-        start_date: board.start_date || '',
-        end_date: board.end_date || '',
-        manager_id: board.manager_id || '',
-        budget: board.budget !== null && board.budget !== undefined ? String(Number(board.budget)) : '',
+        project_id: (board as { project_id?: number | null }).project_id ?? '',
       });
     }
   }, [board]);
 
   // Board-first permission: Owner or Board Admin
   const isBoardOwner = !!(board?.owner_id && user?.id && String(board.owner_id) === String(user.id));
-  const isBoardAdmin = !!(board as any)?.members?.find((m: any) => String(m.id) === String(user?.id))?.pivot?.role === 'admin';
-  const isWorkspaceAdmin = !!board?.workspace?.members?.find((m: any) => m.id === user?.id)?.pivot?.role === 'admin';
-  const canEdit = isBoardOwner || isBoardAdmin || isWorkspaceAdmin;
+  const isBoardAdmin = ['admin', 'owner'].includes((board as any)?.members?.find((m: any) => String(m.id) === String(user?.id))?.pivot?.role);
+  const isWorkspaceAdmin = board?.workspace?.members?.find((m: any) => m.id === user?.id)?.pivot?.role === 'admin';
+  // my_role comes from the server and also covers project owners/managers (full rights on the project's boards).
+  const canEdit = isBoardOwner || isBoardAdmin || isWorkspaceAdmin || board?.my_role === 'admin';
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,37 +72,17 @@ export function BoardSettingsView() {
       return;
     }
 
-    const isProject = formData.type === 'project';
-    if (isProject && formData.start_date && formData.end_date && formData.end_date < formData.start_date) {
-      toast.error('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu');
-      return;
-    }
-
-    if (board?.type === 'project' && !isProject && !window.confirm(
-      'Chuyển về Bảng công việc sẽ ẩn các mục Điểm hiệu suất, Nội quy hiệu suất và Tổng kết dự án. Dữ liệu vẫn được giữ lại và sẽ hiện lại nếu bạn chuyển về Dự án. Tiếp tục?'
-    )) {
-      return;
-    }
-
     const payload: Record<string, unknown> = {
       name: formData.name,
       description: formData.description,
       color: formData.color,
-      type: formData.type,
+      project_id: formData.project_id === '' ? null : formData.project_id,
     };
-    if (isProject) {
-      payload.project_status = formData.project_status || null;
-      payload.start_date = formData.start_date || null;
-      payload.end_date = formData.end_date || null;
-      payload.manager_id = formData.manager_id ? Number(formData.manager_id) : null;
-      payload.budget = formData.budget !== '' ? Number(formData.budget) : null;
-    }
 
     setIsSaving(true);
     try {
       await api.put(`/boards/${boardId}`, payload);
       toast.success('Lưu cài đặt thành công');
-      setBoardType(formData.type);
       fetchBoard(boardId as string, true); // Refresh data
     } catch (error: any) {
       console.error(error);
@@ -264,102 +235,23 @@ export function BoardSettingsView() {
               </div>
 
               <div>
-                <div className="text-sm font-semibold text-foreground mb-2">Loại bảng</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {BOARD_TYPE_OPTIONS.map((opt) => {
-                    const selected = formData.type === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        disabled={!canEdit}
-                        aria-pressed={selected}
-                        onClick={() => setFormData(prev => ({ ...prev, type: opt.value }))}
-                        className={`text-left p-4 rounded-xl border-2 transition-all disabled:opacity-60 ${selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
-                      >
-                        <div className="flex items-center gap-2 font-semibold text-sm text-foreground">
-                          <span className={selected ? 'text-primary' : 'text-muted-foreground'}>
-                            {opt.value === 'project' ? <Briefcase size={18} /> : <Columns size={18} />}
-                          </span>
-                          {opt.title}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
+                <label htmlFor="board-project" className="text-sm font-semibold text-foreground mb-1.5 flex items-center gap-2">
+                  <FolderKanban size={16} className="text-muted-foreground" /> Thuộc dự án
+                </label>
+                <select
+                  id="board-project"
+                  value={formData.project_id}
+                  disabled={!canEdit || projects === null}
+                  onChange={(e) => setFormData(prev => ({ ...prev, project_id: e.target.value ? Number(e.target.value) : '' }))}
+                  className="w-full px-3 py-2.5 bg-background border border-border rounded-xl text-sm disabled:opacity-60"
+                >
+                  <option value="">Không thuộc dự án nào</option>
+                  {projects?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Thời hạn, trạng thái, người quản lý và ngân sách giờ được quản lý ở cấp dự án.
+                </p>
               </div>
-
-              {formData.type === 'project' && (
-                <div className="p-4 rounded-xl border border-border bg-muted/20 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Briefcase size={16} className="text-primary" /> Thông tin dự án
-                  </div>
-                  <div>
-                    <label htmlFor="project-status" className="block text-xs font-semibold text-muted-foreground mb-1">Trạng thái</label>
-                    <select
-                      id="project-status"
-                      value={formData.project_status}
-                      disabled={!canEdit}
-                      onChange={(e) => setFormData(prev => ({ ...prev, project_status: e.target.value }))}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm disabled:opacity-60"
-                    >
-                      {PROJECT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="project-manager" className="block text-xs font-semibold text-muted-foreground mb-1">Người quản lý dự án</label>
-                    <select
-                      id="project-manager"
-                      value={formData.manager_id}
-                      disabled={!canEdit}
-                      onChange={(e) => setFormData(prev => ({ ...prev, manager_id: e.target.value }))}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm disabled:opacity-60"
-                    >
-                      <option value="">— Chưa chọn —</option>
-                      {board.users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="project-start" className="block text-xs font-semibold text-muted-foreground mb-1">Ngày bắt đầu</label>
-                    <input
-                      id="project-start"
-                      type="date"
-                      value={formData.start_date}
-                      disabled={!canEdit}
-                      onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="project-end" className="block text-xs font-semibold text-muted-foreground mb-1">Hạn hoàn thành</label>
-                    <input
-                      id="project-end"
-                      type="date"
-                      value={formData.end_date}
-                      min={formData.start_date || undefined}
-                      disabled={!canEdit}
-                      onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm disabled:opacity-60"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label htmlFor="project-budget" className="block text-xs font-semibold text-muted-foreground mb-1">Ngân sách dự kiến (VNĐ)</label>
-                    <input
-                      id="project-budget"
-                      type="number"
-                      min={0}
-                      step={1000}
-                      inputMode="numeric"
-                      value={formData.budget}
-                      disabled={!canEdit}
-                      onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
-                      placeholder="Không bắt buộc"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm disabled:opacity-60"
-                    />
-                  </div>
-                </div>
-              )}
 
               <div>
                 <div className="text-sm font-semibold text-foreground mb-2 flex flex-row items-center gap-2">

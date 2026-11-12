@@ -13,6 +13,7 @@ class Board extends Model
     protected $fillable = [
         'owner_id',
         'workspace_id',
+        'project_id',
         'department_id',
         'allow_department_notification',
         'public_id',
@@ -95,6 +96,28 @@ class Board extends Model
     public function manager()
     {
         return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    /** Boards the user owns, is a member of, or manages through the board's project. */
+    public function scopeAccessibleBy(\Illuminate\Database\Eloquent\Builder $query, User $user): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where(fn ($q) => $q->where('boards.owner_id', $user->id)
+            ->orWhereExists(fn ($m) => $m->selectRaw('1')->from('board_members')
+                ->whereColumn('board_members.board_id', 'boards.id')
+                ->where('board_members.user_id', $user->id))
+            ->orWhereIn('boards.project_id', self::managedProjectIds($user)));
+    }
+
+    /** Projects whose boards this user has full rights on (project owner or manager). */
+    public static function managedProjectIds(User $user): \Illuminate\Database\Query\Builder
+    {
+        return \Illuminate\Support\Facades\DB::table('projects')->select('id')
+            ->where(fn ($q) => $q->where('owner_id', $user->id)->orWhere('manager_id', $user->id));
     }
 
     public function isProject(): bool

@@ -6,7 +6,7 @@ import { lazy, Suspense } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { PersonalLayout } from './components/layout/PersonalLayout';
 import { WorkspaceLayout } from './components/layout/WorkspaceLayout';
-import { BoardLayout, ProjectOnlyRoute } from './components/layout/BoardLayout';
+import { BoardLayout } from './components/layout/BoardLayout';
 
 // Guards
 import { AuthGuard } from './components/layout/guards/AuthGuard';
@@ -29,6 +29,9 @@ const EmployeeManagementView = lazy(() => import('./pages/EmployeeManagementView
 const DepartmentManagementView = lazy(() => import('./pages/DepartmentManagementView').then((m) => ({ default: m.DepartmentManagementView })));
 const DepartmentDetailView = lazy(() => import('./pages/DepartmentDetailView').then((m) => ({ default: m.DepartmentDetailView })));
 const WorkspaceHome = lazy(() => import('./pages/WorkspaceHome').then((m) => ({ default: m.WorkspaceHome })));
+const HelpPage = lazy(() => import('./pages/HelpPage').then((m) => ({ default: m.HelpPage })));
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
+const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then((m) => ({ default: m.ProjectDetailPage })));
 const NotificationPage = lazy(() => import('./pages/NotificationPage').then((m) => ({ default: m.NotificationPage })));
 const MyTasksPage = lazy(() => import('./pages/MyTasksPage').then((m) => ({ default: m.MyTasksPage })));
 const AttendancePage = lazy(() => import('./pages/AttendancePage').then((m) => ({ default: m.AttendancePage })));
@@ -90,6 +93,9 @@ function App() {
                 </Suspense>
               } />
               <Route path="/home" element={<HomePage />} />
+              <Route path="/help" element={<HelpPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
               <Route path="/boards" element={<WorkspaceHome />} />
               <Route path="/workspaces" element={<Navigate to="/boards" replace />} />
               <Route path="/my-tasks" element={<MyTasksPage />} />
@@ -128,9 +134,9 @@ function App() {
                 <Route path="calendar" element={<CalendarView />} />
                 <Route path="dashboard" element={<BoardWorkloadDashboard />} />
                 <Route path="members" element={<BoardMembersView />} />
-                <Route path="review" element={<ProjectOnlyRoute><BoardReviewView /></ProjectOnlyRoute>} />
-                <Route path="performance" element={<ProjectOnlyRoute><PerformanceDashboardView /></ProjectOnlyRoute>} />
-                <Route path="performance-policy" element={<ProjectOnlyRoute><PerformancePolicyView /></ProjectOnlyRoute>} />
+                <Route path="review" element={<BoardReviewView />} />
+                <Route path="performance" element={<PerformanceDashboardView />} />
+                <Route path="performance-policy" element={<PerformancePolicyView />} />
                 <Route path="settings" element={<BoardSettingsView />} />
                 <Route path="trash" element={<TrashView />} />
                 <Route index element={<Navigate to="kanban" replace />} />

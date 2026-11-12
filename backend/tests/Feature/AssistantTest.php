@@ -286,4 +286,38 @@ TXT;
         $this->assertCount(9, $p['tasks']);
         $this->assertNotEmpty($p['warnings']);
     }
+
+    public function test_preview_names_each_boards_project_and_picks_the_board_from_a_project_name(): void
+    {
+        $project = \App\Models\Project::create(['name' => 'DANAVAGo', 'owner_id' => $this->boss->id]);
+        $go = $this->board('Thiết kế ứng dụng', 'Màn hình và luồng đặt xe');
+        $go->update(['project_id' => $project->id]);
+        DB::table('board_members')->insert(['board_id' => $go->id, 'user_id' => $this->u['hung']->id, 'role' => 'member', 'created_at' => now(), 'updated_at' => now()]);
+
+        $preview = $this->actingAs($this->boss)->postJson('/api/assistant/tasks/preview', [
+            'text' => "1. @Nguyễn Nam Hùng lên final DANAVAGo để hẹn họp với nhà xe\n2. @Trang Phạm gửi báo giá DC Center",
+        ])->assertOk()->json();
+
+        $boards = collect($preview['boards'])->keyBy('id');
+        $this->assertSame('DANAVAGo', $boards[$go->id]['project']);
+        $this->assertArrayNotHasKey('type', $boards[$go->id]); // only the board is chosen; its project is fixed
+        // The project name alone is enough because that project has only this board.
+        $this->assertSame($go->id, $preview['tasks'][0]['board_id']);
+        $this->assertSame($this->sales->id, $preview['tasks'][1]['board_id']);
+    }
+
+    public function test_project_managers_can_send_tasks_to_their_projects_boards_without_being_invited(): void
+    {
+        $project = \App\Models\Project::create(['name' => 'Dự án X', 'owner_id' => $this->boss->id, 'manager_id' => $this->u['phi']->id]);
+        $board = Board::create(['owner_id' => $this->boss->id, 'name' => 'Bảng riêng của sếp', 'project_id' => $project->id]);
+        KanbanColumn::create(['board_id' => $board->id, 'title' => 'Chưa bắt đầu', 'order' => 1000]);
+
+        $ids = collect($this->actingAs($this->u['phi'])->postJson('/api/assistant/tasks/preview', ['text' => "1. Việc một\n2. Việc hai"])
+            ->assertOk()->json('boards'))->pluck('id');
+        $this->assertContains($board->id, $ids->all());
+
+        $this->actingAs($this->u['phi'])->postJson('/api/assistant/tasks/apply', ['items' => [
+            ['title' => 'Việc một', 'board_id' => $board->id, 'assignee_ids' => [], 'priority' => 'Bình thường', 'done' => false, 'due_date' => null],
+        ]])->assertOk()->assertJsonPath('results.0.ok', true);
+    }
 }

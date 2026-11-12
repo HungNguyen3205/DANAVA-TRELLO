@@ -25,7 +25,8 @@ export interface TaskPreview {
   engine: 'gemini' | 'rules';
   warnings: string[];
   tasks: TaskDraft[];
-  boards: { id: number; name: string; type: string; public_id: string }[];
+  /** Boards the user can add tasks to; `project` is the project the board belongs to (context only). */
+  boards: { id: number; name: string; public_id: string; project: string | null }[];
   people: { id: number; name: string; position: string | null }[];
   priorities: Priority[];
 }

@@ -16,7 +16,7 @@ import { StatusSelect } from '../components/ui/StatusSelect';
 import { TaskExcelImportModal } from '../components/kanban/TaskExcelImportModal';
 
 const THEME_HEX_MAP: Record<string, string> = {
-  violet: '#7C5CFC',
+  violet: '#2F4CB0',
   blue: '#4F7DF3',
   orange: '#E6A92D',
   green: '#2FAF83',
@@ -166,7 +166,7 @@ export function ListView() {
                 title: 'Thêm công việc',
                 onConfirm: () => { setPromptData(null); handleAdd(board.columns[0]?.id); }
               })}
-              className="h-9 px-4 inline-flex items-center gap-1.5 text-xs lg:text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] active:scale-[0.98] rounded-xl transition-all shadow-xs hover:shadow-sm whitespace-nowrap shrink-0"
+              className="h-9 px-4 inline-flex items-center gap-1.5 text-xs lg:text-[13px] font-semibold text-white bg-primary hover:bg-[#1E3A8A] active:scale-[0.98] rounded-xl transition-all shadow-xs hover:shadow-sm whitespace-nowrap shrink-0"
             >
               <Plus size={16} className="shrink-0 stroke-[2.5]" />
               <span className="whitespace-nowrap">Thêm công việc</span>

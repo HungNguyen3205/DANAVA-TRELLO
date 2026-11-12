@@ -19,6 +19,9 @@ class AnswerComposer
         if (in_array('chao_hoi', $topics, true) && !$specific) {
             return $this->greeting($ctx, $assistantName);
         }
+        if (!empty($ctx['huong_dan'])) {
+            return $this->guide($ctx['huong_dan']);
+        }
         if (in_array('huong_dan', $topics, true)) {
             $parts[] = $this->howTo();
         }
@@ -104,13 +107,10 @@ class AnswerComposer
     private function board(array $b): string
     {
         $progress = $b['tong_viec'] ? round($b['da_xong'] * 100 / $b['tong_viec']) : 0;
-        $lines = ["### " . ($b['loai'] === 'dự án' ? '📁' : '🗂️') . " {$b['ten']}"];
+        $lines = ["### 🗂️ {$b['ten']}" . (!empty($b['du_an']) ? " · 📁 {$b['du_an']}" : '')];
         $lines[] = "- Tiến độ: **{$b['da_xong']}/{$b['tong_viec']}** việc hoàn thành (**{$progress}%**)";
         if ($b['qua_han']) {
             $lines[] = "- Quá hạn: **{$b['qua_han']}** việc ⚠️";
-        }
-        if ($b['han_du_an']) {
-            $lines[] = "- Hạn dự án: **" . $this->date($b['han_du_an']) . '**';
         }
         $lines[] = '- Theo cột: ' . implode(' · ', array_map(fn ($c) => "{$c['cot']} **{$c['so_viec']}**", $b['theo_cot']));
         if ($b['viec_can_chu_y']) {
@@ -123,13 +123,23 @@ class AnswerComposer
         return implode("\n", $lines);
     }
 
-    private function projectLine(array $b): string
+    /** One project: overall progress over its boards, then one line per board. */
+    private function projectLine(array $p): string
     {
-        $progress = $b['tong_viec'] ? round($b['da_xong'] * 100 / $b['tong_viec']) : 0;
-        $extra = $b['qua_han'] ? " · ⚠️ {$b['qua_han']} quá hạn" : '';
-        $due = $b['han_du_an'] ? ' · hạn ' . $this->date($b['han_du_an']) : '';
+        $boards = $p['cac_bang'] ?? [];
+        $total = array_sum(array_column($boards, 'tong_viec'));
+        $done = array_sum(array_column($boards, 'da_xong'));
+        $late = array_sum(array_column($boards, 'qua_han'));
+        $progress = $total ? round($done * 100 / $total) : 0;
+        $due = !empty($p['han']) ? ' · hạn ' . $this->date($p['han']) : '';
+        $extra = $late ? " · ⚠️ {$late} quá hạn" : '';
+        $line = "- **{$p['ten']}**: {$progress}% ({$done}/{$total}){$due}{$extra}";
+        foreach ($boards as $b) {
+            $line .= "
+  - {$b['ten']}: {$b['da_xong']}/{$b['tong_viec']} việc";
+        }
 
-        return "- **{$b['ten']}**: {$progress}% ({$b['da_xong']}/{$b['tong_viec']}){$due}{$extra}";
+        return $line;
     }
 
     private function person(array $p): string
@@ -202,6 +212,21 @@ class AnswerComposer
         $done = !empty($t['da_xong']) ? '✅ ' : '';
 
         return "- {$done}{$flag}**{$t['tieu_de']}**" . ($bits ? ' — ' . implode(' · ', $bits) : '');
+    }
+
+    /** Short step-by-step answer from the user guide. */
+    private function guide(array $sections): string
+    {
+        $parts = [];
+        foreach ($sections as $s) {
+            $lines = ["### 💡 {$s['tieu_de']}"];
+            foreach (array_values($s['cac_buoc']) as $i => $step) {
+                $lines[] = ($i + 1) . '. ' . $step;
+            }
+            $parts[] = implode("\n", $lines);
+        }
+
+        return implode("\n\n", $parts) . "\n\n_Xem thêm ở trang **Hướng dẫn sử dụng** (menu trái, dưới cùng)._";
     }
 
     private function howTo(): string

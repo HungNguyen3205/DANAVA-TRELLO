@@ -165,7 +165,7 @@ export function ShareBoardModal({
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-[#5B4BD6] transition-all flex items-center gap-1.5 shadow-xs shrink-0"
+                className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-[#1E3A8A] transition-all flex items-center gap-1.5 shadow-xs shrink-0"
               >
                 {copied ? (
                   <>

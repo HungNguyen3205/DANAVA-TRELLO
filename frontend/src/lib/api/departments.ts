@@ -187,3 +187,16 @@ export async function getDepartmentOptions(): Promise<DepartmentOption[]> {
     return [];
   }
 }
+
+/** Upload (or replace) a department cover photo. */
+export async function uploadDepartmentCover(id: number | string, file: File): Promise<{ message: string; cover_image: string }> {
+  const form = new FormData();
+  form.append('image', file);
+  const res = await api.post(`/admin/departments/${id}/cover`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return res.data;
+}
+
+export async function removeDepartmentCover(id: number | string): Promise<{ message: string }> {
+  const res = await api.delete(`/admin/departments/${id}/cover`);
+  return res.data;
+}

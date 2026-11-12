@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { Home, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined, Columns, Trash2, Building2, CalendarClock, BarChart3 } from 'lucide-react';
+import { Home, FolderKanban, LifeBuoy, CheckSquare, Bell, Search, User, Settings, Users, ShieldAlert, ChartNoAxesCombined, Trash2, Building2, CalendarClock, BarChart3 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -18,22 +18,28 @@ export function PersonalLayout() {
 
   return (
     <div className="flex flex-1 overflow-hidden w-full h-full relative">
-      <SidebarShell>
+      <SidebarShell
+        footer={
+          <>
+            <SidebarItem icon={<LifeBuoy size={18} />} label="Hướng dẫn sử dụng" to="/help" active={path === '/help'} />
+            <SidebarItem icon={<User size={18} />} label="Hồ sơ cá nhân" to="/profile" active={path === '/profile'} />
+            <SidebarItem icon={<Settings size={18} />} label="Cài đặt tài khoản" to="/account/settings" active={path === '/account/settings'} />
+          </>
+        }
+      >
         <SidebarSection>Chung</SidebarSection>
         <SidebarItem icon={<ChartNoAxesCombined size={18} />} label="Tổng quan" to="/dashboard" active={path === '/dashboard'} />
 
         <SidebarSection>Khu vực làm việc</SidebarSection>
         <SidebarItem icon={<Home size={18} />} label="Trang chủ của tôi" to="/home" active={path === '/home'} />
-        <SidebarItem icon={<Columns size={18} />} label="Bảng công việc" to="/boards" active={path === '/boards'} />
+        {/* "Tất cả bảng" is a tab inside Dự án (/boards) */}
+        <SidebarItem icon={<FolderKanban size={18} />} label="Dự án" to="/projects" active={path.startsWith('/projects') || path === '/boards'} />
         <SidebarItem icon={<CheckSquare size={18} />} label="Công việc của tôi" to="/my-tasks" active={path === '/my-tasks'} />
         <SidebarItem icon={<CalendarClock size={18} />} label="Chấm công" to="/attendance" active={path === '/attendance'} />
         <SidebarItem icon={<Bell size={18} />} label="Thông báo" to="/notifications" active={path === '/notifications'} />
         <SidebarItem icon={<Search size={18} />} label="Tìm kiếm" to="/search" active={path === '/search'} />
         <SidebarItem icon={<Trash2 size={18} />} label="Thùng rác" to="/trash" active={path === '/trash'} />
 
-        <SidebarSection>Tài khoản</SidebarSection>
-        <SidebarItem icon={<User size={18} />} label="Hồ sơ cá nhân" to="/profile" active={path === '/profile'} />
-        <SidebarItem icon={<Settings size={18} />} label="Cài đặt tài khoản" to="/account/settings" active={path === '/account/settings'} />
 
         {(user?.system_role === 'system_admin' || user?.system_role === 'admin') && (
           <>

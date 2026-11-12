@@ -1,21 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Plus, Columns, Users, Search, Shield, UserCheck, Briefcase, CalendarClock } from 'lucide-react';
+import { Star, Plus, Columns, Search } from 'lucide-react';
+import { MoveBoardDialog } from '../components/project/MoveBoardDialog';
+import { BoardCard } from '../components/board/BoardCard';
+import type { ReactNode } from 'react';
 import { NewBoardModal, type NewBoardPayload } from '../components/workspace/NewBoardModal';
-import { formatDateVi, projectStatusLabel } from '../lib/boardType';
-import { getAvatarUrl } from '../lib/avatar';
+import { ProjectsTabs } from '../components/project/ProjectsTabs';
 import api from '../lib/axios';
-import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 
 export function WorkspaceHome() {
+  return <BoardsBrowser />;
+}
+
+/**
+ * The boards grid (cards with background, star, role badge), with filters and search.
+ * Used for "all my boards" and, with `projectId`, for the boards of one project.
+ */
+export function BoardsBrowser({ projectId, embedded = false, actions }: {
+  /** Only show boards of this project, and create new boards inside it. */
+  projectId?: number;
+  /** Render inside another page (no own scroll area or page header). */
+  embedded?: boolean;
+  /** Extra buttons next to "Tạo bảng mới" (embedded mode). */
+  actions?: ReactNode;
+}) {
   const navigate = useNavigate();
-  const user = useAuthStore(state => state.user);
   const [boards, setBoards] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [filterTab, setFilterTab] = useState<'all' | 'starred' | 'created' | 'joined' | 'projects'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'starred' | 'created' | 'joined'>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [moving, setMoving] = useState<any | null>(null);
 
   const fetchBoards = async () => {
     setLoading(true);
@@ -37,7 +53,7 @@ export function WorkspaceHome() {
     if (!payload.name.trim()) return;
     try {
       const res = await api.post('/boards', payload);
-      toast.success(payload.type === 'project' ? 'Đã tạo dự án mới thành công' : 'Đã tạo bảng mới thành công');
+      toast.success('Đã tạo bảng mới thành công');
       setIsCreateOpen(false);
       await fetchBoards();
       if (res.data?.public_id) {
@@ -61,24 +77,24 @@ export function WorkspaceHome() {
     }
   };
 
-  const filteredBoards = boards.filter(b => {
+  const scoped = projectId === undefined ? boards : boards.filter(b => b.project_id === projectId);
+
+  const filteredBoards = scoped.filter(b => {
     const matchesSearch = b.name.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
     if (filterTab === 'starred') return b.is_starred;
     if (filterTab === 'created') return b.my_role === 'admin';
     if (filterTab === 'joined') return b.my_role === 'member';
-    if (filterTab === 'projects') return b.type === 'project';
     return true;
   });
 
-  const starredCount = boards.filter(b => b.is_starred).length;
-  const createdCount = boards.filter(b => b.my_role === 'admin').length;
-  const joinedCount = boards.filter(b => b.my_role === 'member').length;
-  const projectCount = boards.filter(b => b.type === 'project').length;
+  const starredCount = scoped.filter(b => b.is_starred).length;
+  const createdCount = scoped.filter(b => b.my_role === 'admin').length;
+  const joinedCount = scoped.filter(b => b.my_role === 'member').length;
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background">
+      <div className={`${embedded ? 'py-10' : 'flex-1'} flex items-center justify-center bg-background`}>
         <div className="animate-pulse text-primary font-medium flex items-center gap-2">
           <Columns size={20} className="animate-spin text-primary/50" />
           <span>Đang tải các bảng công việc...</span>
@@ -87,19 +103,34 @@ export function WorkspaceHome() {
     );
   }
 
-  return (
-    <div className="flex flex-1 overflow-hidden relative">
-      <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
-          {/* Header Section */}
+  const content = (
+        <div className={embedded ? 'space-y-5' : 'max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500'}>
+
+          {embedded ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Columns size={18} className="text-primary" /> Bảng công việc của dự án
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {actions}
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="h-9 px-3.5 inline-flex items-center gap-1.5 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:brightness-95 transition"
+                >
+                  <Plus size={16} /> Tạo bảng mới
+                </button>
+              </div>
+            </div>
+          ) : (
+          <>
+          <ProjectsTabs />
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/60">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                   <Columns size={20} />
                 </div>
-                Bảng công việc của bạn
+                Tất cả bảng của bạn
               </h1>
               <p className="text-sm text-muted-foreground mt-1.5">
                 Xem và quản lý tất cả các bảng bạn đã tạo hoặc được mời tham gia.
@@ -108,12 +139,14 @@ export function WorkspaceHome() {
 
             <button 
               onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-orange-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm shrink-0 self-start md:self-auto"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand text-brand-foreground hover:brightness-95 rounded-xl font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm shrink-0 self-start md:self-auto"
             >
               <Plus size={18} />
               <span>Tạo bảng mới</span>
             </button>
           </div>
+          </>
+          )}
 
           {/* Filter & Search Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -127,7 +160,7 @@ export function WorkspaceHome() {
                     : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-accent'
                 }`}
               >
-                Tất cả ({boards.length})
+                Tất cả ({scoped.length})
               </button>
               {starredCount > 0 && (
                 <button
@@ -162,19 +195,6 @@ export function WorkspaceHome() {
                   }`}
                 >
                   Được mời ({joinedCount})
-                </button>
-              )}
-              {projectCount > 0 && (
-                <button
-                  onClick={() => setFilterTab('projects')}
-                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
-                    filterTab === 'projects' 
-                      ? 'bg-primary text-primary-foreground shadow-xs' 
-                      : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-accent'
-                  }`}
-                >
-                  <Briefcase size={12} />
-                  Dự án ({projectCount})
                 </button>
               )}
             </div>
@@ -219,11 +239,13 @@ export function WorkspaceHome() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
               {filteredBoards.map(board => (
                 <BoardCard 
                   key={board.id}
                   board={board}
+                  hideProject={projectId !== undefined}
+                  onMove={board.my_role === 'admin' ? () => setMoving(board) : undefined}
                   onToggleStar={(e) => {
                     e.stopPropagation();
                     toggleStar(board.id, board.is_starred);
@@ -235,7 +257,7 @@ export function WorkspaceHome() {
               {/* Add Board Card */}
               <button 
                 onClick={() => setIsCreateOpen(true)}
-                className="h-32 rounded-2xl bg-card/60 border border-border border-dashed flex flex-col items-center justify-center text-sm font-medium text-muted-foreground hover:bg-accent/60 hover:border-primary/50 hover:text-foreground transition-all group shadow-xs hover:shadow-md gap-2"
+                className="min-h-[11rem] h-full rounded-2xl bg-card/60 border border-border border-dashed flex flex-col items-center justify-center text-sm font-medium text-muted-foreground hover:bg-accent/60 hover:border-primary/50 hover:text-foreground transition-all group shadow-xs hover:shadow-md gap-2"
               >
                 <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-transform group-hover:bg-primary/10 group-hover:text-primary">
                   <Plus size={20} />
@@ -246,91 +268,46 @@ export function WorkspaceHome() {
           )}
 
         </div>
-      </main>
-
-      {isCreateOpen && (
-        <NewBoardModal
-          isOpen
-          onClose={() => setIsCreateOpen(false)}
-          onSubmit={handleCreateBoard}
-        />
-      )}
-    </div>
   );
-}
 
-function BoardCard({ 
-  board, 
-  onClick, 
-  onToggleStar 
-}: { 
-  board: any, 
-  onClick?: () => void, 
-  onToggleStar?: (e: React.MouseEvent) => void 
-}) {
-  const bgClass = board.color || 'bg-gradient-to-br from-blue-600 to-cyan-500';
-  const isOwner = board.my_role === 'admin';
-  const isProject = board.type === 'project';
+  const moveDialog = moving && (
+    <MoveBoardDialog
+      board={moving}
+      onClose={() => setMoving(null)}
+      onMoved={() => {
+        setMoving(null);
+        fetchBoards();
+      }}
+    />
+  );
+
+  const modal = isCreateOpen && (
+    <NewBoardModal
+      isOpen
+      defaultProjectId={projectId}
+      onClose={() => setIsCreateOpen(false)}
+      onSubmit={handleCreateBoard}
+    />
+  );
+
+  if (embedded) {
+    return (
+      <>
+        {content}
+        {modal}
+        {moveDialog}
+      </>
+    );
+  }
 
   return (
-    <div 
-      onClick={onClick}
-      className={`relative h-32 rounded-2xl overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${bgClass} flex flex-col justify-between p-4`}
-      style={board.background_image ? { backgroundImage: `url("${getAvatarUrl(board.background_image)}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
-    >
-      {/* Background shading overlay */}
-      <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors pointer-events-none" />
-
-      {/* Top Header Row in Card */}
-      <div className="relative z-10 flex items-start justify-between gap-2">
-        {/* Badges wrap as whole pills; text inside a pill never breaks */}
-        <div className="flex flex-wrap items-center gap-1 min-w-0">
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap shadow-xs backdrop-blur-xs ${
-            isOwner
-              ? 'bg-amber-400/90 text-amber-950 font-extrabold'
-              : 'bg-white/20 text-white'
-          }`}>
-            {isOwner ? <Shield size={10} /> : <UserCheck size={10} />}
-            {isOwner ? 'Chủ bảng' : 'Thành viên'}
-          </span>
-          {isProject && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap bg-white/90 text-slate-900 shadow-xs" title={`Dự án · ${projectStatusLabel(board.project_status)}`}>
-              <Briefcase size={10} />
-              {projectStatusLabel(board.project_status)}
-            </span>
-          )}
-        </div>
-
-        <button
-          type="button"
-          className="p-1 rounded-full hover:bg-black/20 transition-colors text-white relative z-20 shrink-0"
-          onClick={onToggleStar}
-          title={board.is_starred ? 'Bỏ gắn sao' : 'Gắn sao bảng này'}
-        >
-          <Star 
-            size={16} 
-            className={`transition-all ${board.is_starred ? 'text-yellow-300 fill-yellow-300 opacity-100 scale-110' : 'text-white/70 opacity-0 group-hover:opacity-100 hover:scale-125'}`} 
-          />
-        </button>
-      </div>
-
-      {/* Bottom Title & Members Row in Card */}
-      <div className="relative z-10">
-        <h4 className="text-white font-bold text-sm leading-tight drop-shadow-md line-clamp-2 mb-1.5">
-          {board.name}
-        </h4>
-        <div className="flex items-center gap-1.5 text-[11px] text-white/80 font-medium">
-          <Users size={12} />
-          <span>{board.members_count || 1} thành viên</span>
-          {isProject && board.end_date && (
-            <>
-              <span className="opacity-60">·</span>
-              <CalendarClock size={12} />
-              <span>Hạn {formatDateVi(board.end_date)}</span>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="flex flex-1 overflow-hidden relative">
+      <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar p-4 md:p-8">
+        {content}
+      </main>
+      {modal}
+      {moveDialog}
     </div>
   );
 }
+

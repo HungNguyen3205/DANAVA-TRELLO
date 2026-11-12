@@ -60,9 +60,17 @@ export function RobotCustomizer({ onClose }: { onClose: () => void }) {
       <ColorRow label="Màu mắt LED" value={prefs.eyeColor} presets={EYE_PRESETS} onChange={(v) => set({ eyeColor: v })} />
       <ColorRow label="Màu nền tròn" value={prefs.ringColor} presets={RING_PRESETS} onChange={(v) => set({ ringColor: v })} />
 
+      <label className="flex items-center justify-between gap-3 text-xs font-semibold text-foreground cursor-pointer">
+        <span>
+          Giới thiệu khi mở trang mới
+          <span className="block font-normal text-muted-foreground">Em nói ngắn gọn trang đó dùng để làm gì.</span>
+        </span>
+        <input type="checkbox" checked={prefs.pageIntros} onChange={(e) => set({ pageIntros: e.target.checked })} className="w-4 h-4 accent-primary shrink-0" />
+      </label>
+
       <button
         type="button"
-        onClick={() => savePrefs(DEFAULT_PREFS)}
+        onClick={() => savePrefs({ ...DEFAULT_PREFS, pageIntros: prefs.pageIntros })}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
       >
         <RotateCcw size={13} /> Khôi phục mặc định

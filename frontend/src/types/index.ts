@@ -34,6 +34,8 @@ export interface Department {
   creator?: User | null;
   status: 'active' | 'inactive';
   color?: string | null;
+  /** Cover photo shown on the department card */
+  cover_image?: string | null;
   employees_count?: number;
   created_at: string;
   updated_at?: string;
@@ -193,6 +195,9 @@ export interface Board {
   color?: string;
   /** Uploaded background image path ("/storage/board-backgrounds/..."). */
   background_image?: string | null;
+  /** Project this board belongs to (Project > Board > Column > Task). */
+  project_id?: number | null;
+  project?: { id: number; name: string } | null;
   type?: 'task' | 'project';
   project_status?: 'planning' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled' | null;
   start_date?: string | null;

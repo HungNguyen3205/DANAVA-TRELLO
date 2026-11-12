@@ -184,7 +184,7 @@ export function KanbanBoard({
             const col = board.columns.find(c => c.id === active.columnId);
             
             const PREDEFINED_THEMES: Record<string, any> = {
-              violet: { dot: "bg-[#7C5CFC]" },
+              violet: { dot: "bg-[#2F4CB0]" },
               blue: { dot: "bg-[#4F7DF3]" },
               orange: { dot: "bg-[#E6A92D]" },
               green: { dot: "bg-[#2FAF83]" },
@@ -213,7 +213,7 @@ export function KanbanBoard({
             const col = active as Column;
             const tStr = (col.title || "").toLowerCase();
             const PREDEFINED_THEMES: Record<string, any> = {
-              violet: { bg: "bg-[#F6F3FF]", header: "text-[#7C5CFC]", iconBg: "bg-[#E8E1FF]", iconColor: "text-[#7C5CFC]", dot: "bg-[#7C5CFC]" },
+              violet: { bg: "bg-[#F1F4FB]", header: "text-[#2F4CB0]", iconBg: "bg-[#DCE4F8]", iconColor: "text-[#2F4CB0]", dot: "bg-[#2F4CB0]" },
               blue: { bg: "bg-[#F1F6FF]", header: "text-[#4F7DF3]", iconBg: "bg-[#DFE9FF]", iconColor: "text-[#4F7DF3]", dot: "bg-[#4F7DF3]" },
               orange: { bg: "bg-[#FFF9EA]", header: "text-[#E6A92D]", iconBg: "bg-[#FFF0C2]", iconColor: "text-[#E6A92D]", dot: "bg-[#E6A92D]" },
               green: { bg: "bg-[#EFFAF6]", header: "text-[#2FAF83]", iconBg: "bg-[#D9F5EA]", iconColor: "text-[#2FAF83]", dot: "bg-[#2FAF83]" },

@@ -58,12 +58,34 @@ class KnowledgeRetriever
             'tong_quan_cua_toi' => $this->mySummary($user, $now),
         ];
 
+        // How-to questions are answered from the user guide only (no task lists mixed in).
+        if (in_array('huong_dan', $topics, true)) {
+            $guide = \App\Support\UserGuide::search($question);
+            if ($guide) {
+                $context['huong_dan'] = array_map(fn ($g) => [
+                    'tieu_de' => $g['title'],
+                    'tom_tat' => $g['summary'],
+                    'cac_buoc' => $g['steps'],
+                ], $guide);
+
+                return $context;
+            }
+        }
+
         // Boards named in the question.
         $matchedBoards = $this->matchBoards($q, $boards);
         if ($matchedBoards->isNotEmpty()) {
             $context['bang_duoc_hoi'] = $matchedBoards->map(fn ($b) => $this->boardDetail($b, $now))->values()->all();
         } elseif (in_array('du_an', $topics, true)) {
-            $context['du_an'] = $boards->where('type', 'project')->map(fn ($b) => $this->boardDetail($b, $now, 5))->values()->all();
+            // Projects group boards: list each project with the boards this user can open.
+            $context['du_an'] = \App\Models\Project::visibleTo($user)->with('manager:id,name')->orderBy('name')->limit(10)->get()
+                ->map(fn ($p) => [
+                    'ten' => $p->name,
+                    'trang_thai' => $p->status,
+                    'han' => $p->end_date?->toDateString(),
+                    'quan_ly' => $p->manager?->name,
+                    'cac_bang' => $boards->where('project_id', $p->id)->map(fn ($b) => $this->boardDetail($b, $now, 3))->values()->all(),
+                ])->values()->all();
         }
 
         // People named in the question (colleagues sharing a board with the asker).
@@ -106,7 +128,7 @@ class KnowledgeRetriever
             'hoan_thanh' => '/da xong|hoan thanh|xong roi|done/',
             'tien_do' => '/tien do|bao cao|tong hop|tinh hinh|thong ke/',
             'chao_hoi' => '/^(chao|hello|hi|xin chao|alo)\b/',
-            'huong_dan' => '/cach|huong dan|lam sao|lam the nao|su dung|dung nhu the nao/',
+            'huong_dan' => '/cach|huong dan|lam sao|lam the nao|su dung|dung nhu the nao|o dau|the nao|nhu nao|khong biet|khong hieu|la gi/',
         ];
 
         return array_keys(array_filter($map, fn ($re) => preg_match($re, $q)));
@@ -130,7 +152,8 @@ class KnowledgeRetriever
         return Board::query()
             ->where(fn ($q) => $q->where('owner_id', $user->id)
                 ->orWhereHas('members', fn ($m) => $m->where('users.id', $user->id)))
-            ->get(['id', 'public_id', 'name', 'type', 'description', 'project_status', 'start_date', 'end_date', 'manager_id']);
+            ->with('project:id,name')
+            ->get(['id', 'public_id', 'name', 'type', 'description', 'project_status', 'start_date', 'end_date', 'manager_id', 'project_id']);
     }
 
     /** Boards whose distinctive name words appear in the question. */
@@ -233,10 +256,8 @@ class KnowledgeRetriever
 
         return [
             'ten' => $board->name,
-            'loai' => $board->type === 'project' ? 'dự án' : 'bảng công việc',
+            'du_an' => $board->project?->name,
             'ma' => $board->public_id,
-            'trang_thai_du_an' => $board->project_status,
-            'han_du_an' => $board->end_date?->toDateString(),
             'tong_viec' => (clone $base)->count(),
             'da_xong' => (clone $base)->whereNotNull('completed_at')->count(),
             'qua_han' => (clone $open)->whereDate('due_date', '<', $today)->count(),

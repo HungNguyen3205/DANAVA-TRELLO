@@ -724,7 +724,7 @@ function TargetColumnPickerModal({
             type="button"
             onClick={() => onConfirm(selectedColId)}
             disabled={isLoading || availableColumns.length === 0}
-            className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:bg-[#1E3A8A] rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
           >
             {isLoading ? (
               <>

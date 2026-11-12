@@ -18,7 +18,7 @@ import { WipLimitModal } from "./WipLimitModal";
 import { WipConfirmModal } from "./WipConfirmModal";
 
 const PREDEFINED_THEMES: Record<string, any> = {
-  violet: { bg: "bg-[#F6F3FF] dark:bg-[#7C5CFC]/15", header: "text-[#7C5CFC] dark:text-[#a78bfa]", iconBg: "bg-[#E8E1FF] dark:bg-[#7C5CFC]/20", iconColor: "text-[#7C5CFC] dark:text-[#a78bfa]", dot: "bg-[#7C5CFC] dark:bg-[#a78bfa]", border: "border-[#7C5CFC]/20 dark:border-[#7C5CFC]/30", hoverBg: "hover:bg-card" },
+  violet: { bg: "bg-[#F1F4FB] dark:bg-[#2F4CB0]/15", header: "text-[#2F4CB0] dark:text-[#93ACF5]", iconBg: "bg-[#DCE4F8] dark:bg-[#2F4CB0]/20", iconColor: "text-[#2F4CB0] dark:text-[#93ACF5]", dot: "bg-[#2F4CB0] dark:bg-[#93ACF5]", border: "border-[#2F4CB0]/20 dark:border-[#2F4CB0]/30", hoverBg: "hover:bg-card" },
   blue: { bg: "bg-[#F1F6FF] dark:bg-[#4F7DF3]/15", header: "text-[#4F7DF3] dark:text-[#60a5fa]", iconBg: "bg-[#DFE9FF] dark:bg-[#4F7DF3]/20", iconColor: "text-[#4F7DF3] dark:text-[#60a5fa]", dot: "bg-[#4F7DF3] dark:bg-[#60a5fa]", border: "border-[#4F7DF3]/20 dark:border-[#4F7DF3]/30", hoverBg: "hover:bg-card" },
   orange: { bg: "bg-[#FFF9EA] dark:bg-[#E6A92D]/15", header: "text-[#E6A92D] dark:text-[#fbbf24]", iconBg: "bg-[#FFF0C2] dark:bg-[#E6A92D]/20", iconColor: "text-[#E6A92D] dark:text-[#fbbf24]", dot: "bg-[#E6A92D] dark:bg-[#fbbf24]", border: "border-[#E6A92D]/20 dark:border-[#E6A92D]/30", hoverBg: "hover:bg-card" },
   green: { bg: "bg-[#EFFAF6] dark:bg-[#2FAF83]/15", header: "text-[#2FAF83] dark:text-[#34d399]", iconBg: "bg-[#D9F5EA] dark:bg-[#2FAF83]/20", iconColor: "text-[#2FAF83] dark:text-[#34d399]", dot: "bg-[#2FAF83] dark:bg-[#34d399]", border: "border-[#2FAF83]/20 dark:border-[#2FAF83]/30", hoverBg: "hover:bg-card" },
@@ -292,7 +292,7 @@ export function BoardColumn({
                       <Palette size={14} className="text-muted-foreground" />
                       Đổi màu nền
                     </div>
-                    <span className="w-2.5 h-2.5 rounded-full border border-border/80" style={{ backgroundColor: currentColor ? (PREDEFINED_THEMES[currentColor]?.dot || '#a78bfa') : '#a78bfa' }} />
+                    <span className="w-2.5 h-2.5 rounded-full border border-border/80" style={{ backgroundColor: currentColor ? (PREDEFINED_THEMES[currentColor]?.dot || '#93ACF5') : '#93ACF5' }} />
                   </button>
                 )}
 

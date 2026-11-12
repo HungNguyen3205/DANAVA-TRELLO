@@ -28,13 +28,33 @@ class BoardAccessService
             ->exists();
     }
 
+    /** @var array<string, bool> per-request cache: "userId:boardId" => manages the board's project */
+    private array $projectManagerCache = [];
+
+    /**
+     * Project owners and project managers have full rights on every board of their project,
+     * even without being invited to the board.
+     */
+    public function isProjectManager(User $user, Board $board): bool
+    {
+        if (!$board->project_id) {
+            return false;
+        }
+        $key = $user->id . ':' . $board->id;
+
+        return $this->projectManagerCache[$key] ??= DB::table('projects')
+            ->where('id', $board->project_id)
+            ->where(fn ($q) => $q->where('owner_id', $user->id)->orWhere('manager_id', $user->id))
+            ->exists();
+    }
+
     /**
      * Check if user is a member or owner of the board.
      * System Admin does NOT automatically bypass.
      */
     public function isMember(User $user, Board $board): bool
     {
-        if ($this->isOwner($user, $board)) {
+        if ($this->isOwner($user, $board) || $this->isProjectManager($user, $board)) {
             return true;
         }
 
@@ -50,7 +70,7 @@ class BoardAccessService
      */
     public function isAdmin(User $user, Board $board): bool
     {
-        if ($this->isOwner($user, $board)) {
+        if ($this->isOwner($user, $board) || $this->isProjectManager($user, $board)) {
             return true;
         }
 
@@ -82,7 +102,7 @@ class BoardAccessService
      */
     public function canDelete(User $user, Board $board): bool
     {
-        return $this->isOwner($user, $board);
+        return $this->isOwner($user, $board) || $this->isProjectManager($user, $board);
     }
 
     /**

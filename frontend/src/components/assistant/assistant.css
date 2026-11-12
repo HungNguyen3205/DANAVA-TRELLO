@@ -72,7 +72,7 @@
 .asst-dock:hover { transform: scale(1.1); }
 .asst-dock:active { transform: scale(.95); }
 .asst-dock:focus-visible { outline: none; }
-.asst-dock:focus-visible .asst-avatar { filter: drop-shadow(0 0 0 #6C5CE7) drop-shadow(0 0 5px rgba(108,92,231,.8)); }
+.asst-dock:focus-visible .asst-avatar { filter: drop-shadow(0 0 0 #2F4CB0) drop-shadow(0 0 5px rgba(108,92,231,.8)); }
 .asst-dock .asst-avatar { filter: drop-shadow(0 6px 12px rgba(10, 42, 122, .3)); }
 @media (max-width: 640px) {
   .asst-dock { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }

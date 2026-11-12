@@ -160,22 +160,29 @@ class PersonalDashboardController extends Controller
             ->get();
             
         // Recent Boards: chỉ lấy board người dùng sở hữu HOẶC là thành viên
-        $recentBoards = \DB::table('boards')
-            ->leftJoin('board_members', 'boards.id', '=', 'board_members.board_id')
-            ->where(function($q) use ($user) {
-                $q->where('boards.owner_id', $user->id)
-                  ->orWhere('board_members.user_id', $user->id);
-            })
-            ->distinct()
-            ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
-            ->orderBy('boards.updated_at', 'desc')
+        // Deleted boards are excluded (the model applies soft deletes); boards of projects the user manages are included.
+        $recentBoards = \App\Models\Board::accessibleBy($user)
+            ->with('project:id,name')
+            ->orderByDesc('updated_at')
             ->limit(8)
-            ->get();
+            ->get(['id', 'public_id', 'name', 'color', 'background_image', 'workspace_id', 'project_id', 'updated_at'])
+            ->map(fn ($b) => [
+                'id' => $b->id,
+                'public_id' => $b->public_id,
+                'name' => $b->name,
+                'color' => $b->color,
+                'background_image' => $b->background_image,
+                'workspace_id' => $b->workspace_id,
+                'project_name' => $b->project?->name,
+                'updated_at' => $b->updated_at?->toIso8601String(),
+            ])
+            ->values();
 
         $starredBoards = \DB::table('boards')
             ->join('board_members', 'boards.id', '=', 'board_members.board_id')
             ->where('board_members.user_id', $user->id)
             ->where('board_members.is_starred', true)
+            ->whereNull('boards.deleted_at')
             ->select('boards.id', 'boards.public_id', 'boards.name', 'boards.color', 'boards.workspace_id')
             ->get();
 

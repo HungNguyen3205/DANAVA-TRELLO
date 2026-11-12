@@ -13,9 +13,9 @@ interface StatusSelectProps {
 }
 
 const DEFAULT_STATUS_COLORS: Record<string, string> = {
-  'chưa bắt đầu': '#7C5CFC',
-  'cần làm': '#7C5CFC',
-  'todo': '#7C5CFC',
+  'chưa bắt đầu': '#2F4CB0',
+  'cần làm': '#2F4CB0',
+  'todo': '#2F4CB0',
   'đang thực hiện': '#4F7DF3',
   'in progress': '#4F7DF3',
   'doing': '#4F7DF3',

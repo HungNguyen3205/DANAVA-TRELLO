@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Trash2, X, EyeOff, Loader2, Palette, Upload } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { projectsApi } from '../../lib/api/projects';
+import { introFor, type PageIntro } from './pageIntros';
+import { savePrefs, useAssistantPrefs } from './assistantPrefs';
+import { Trash2, X, EyeOff, Loader2, Palette, Upload, MessageCircleQuestion } from 'lucide-react';
 import { toast } from 'sonner';
 import { type AvatarMood } from './AssistantAvatar';
 import { RobotAvatar } from './RobotAvatar';
@@ -112,6 +116,12 @@ export function AssistantWidget() {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [input, setInput] = useState('');
   const [files, setFiles] = useState<PendingFile[]>([]);
+  /** Question sent from elsewhere (help page, project greeting); asked once history is loaded. */
+  const [pendingAsk, setPendingAsk] = useState<string | null>(null);
+  /** Short "what this page is for" message, shown once per page type per session. */
+  const [greet, setGreet] = useState<PageIntro | null>(null);
+  const prefs = useAssistantPrefs();
+  const location = useLocation();
   const [dragging, setDragging] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [sending, setSending] = useState(false);
@@ -214,6 +224,80 @@ export function AssistantWidget() {
         .catch(() => toast.error('Không kết nối được trợ lý.'))
         .finally(() => setLoadingHistory(false));
     }
+  };
+
+  // Other pages can ask the assistant something: window.dispatchEvent(new CustomEvent('assistant-ask', { detail: '...' }))
+  const openPanelRef = useRef(openPanel);
+  useEffect(() => {
+    openPanelRef.current = openPanel;
+  });
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const q = String((e as CustomEvent<string>).detail ?? '').trim();
+      if (!q) return;
+      setGreet(null);
+      setMinimized(false);
+      writeMinimized(false);
+      setPendingAsk(q);
+      openPanelRef.current();
+    };
+    window.addEventListener('assistant-ask', onAsk);
+    return () => window.removeEventListener('assistant-ask', onAsk);
+  }, []);
+
+  // Introduce each page once per browser session (can be turned off in the robot's settings).
+  useEffect(() => {
+    const intro = introFor(location.pathname);
+    // Leaving the page hides its introduction.
+    setGreet((g) => (g && intro && g.key === intro.key ? g : null));
+    if (!intro || !prefs.pageIntros) return;
+    const storageKey = `asst-intro:${intro.key}`;
+    try {
+      if (sessionStorage.getItem(storageKey)) return;
+    } catch {
+      /* storage unavailable: introduce anyway */
+    }
+    const remember = () => {
+      try {
+        sessionStorage.setItem(storageKey, '1');
+      } catch {
+        /* ignore */
+      }
+    };
+    let alive = true;
+    // Let the page render first, so the message does not cover it while loading.
+    const timer = window.setTimeout(() => {
+      if (!intro.projectId) {
+        if (alive) {
+          setGreet(intro);
+          remember();
+        }
+        return;
+      }
+      projectsApi
+        .get(intro.projectId)
+        .then((proj) => {
+          if (!alive) return;
+          setGreet({
+            ...intro,
+            title: `Dự án: ${proj.name}`,
+            text: `Đây là trang dự án **${proj.name}**: tổng quan tiến độ, thành viên và các bảng bên trong.`,
+            suggestions: intro.suggestions.map(([label, q]) => [label, q || `Tiến độ dự án ${proj.name}`]),
+          });
+          remember();
+        })
+        .catch(() => {});
+    }, 900);
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+  }, [location.pathname, prefs.pageIntros]);
+
+  const askNow = (q: string) => {
+    setGreet(null);
+    setPendingAsk(q);
+    openPanel();
   };
 
   const scrollToEnd = useCallback((smooth: boolean) => {
@@ -328,6 +412,14 @@ export function AssistantWidget() {
     }
   };
 
+  useEffect(() => {
+    if (!pendingAsk || !open || !state || loadingHistory || sending) return;
+    const q = pendingAsk;
+    setPendingAsk(null);
+    void send(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- send is recreated every render
+  }, [pendingAsk, open, state, loadingHistory, sending]);
+
   const clear = async () => {
     if (!window.confirm('Xóa toàn bộ lịch sử trò chuyện với trợ lý?')) return;
     await assistantApi.clear().catch(() => {});
@@ -381,6 +473,40 @@ export function AssistantWidget() {
     </section>
   );
 
+  const greeting = greet && !open && !reminderOpen && !minimized && (
+    <section className="asst-reminder" role="dialog" aria-label={`Trợ lý ${name} giới thiệu trang`}>
+      <div className="rounded-[20px] border border-border bg-card shadow-2xl overflow-hidden">
+        <header className="flex items-center gap-2.5 pl-3 pr-2 py-2.5 text-white" style={{ background: 'linear-gradient(120deg, #1E2A5E 0%, #2B3F8F 70%, #F47624 160%)' }}>
+          <div className="shrink-0"><RobotAvatar mood="waving" look={{ x: 0, y: 0 }} size={36} /></div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold leading-tight">Em là {name} 👋</div>
+            <div className="text-xs text-white/80 mt-0.5 truncate">{greet.title}</div>
+          </div>
+          <button type="button" onClick={() => setGreet(null)} className="p-1.5 rounded-lg hover:bg-white/15" aria-label="Đóng"><X size={18} /></button>
+        </header>
+        <div className="p-3.5 space-y-2">
+          <div className="text-sm text-foreground leading-relaxed"><MarkdownLite text={greet.text} /></div>
+          {greet.suggestions.map(([label, q]) => (
+            <button key={label} type="button" onClick={() => askNow(q)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-border text-left text-sm text-foreground hover:bg-accent hover:border-ring/40 transition-colors">
+              {label}
+            </button>
+          ))}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <button type="button" onClick={() => { setGreet(null); openPanel(); }}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+              <MessageCircleQuestion size={14} /> Hỏi điều khác
+            </button>
+            <button type="button" onClick={() => { setGreet(null); savePrefs({ ...prefs, pageIntros: false }); toast.success('Đã tắt giới thiệu trang. Bật lại trong nút bảng màu của trợ lý.'); }}
+              className="text-xs text-muted-foreground hover:text-foreground">
+              Tắt giới thiệu
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
   if (minimized) {
     return (
       <>
@@ -395,6 +521,7 @@ export function AssistantWidget() {
   return (
     <>
       {reminder}
+      {greeting}
       {!open && !reminderOpen && (
         <div
           ref={dockRef}

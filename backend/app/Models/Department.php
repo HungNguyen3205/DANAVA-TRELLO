@@ -17,6 +17,7 @@ class Department extends Model
         'manager_id',
         'status',
         'color',
+        'cover_image',
         'created_by',
     ];
 

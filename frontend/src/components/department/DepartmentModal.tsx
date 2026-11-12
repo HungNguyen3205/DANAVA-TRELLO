@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Building2, UserCheck, Palette, AlertCircle, Loader2, Search, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { getDepartmentTelegram, updateDepartmentTelegram, type TelegramIntegrationStatus } from '../../lib/api/telegram';
+import { X, Building2, UserCheck, Palette, AlertCircle, Loader2, Search, Check, Send, ImagePlus, Trash2 } from 'lucide-react';
 import type { Department, User } from '../../types';
-import { createDepartment, updateDepartment } from '../../lib/api/departments';
+import { createDepartment, removeDepartmentCover, updateDepartment, uploadDepartmentCover } from '../../lib/api/departments';
+import { getAvatarUrl } from '../../lib/avatar';
 import api from '../../lib/axios';
 import { toast } from 'sonner';
 
@@ -19,7 +21,7 @@ const PRESET_COLORS = [
   '#10b981', // Emerald
   '#f59e0b', // Amber
   '#ef4444', // Red
-  '#8b5cf6', // Violet
+  '#4263C9', // Violet
   '#ec4899', // Pink
 ];
 
@@ -39,6 +41,14 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
   const [managerId, setManagerId] = useState<number | null>(null);
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  // Telegram group of the department (full settings live on the department page)
+  const [telegramChatId, setTelegramChatId] = useState('');
+  const [telegram, setTelegram] = useState<TelegramIntegrationStatus | null>(null);
+  // Cover photo: a newly picked file (uploaded after saving) or a request to remove the current one
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
+  const coverInput = useRef<HTMLInputElement>(null);
 
   // System users for manager / employee pickers
   const [usersList, setUsersList] = useState<User[]>([]);
@@ -83,6 +93,46 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     setErrors({});
   }, [department, isOpen]);
 
+  useEffect(() => {
+    setCoverFile(null);
+    setRemoveCover(false);
+    setCoverPreview(null);
+  }, [isOpen, department]);
+
+  useEffect(() => () => {
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+  }, [coverPreview]);
+
+  const pickCover = (file?: File) => {
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return void toast.error('Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.');
+    if (file.size > 5 * 1024 * 1024) return void toast.error('Ảnh tối đa 5MB.');
+    setCoverFile(file);
+    setRemoveCover(false);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const shownCover = coverPreview ?? (!removeCover && department?.cover_image ? getAvatarUrl(department.cover_image) : null);
+
+  // Current Telegram group (edit mode)
+  useEffect(() => {
+    if (!isOpen) return;
+    setTelegram(null);
+    setTelegramChatId('');
+    if (!department) return;
+    let alive = true;
+    getDepartmentTelegram(department.id)
+      .then((t) => {
+        if (!alive) return;
+        setTelegram(t);
+        setTelegramChatId(t.chat_id || '');
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [isOpen, department]);
+
   // Load active employees list for selection
   useEffect(() => {
     if (!isOpen) return;
@@ -121,9 +171,12 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
       color !== initialData.color ||
       managerId !== initialData.managerId ||
       status !== initialData.status ||
-      selectedEmployees.length > 0
+      selectedEmployees.length > 0 ||
+      !!coverFile ||
+      removeCover ||
+      telegramChatId.trim() !== (telegram?.chat_id || '')
     );
-  }, [name, code, description, color, managerId, status, selectedEmployees, initialData]);
+  }, [name, code, description, color, managerId, status, selectedEmployees, initialData, telegramChatId, telegram, coverFile, removeCover]);
 
   const handleClose = () => {
     if (isDirty) {
@@ -150,6 +203,10 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
       errs.code = 'Mã không được quá 50 ký tự';
     }
 
+    if (telegramChatId.trim() && !/^-?\d+$/.test(telegramChatId.trim())) {
+      errs.telegram = 'Chat ID là dãy số, nhóm thường bắt đầu bằng -100 (ví dụ -1004340949074).';
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -159,6 +216,29 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     if (!validate()) return;
 
     setIsSubmitting(true);
+    const saveTelegram = async (deptId: number | string) => {
+      const next = telegramChatId.trim();
+      const prev = telegram?.chat_id || '';
+      if (next === prev) return;
+      try {
+        await updateDepartmentTelegram(deptId, {
+          chat_id: next || null,
+          enabled: !!next,
+          event_settings: telegram?.event_settings,
+        });
+        toast.success(next ? 'Đã lưu nhóm Telegram. Vào trang phòng ban để bấm "Kiểm tra" và "Gửi thử".' : 'Đã gỡ nhóm Telegram của phòng ban.');
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Lưu phòng ban xong nhưng chưa lưu được nhóm Telegram.');
+      }
+    };
+    const saveCover = async (deptId: number | string) => {
+      try {
+        if (coverFile) await uploadDepartmentCover(deptId, coverFile);
+        else if (removeCover) await removeDepartmentCover(deptId);
+      } catch (err: any) {
+        toast.error(err?.response?.data?.errors?.image?.[0] || err?.response?.data?.message || 'Lưu phòng ban xong nhưng chưa lưu được ảnh.');
+      }
+    };
     try {
       if (isEdit && department) {
         const res = await updateDepartment(department.id, {
@@ -170,6 +250,8 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           status,
         });
         toast.success(res.message || 'Cập nhật phòng ban thành công');
+        await saveTelegram(department.id);
+        await saveCover(department.id);
       } else {
         const res = await createDepartment({
           name: name.trim(),
@@ -181,6 +263,10 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           employee_ids: selectedEmployees,
         });
         toast.success(res.message || 'Tạo phòng ban thành công');
+        if (res.department?.id) {
+          await saveTelegram(res.department.id);
+          await saveCover(res.department.id);
+        }
       }
 
       onSuccess();
@@ -307,6 +393,71 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
             />
+          </div>
+
+          {/* Ảnh bìa phòng ban */}
+          <div className="space-y-1.5">
+            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <ImagePlus className="w-4 h-4 text-slate-400" /> Ảnh phòng ban
+            </div>
+            <div
+              className="relative h-28 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex items-end p-3"
+              style={shownCover
+                ? { backgroundImage: `url("${shownCover}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                : { background: `linear-gradient(135deg, ${color}, ${color}99)` }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+              <span className="relative text-sm font-bold text-white drop-shadow truncate">{name || 'Tên phòng ban'}</span>
+              <div className="absolute top-2 right-2 flex gap-1.5">
+                <button type="button" onClick={() => coverInput.current?.click()}
+                  className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg bg-black/45 text-white text-xs font-semibold backdrop-blur-sm hover:bg-black/60">
+                  <ImagePlus className="w-3.5 h-3.5" /> {shownCover ? 'Đổi ảnh' : 'Tải ảnh lên'}
+                </button>
+                {shownCover && (
+                  <button type="button" aria-label="Xóa ảnh" title="Xóa ảnh"
+                    onClick={() => { setCoverFile(null); setCoverPreview(null); setRemoveCover(!!department?.cover_image); }}
+                    className="h-8 w-8 grid place-items-center rounded-lg bg-black/45 text-white backdrop-blur-sm hover:bg-rose-600">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">JPG, PNG hoặc WebP, tối đa 5MB. Ảnh phủ kín thẻ phòng ban; chưa có ảnh thì dùng màu nhận diện.</p>
+            <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp" hidden
+              onChange={(e) => { pickCover(e.target.files?.[0]); e.target.value = ''; }} />
+          </div>
+
+          {/* Nhóm Telegram của phòng ban */}
+          <div className="space-y-1.5">
+            <label htmlFor="dept-telegram" className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Send className="w-4 h-4 text-sky-500" /> Nhóm Telegram của phòng ban
+              {telegram?.status === 'connected' && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                  Đã kết nối{telegram.chat_title ? `: ${telegram.chat_title}` : ''}
+                </span>
+              )}
+            </label>
+            <input
+              id="dept-telegram"
+              type="text"
+              inputMode="numeric"
+              placeholder="Chat ID nhóm, ví dụ -1004340949074"
+              value={telegramChatId}
+              onChange={(e) => {
+                setTelegramChatId(e.target.value);
+                if (errors.telegram) setErrors((prev) => ({ ...prev, telegram: '' }));
+              }}
+              aria-describedby="dept-telegram-help"
+              className={`w-full px-3.5 py-2.5 rounded-xl text-sm bg-white dark:bg-slate-800 border ${errors.telegram ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'} focus:ring-2 focus:ring-indigo-500 focus:outline-none`}
+            />
+            {errors.telegram ? (
+              <p className="text-[11px] text-rose-500">{errors.telegram}</p>
+            ) : (
+              <p id="dept-telegram-help" className="text-[11px] text-slate-500 dark:text-slate-400">
+                Thêm bot{telegram?.bot_username ? ` @${telegram.bot_username}` : ''} vào nhóm Telegram của phòng, rồi dán Chat ID nhóm vào đây. Để trống nếu không dùng.
+                Kiểm tra kết nối, gửi thử và chọn loại thông báo ở trang chi tiết phòng ban.
+              </p>
+            )}
           </div>
 
           {/* Màu nhận diện */}

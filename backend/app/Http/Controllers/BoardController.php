@@ -15,12 +15,10 @@ class BoardController extends Controller
     {
         $userId = $request->user()->id;
 
-        $boards = Board::where(function ($q) use ($userId) {
-            $q->where('owner_id', $userId)
-              ->orWhereHas('members', function ($sub) use ($userId) {
-                  $sub->where('users.id', $userId);
-              });
-        })->with(['owner', 'manager:id,name,avatar'])->orderBy('updated_at', 'desc')->get();
+        // Includes boards of projects this user owns or manages (full rights there).
+        $managedProjectIds = Board::managedProjectIds($request->user())->pluck('id')->all();
+        $boards = Board::accessibleBy($request->user())
+            ->with(['owner', 'manager:id,name,avatar', 'project:id,name,status'])->orderBy('updated_at', 'desc')->get();
 
         $boardIds = $boards->pluck('id')->toArray();
 
@@ -36,10 +34,12 @@ class BoardController extends Controller
             ->groupBy('board_id')
             ->pluck('count', 'board_id');
 
-        $boards = $boards->map(function ($board) use ($userId, $memberships, $membersCount) {
+        $boards = $boards->map(function ($board) use ($userId, $memberships, $membersCount, $managedProjectIds) {
             $member = $memberships->get($board->id);
             $board->is_starred = $member ? (bool)$member->is_starred : false;
-            $board->my_role = ($board->owner_id === $userId || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
+            $viaProject = in_array($board->project_id, $managedProjectIds, false);
+            $board->my_role = ($board->owner_id === $userId || $viaProject || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
+            $board->via_project = $viaProject && !$member && $board->owner_id !== $userId;
             $board->members_count = $membersCount[$board->id] ?? 1;
             return $board;
         });
@@ -54,9 +54,14 @@ class BoardController extends Controller
             'name' => 'required|string|max:255',
             'color' => 'nullable|string|max:50',
             'description' => 'nullable|string',
+            'project_id' => 'nullable|integer|exists:projects,id',
         ], $this->projectRules()));
 
         $userId = $request->user()->id;
+        $projectId = $request->input('project_id');
+        if ($projectId) {
+            abort_unless(\App\Models\Project::find($projectId)?->canView($request->user()), 403, 'Bạn không có quyền tạo bảng trong dự án này.');
+        }
         $type = $request->input('type', Board::TYPE_TASK);
         $projectFields = $type === Board::TYPE_PROJECT
             ? $this->resolveProjectFields($request, null)
@@ -68,10 +73,11 @@ class BoardController extends Controller
             $projectFields['project_status'] = $projectFields['project_status'] ?? 'planning';
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $userId, $type, $projectFields) {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $userId, $type, $projectFields, $projectId) {
             $board = Board::create(array_merge([
                 'owner_id' => $userId,
                 'workspace_id' => null,
+                'project_id' => $projectId,
                 'name' => $request->name,
                 'type' => $type,
                 'description' => $request->description,
@@ -150,6 +156,7 @@ class BoardController extends Controller
         $relations = [
             'owner', 
             'manager:id,name,avatar',
+            'project:id,name,status',
             'sprints', 
             'labels', 
             'columns' => function ($q) {
@@ -171,8 +178,12 @@ class BoardController extends Controller
             ->first();
 
         $boardData->is_starred = $member ? (bool)$member->is_starred : false;
-        $boardData->my_role = ($board->owner_id === $userId || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
-        $boardData->is_owner = ($board->owner_id === $userId || ($member && $member->role === 'owner'));
+        $access = app(\App\Services\BoardAccessService::class);
+        $viaProject = $access->isProjectManager($request->user(), $board);
+        $boardData->my_role = ($board->owner_id === $userId || $viaProject || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
+        // Project owners/managers have full rights (including delete) on the project's boards.
+        $boardData->is_owner = ($board->owner_id === $userId || $viaProject || ($member && $member->role === 'owner'));
+        $boardData->via_project = $viaProject && !$member && $board->owner_id !== $userId;
 
         return response()->json($boardData);
     }
@@ -197,6 +208,12 @@ class BoardController extends Controller
         ], $this->projectRules()));
 
         $data = $request->only(['name', 'description', 'color']);
+        if ($request->exists('project_id')) {
+            $request->validate(['project_id' => 'nullable|integer|exists:projects,id']);
+            $target = $request->input('project_id') ? \App\Models\Project::find($request->input('project_id')) : null;
+            abort_if($target && !$target->canView($request->user()), 403, 'Bạn không có quyền với dự án này.');
+            $data['project_id'] = $target?->id;
+        }
         $type = $request->input('type', $board->type);
 
         if ($request->has('type')) {

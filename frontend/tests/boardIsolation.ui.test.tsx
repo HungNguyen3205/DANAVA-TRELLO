@@ -83,6 +83,8 @@ describe('Board Isolation & Security Frontend UI Tests', () => {
         'fake-jwt-token-hung'
       );
 
+      // Other requests (e.g. the projects list) return nothing
+      (api.get as any).mockResolvedValue({ data: [] });
       // Mock personal dashboard returning 0 boards
       (api.get as any).mockResolvedValueOnce({
         data: {

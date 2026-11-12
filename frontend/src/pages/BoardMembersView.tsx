@@ -109,7 +109,7 @@ export function BoardMembersView() {
           </div>
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2 text-[13px] font-semibold whitespace-nowrap text-white bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-4 py-2 text-[13px] font-semibold whitespace-nowrap text-white bg-primary hover:bg-[#1E3A8A] rounded-xl transition-all shadow-sm"
           >
             <UserPlus size={16} />
             Thêm thành viên vào bảng
@@ -129,7 +129,7 @@ export function BoardMembersView() {
             </p>
             <button 
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-xl transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#1E3A8A] rounded-xl transition-all shadow-sm"
             >
               <UserPlus size={16} /> Thêm thành viên
             </button>

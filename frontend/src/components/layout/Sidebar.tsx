@@ -17,7 +17,7 @@ interface SidebarCtx {
 
 const Ctx = createContext<SidebarCtx>({ collapsed: false, showTip: () => {}, hideTip: () => {} });
 
-export function SidebarShell({ children, header }: { children: ReactNode; header?: ReactNode }) {
+export function SidebarShell({ children, header, footer }: { children: ReactNode; header?: ReactNode; /** Pinned to the bottom (help, account). */ footer?: ReactNode }) {
   const { isMobileSidebarOpen, closeMobileSidebar, isSidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
   // The phone drawer always shows labels.
   const collapsed = isSidebarCollapsed && !isMobileSidebarOpen;
@@ -62,6 +62,13 @@ export function SidebarShell({ children, header }: { children: ReactNode; header
         <nav className="flex-1 min-h-0 flex flex-col px-3.5 pb-3 overflow-y-auto overflow-x-hidden scrollbar-none" onScroll={hideTip}>
           {children}
         </nav>
+
+        {footer && (
+          // Fixed-height rows at the bottom, separated from the main menu.
+          <div className="shrink-0 flex flex-col gap-0.5 px-3.5 pt-2 pb-3 border-t border-border [&>a]:flex-none [&>a]:h-10 [&>a]:min-h-0">
+            {footer}
+          </div>
+        )}
       </aside>
 
       {tip && collapsed && (

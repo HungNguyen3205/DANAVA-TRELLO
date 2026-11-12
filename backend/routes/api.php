@@ -59,6 +59,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
         Route::patch('/departments/{id}/restore', [\App\Http\Controllers\Admin\DepartmentController::class, 'restore']);
         Route::post('/departments/{department}/employees', [\App\Http\Controllers\Admin\DepartmentController::class, 'assignEmployees']);
         Route::delete('/departments/{department}/employees/{user}', [\App\Http\Controllers\Admin\DepartmentController::class, 'removeEmployee']);
+        Route::post('/departments/{department}/cover', [\App\Http\Controllers\Admin\DepartmentCoverController::class, 'store'])->middleware('throttle:20,1');
+        Route::delete('/departments/{department}/cover', [\App\Http\Controllers\Admin\DepartmentCoverController::class, 'destroy']);
 
         // Department Telegram Management
         Route::get('/departments/{department}/telegram', [\App\Http\Controllers\Admin\DepartmentTelegramController::class, 'show']);
@@ -123,6 +125,20 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::get('/analytics/overview', [WorkspaceController::class, 'globalDashboard']);
 
     // Direct Boards (Hoàn toàn Board-first, không phụ thuộc vào Không gian làm việc)
+    // User guide (also used by the assistant)
+    Route::get('/guide', [\App\Http\Controllers\GuideController::class, 'index']);
+
+    // Projects: Project > Board > Column > Task
+    Route::get('/projects', [\App\Http\Controllers\ProjectController::class, 'index']);
+    Route::post('/projects', [\App\Http\Controllers\ProjectController::class, 'store']);
+    Route::get('/projects/{project}', [\App\Http\Controllers\ProjectController::class, 'show']);
+    Route::put('/projects/{project}', [\App\Http\Controllers\ProjectController::class, 'update']);
+    Route::delete('/projects/{project}', [\App\Http\Controllers\ProjectController::class, 'destroy']);
+    Route::post('/projects/{project}/boards', [\App\Http\Controllers\ProjectController::class, 'attachBoard']);
+    Route::delete('/projects/{project}/boards/{board}', [\App\Http\Controllers\ProjectController::class, 'detachBoard']);
+    Route::post('/projects/{project}/cover', [\App\Http\Controllers\ProjectController::class, 'uploadCover'])->middleware('throttle:20,1');
+    Route::delete('/projects/{project}/cover', [\App\Http\Controllers\ProjectController::class, 'removeCover']);
+
     Route::get('/boards', [BoardController::class, 'myBoards']);
     Route::post('/boards', [BoardController::class, 'storeDirect']);
     Route::get('/me/boards', [BoardController::class, 'myBoards']);

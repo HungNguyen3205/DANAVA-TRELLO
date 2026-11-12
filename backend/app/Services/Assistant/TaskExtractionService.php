@@ -41,14 +41,14 @@ class TaskExtractionService
         return $itemLines >= 2 || ($mentions >= 2 && count($lines) >= 3);
     }
 
-    /** Boards the user belongs to (where tasks may be created). */
+    /** Boards the user may create tasks in (member, owner, or manager of the board's project). */
     public function boardsFor(User $user): Collection
     {
         return Board::query()
-            ->where(fn ($q) => $q->where('owner_id', $user->id)
-                ->orWhereHas('members', fn ($m) => $m->where('users.id', $user->id)))
+            ->accessibleBy($user)
             ->orderBy('name')
-            ->get(['id', 'public_id', 'name', 'type', 'description', 'project_status']);
+            ->with('project:id,name')
+            ->get(['id', 'public_id', 'name', 'type', 'description', 'project_status', 'project_id']);
     }
 
     public function extract(User $user, string $text): array
@@ -80,8 +80,9 @@ class TaskExtractionService
             'boards' => $boards->map(fn ($b) => [
                 'id' => $b->id,
                 'name' => $b->name,
-                'type' => $b->type,
                 'public_id' => $b->public_id,
+                // Each board already belongs to a project, so only the board is chosen.
+                'project' => $b->project?->name,
             ])->values()->all(),
             'people' => array_map(fn ($p) => ['id' => $p['id'], 'name' => $p['name'], 'position' => $p['position']], $directory->summary()),
             'priorities' => self::PRIORITIES,
@@ -201,9 +202,14 @@ class TaskExtractionService
         foreach ($boards as $board) {
             $nameHits = array_intersect($words, VietnameseText::words($board->name));
             $descHits = array_intersect($words, VietnameseText::words((string) $board->description));
-            $score = count(array_unique([...$nameHits, ...$descHits]));
+            $projectHits = array_intersect($words, VietnameseText::words((string) $board->project?->name));
+            $hits = array_unique([...$nameHits, ...$descHits, ...$projectHits]);
+            // A project name is a strong hint: one matching word is enough when the project has only this board.
+            $onlyBoardOfProject = $board->project_id && $boards->where('project_id', $board->project_id)->count() === 1;
+            $score = count($hits) + ($projectHits && $onlyBoardOfProject ? 1 : 0);
             if ($score > $bestScore) {
-                $best = [$board->id, 'Trùng từ khóa: ' . implode(', ', array_slice(array_unique([...$nameHits, ...$descHits]), 0, 4))];
+                $reason = 'Trùng từ khóa: ' . implode(', ', array_slice($hits, 0, 4));
+                $best = [$board->id, $board->project ? $reason . ' (dự án ' . $board->project->name . ')' : $reason];
                 $bestScore = $score;
             }
         }
@@ -261,7 +267,7 @@ class TaskExtractionService
         $boardList = $boards->map(fn ($b) => [
             'id' => $b->id,
             'name' => $b->name,
-            'type' => $b->type === 'project' ? 'dự án' : 'bảng công việc',
+            'project' => $b->project?->name,
             'description' => mb_substr((string) $b->description, 0, 300),
         ])->values()->all();
 
@@ -272,7 +278,7 @@ Quy tắc:
 - title: ngắn gọn, rõ hành động, KHÔNG chứa tên người, tối đa 120 ký tự. details: giữ nguyên ý gốc và bổ sung ngữ cảnh liên quan trong tin nhắn.
 - assignee_user_ids: chỉ dùng id có trong danh sách NHÂN VIÊN. So khớp theo tên, tên gọi tắt, biệt danh (aliases); không phân biệt dấu/hoa thường. Nếu tên có thể là nhiều người hoặc không chắc, KHÔNG đoán: để trống và ghi tên gốc vào unmatched_mentions.
 - "@All" nghĩa là cả nhóm, không phải một người.
-- board_id: chọn bảng/dự án phù hợp nhất theo nội dung từ danh sách BẢNG; không chắc thì null. board_reason: giải thích ngắn.
+- board_id: chọn BẢNG phù hợp nhất trong danh sách BẢNG (mỗi bảng có ghi dự án chứa nó). Có thể dựa vào tên bảng, mô tả hoặc tên dự án được nhắc trong tin nhắn; nếu dự án chỉ có một bảng thì chọn bảng đó. Không cần và không được hỏi dự án, vì dự án đã xác định theo bảng. Không chắc thì null. board_reason: giải thích ngắn.
 - priority: một trong "Thấp", "Bình thường", "Cao", "Khẩn cấp". Có chữ GẤP/khẩn/chốt hôm nay thì "Khẩn cấp". Ghi chú gấp ở cuối tin nhắn áp dụng cho việc liên quan.
 - done = true nếu việc được ghi là DONE/đã xong.
 - due_date: YYYY-MM-DD nếu có hạn (hôm nay = {$this->today()}), ngược lại null.

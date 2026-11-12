@@ -62,7 +62,7 @@ export function BoardCodeGuard() {
         </p>
         <Link
           to="/boards"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-[#5B4BD6] transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-[#1E3A8A] transition-colors shadow-sm"
         >
           <ArrowLeft size={16} /> Quay về Bảng của tôi
         </Link>
@@ -82,7 +82,7 @@ export function BoardCodeGuard() {
         </p>
         <Link
           to="/boards"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-[#5B4BD6] transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-[#1E3A8A] transition-colors shadow-sm"
         >
           <ArrowLeft size={16} /> Quay về Bảng của tôi
         </Link>

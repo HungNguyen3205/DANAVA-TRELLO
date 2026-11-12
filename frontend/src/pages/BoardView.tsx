@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
-import { Search, Plus, Archive, FileSpreadsheet } from 'lucide-react';
+import { Search, Plus, Archive, FileSpreadsheet, FolderInput } from 'lucide-react';
+import { MoveBoardDialog } from '../components/project/MoveBoardDialog';
 import api from '../lib/axios';
 import { toast } from 'sonner';
 import type { Board, Task, Column } from '../types';
@@ -23,6 +24,7 @@ export function BoardView() {
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
   const [showArchivedModal, setShowArchivedModal] = useState(false);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
+  const [showMoveBoard, setShowMoveBoard] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isStarred, setIsStarred] = useState(false);
 
@@ -269,6 +271,9 @@ export function BoardView() {
             menuItems={[
               { icon: <FileSpreadsheet size={16} className="text-emerald-600 dark:text-emerald-400" />, label: 'Nhập từ Excel', hint: 'Tạo nhiều công việc từ file', onClick: () => setShowExcelImportModal(true) },
               { icon: <Archive size={16} className="text-amber-600 dark:text-amber-400" />, label: 'Cột lưu trữ', hint: 'Xem và khôi phục cột đã lưu trữ', onClick: () => setShowArchivedModal(true) },
+              ...(board.is_owner || board.my_role === 'admin' || board.my_role === 'owner'
+                ? [{ icon: <FolderInput size={16} className="text-primary" />, label: 'Chuyển sang dự án khác', hint: board.project ? `Đang ở: ${board.project.name}` : 'Chưa thuộc dự án', onClick: () => setShowMoveBoard(true) }]
+                : []),
             ]}
           >
             {/* Search: an icon on phones that opens when tapped, a box on larger screens */}
@@ -289,7 +294,7 @@ export function BoardView() {
                 type="button"
                 onClick={() => handleAdd(board.columns[0]?.id)}
                 title="Thêm công việc"
-                className="h-8 w-8 sm:w-auto sm:px-3.5 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] active:scale-[0.98] rounded-full transition-all shadow-xs whitespace-nowrap shrink-0"
+                className="h-8 w-8 sm:w-auto sm:px-3.5 inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold text-brand-foreground bg-brand hover:brightness-95 active:scale-[0.98] rounded-full transition-all shadow-xs whitespace-nowrap shrink-0"
               >
                 <Plus size={16} className="shrink-0 stroke-[2.5]" />
                 <span className="hidden sm:inline">Thêm việc</span>
@@ -364,6 +369,17 @@ export function BoardView() {
             (user && board.users?.some(u => String(u.id) === String(user.id) && (u.role === 'admin' || u.role === 'owner')))
           )}
           onClose={() => setShowArchivedModal(false)}
+        />
+      )}
+
+      {showMoveBoard && (
+        <MoveBoardDialog
+          board={{ id: Number(board.id), name: board.title, project_id: board.project_id ?? null }}
+          onClose={() => setShowMoveBoard(false)}
+          onMoved={() => {
+            setShowMoveBoard(false);
+            fetchBoard(boardId, true);
+          }}
         />
       )}
 

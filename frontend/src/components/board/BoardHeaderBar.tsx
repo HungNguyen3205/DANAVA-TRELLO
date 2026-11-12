@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreHorizontal, Share2, Star } from 'lucide-react';
+import { ChevronRight, MoreHorizontal, Share2, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Board } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { useBoardRoute } from '../layout/BoardRouteContext';
@@ -78,6 +79,15 @@ export function BoardHeaderBar({
   const content = (
     <div className={`flex items-center gap-1.5 sm:gap-2 min-w-0 w-full ${slot ? 'pl-2 sm:pl-3 ml-1 sm:ml-2 border-l border-border' : className}`}>
       <div className="flex items-center gap-0.5 min-w-0 flex-1">
+        {board.project && (
+          <>
+            <Link to={`/projects/${board.project.id}`} title={`Dự án: ${board.project.name}`}
+              className="hidden sm:block max-w-[12rem] truncate text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              {board.project.name}
+            </Link>
+            <ChevronRight size={14} className="hidden sm:block shrink-0 text-muted-foreground/60" aria-hidden="true" />
+          </>
+        )}
         <h1 className="text-sm sm:text-[15px] font-bold tracking-tight text-foreground truncate" title={board.title}>
           {board.title}
         </h1>

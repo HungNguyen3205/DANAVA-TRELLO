@@ -152,4 +152,23 @@ class AssistantKnowledgeTest extends TestCase
                 && !str_contains($system, '@'); // no e-mail addresses
         });
     }
+
+    public function test_how_to_questions_are_answered_from_the_user_guide(): void
+    {
+        $reply = $this->ask('Làm sao để mời người vào bảng?');
+
+        $this->assertStringContainsString('Mời thành viên', $reply);
+        $this->assertStringContainsString('1. ', $reply);
+        $this->assertStringContainsString('Hướng dẫn sử dụng', $reply);
+        $this->assertStringNotContainsString('Việc của anh/chị', $reply); // no task list mixed in
+    }
+
+    public function test_guide_page_lists_sections_without_internal_keywords(): void
+    {
+        $sections = $this->actingAs($this->me)->getJson('/api/guide')->assertOk()->json('sections');
+
+        $this->assertNotEmpty($sections);
+        $this->assertArrayHasKey('steps', $sections[0]);
+        $this->assertArrayNotHasKey('keywords', $sections[0]);
+    }
 }

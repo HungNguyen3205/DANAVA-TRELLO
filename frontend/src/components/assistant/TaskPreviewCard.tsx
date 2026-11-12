@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, Loader2, X, Sparkles, UserPlus, ExternalLink, FolderKanban, LayoutGrid } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Loader2, X, Sparkles, UserPlus, ExternalLink, LayoutGrid } from 'lucide-react';
 import { Picker } from './Picker';
 import { toast } from 'sonner';
 import { assistantApi, type ApplyItem, type ApplyResult, type TaskDraft, type TaskPreview } from '../../lib/api/assistant';
@@ -58,8 +58,8 @@ export function TaskPreviewCard({ messageId, preview, onApplied }: { messageId: 
       preview.boards.map((b) => ({
         value: b.id,
         label: b.name,
-        hint: b.type === 'project' ? 'Dự án' : 'Bảng công việc',
-        icon: b.type === 'project' ? <FolderKanban size={14} className="shrink-0 text-orange-500" /> : <LayoutGrid size={14} className="shrink-0 text-primary" />,
+        hint: b.project ? `Dự án: ${b.project}` : 'Chưa thuộc dự án',
+        icon: <LayoutGrid size={14} className="shrink-0 text-primary" />,
       })),
     [preview.boards],
   );

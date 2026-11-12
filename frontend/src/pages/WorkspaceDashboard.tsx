@@ -321,8 +321,8 @@ export function WorkspaceDashboard() {
                 <AreaChart data={data.activity_trend} margin={{ top: 16, right: 12, left: -16, bottom: 0 }}>
                   <defs>
                     <linearGradient id="createdGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7C5CFC" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#7C5CFC" stopOpacity={0.0} />
+                      <stop offset="0%" stopColor="#2F4CB0" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#2F4CB0" stopOpacity={0.0} />
                     </linearGradient>
                     <linearGradient id="completedGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#10B981" stopOpacity={0.35} />
@@ -338,7 +338,7 @@ export function WorkspaceDashboard() {
                     type="monotone"
                     dataKey="created"
                     name="Tạo mới"
-                    stroke="#7C5CFC"
+                    stroke="#2F4CB0"
                     strokeWidth={2.5}
                     fill="url(#createdGrad)"
                   />

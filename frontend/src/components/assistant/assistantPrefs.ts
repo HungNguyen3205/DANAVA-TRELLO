@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 export interface AssistantPrefs {
   eyeColor: string;
   ringColor: string;
+  /** Introduce each page (what it is for) when it is opened. */
+  pageIntros: boolean;
 }
 
 export const EYE_PRESETS = [
@@ -23,7 +25,7 @@ export const RING_PRESETS = [
   { name: 'Đen', value: '#1e293b' },
 ];
 
-export const DEFAULT_PREFS: AssistantPrefs = { eyeColor: '#00f5ff', ringColor: '#0070f3' };
+export const DEFAULT_PREFS: AssistantPrefs = { eyeColor: '#00f5ff', ringColor: '#0070f3', pageIntros: true };
 
 const KEY = 'assistant-robot-prefs';
 const EVENT = 'assistant-prefs-changed';
@@ -35,6 +37,7 @@ export function loadPrefs(): AssistantPrefs {
     return {
       eyeColor: HEX.test(raw.eyeColor) ? raw.eyeColor : DEFAULT_PREFS.eyeColor,
       ringColor: HEX.test(raw.ringColor) ? raw.ringColor : DEFAULT_PREFS.ringColor,
+      pageIntros: raw.pageIntros !== false,
     };
   } catch {
     return DEFAULT_PREFS;

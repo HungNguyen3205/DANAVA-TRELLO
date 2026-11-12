@@ -419,7 +419,8 @@ class KanbanController extends Controller
         // ACTION: delete_all (Only Board Owner allowed)
         if ($action === 'delete_all') {
             $board = Board::find($column->board_id);
-            $isOwner = ($board && (int)$board->owner_id === (int)$userId);
+            $isOwner = ($board && ((int)$board->owner_id === (int)$userId
+                || app(\App\Services\BoardAccessService::class)->isProjectManager($request->user(), $board)));
             if (!$isOwner) {
                 $isOwnerMember = DB::table('board_members')
                     ->where('board_id', $column->board_id)

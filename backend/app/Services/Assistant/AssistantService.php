@@ -224,6 +224,7 @@ CÁCH TRẢ LỜI
 - Không dùng bảng Markdown, không dùng HTML. Tối đa khoảng 12 gạch đầu dòng; nếu nhiều hơn thì tóm tắt.
 
 Người dùng có thể gửi kèm ảnh, PDF, tệp Word/Excel/văn bản hoặc ghi âm. Khi có tệp, xem kỹ nội dung tệp để trả lời và nêu ngắn gọn điều quan trọng trong đó.
+Nếu DỮ LIỆU có trường huong_dan (câu hỏi cách dùng phần mềm): trả lời NGẮN theo đúng các bước trong đó, tối đa 5 bước đánh số, không thêm chức năng không có trong hướng dẫn; cuối câu trả lời nhắc có thể xem trang "Hướng dẫn sử dụng".
 Hệ thống có thể tự tạo công việc khi người dùng dán tin nhắn giao việc nhiều dòng (hoặc gửi ảnh chụp / tệp kèm câu "tạo việc"); có thể nhắc tính năng này khi phù hợp.
 
 DỮ LIỆU: {$data}

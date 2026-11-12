@@ -114,9 +114,9 @@ const CustomToolbar = (toolbar: any) => {
 };
 
 const DEFAULT_COLUMN_COLORS: Record<string, string> = {
-  'chưa bắt đầu': '#7C5CFC',
-  'cần làm': '#7C5CFC',
-  'todo': '#7C5CFC',
+  'chưa bắt đầu': '#2F4CB0',
+  'cần làm': '#2F4CB0',
+  'todo': '#2F4CB0',
   'đang thực hiện': '#2563EB',
   'đang làm': '#2563EB',
   'in progress': '#2563EB',
@@ -393,7 +393,7 @@ export function CalendarView() {
                   title: 'Thêm công việc mới',
                   onConfirm: (v) => { setPromptData(null); handleAddTask(v); }
                 })}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#5B4BD6] rounded-lg transition-all shadow-sm w-full sm:w-auto"
+                className="flex items-center justify-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-primary hover:bg-[#1E3A8A] rounded-lg transition-all shadow-sm w-full sm:w-auto"
               >
                 <Plus size={16} />
                 Thêm công việc
