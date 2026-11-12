@@ -32,9 +32,10 @@ class UserGuide
                 'Nhập tên, mô tả, trạng thái và thời hạn rồi bấm **Tạo dự án**.',
                 'Trong dự án: **Chỉnh sửa** để đổi thông tin và chọn **Quản lý dự án**.',
                 'Bấm **Màu & ảnh bìa** để đổi màu nhận diện và tải ảnh bìa.',
+                'Mục **Tài liệu dự án**: kéo thả hồ sơ, kế hoạch, hợp đồng… (tối đa 20MB mỗi tệp) để mọi người trong dự án cùng xem và tải.',
                 'Chủ dự án và quản lý dự án có **toàn quyền** trên mọi bảng trong dự án.',
             ],
-            'keywords' => ['tao du an', 'du an moi', 'quan ly du an', 'sua du an', 'xoa du an', 'anh bia', 'mau du an', 'tien do du an', 'nguoi quan ly'],
+            'keywords' => ['tao du an', 'du an moi', 'quan ly du an', 'tai lieu', 'tai lieu du an', 'up file', 'tai file', 'dinh kem du an', 'ho so du an', 'sua du an', 'xoa du an', 'anh bia', 'mau du an', 'tien do du an', 'nguoi quan ly'],
         ],
         [
             'id' => 'bang',

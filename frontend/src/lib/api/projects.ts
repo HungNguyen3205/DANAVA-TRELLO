@@ -51,6 +51,7 @@ export interface ProjectDetail extends ProjectSummary {
   stats: ProjectStats;
   members: PersonLite[];
   hidden_boards_count: number;
+  files_count?: number;
   boards: ProjectBoard[];
 }
 
@@ -86,3 +87,38 @@ export const projectsApi = {
 export const PROJECT_COLORS = ['#1E3A8A', '#F47624', '#0E7490', '#15803D', '#B45309', '#BE123C', '#475569', '#0369A1'];
 
 export const projectColor = (p: { color: string | null; id: number }) => p.color || PROJECT_COLORS[p.id % PROJECT_COLORS.length];
+
+// ---------------- Project documents ----------------
+
+export interface ProjectFile {
+  id: number;
+  name: string;
+  mime: string | null;
+  size: number;
+  uploaded_by: PersonLite | null;
+  created_at: string | null;
+  /** Signed links (relative to the API host), valid for a few hours. */
+  download_url: string;
+  view_url: string;
+  can_delete: boolean;
+}
+
+export const projectFilesApi = {
+  list: (projectId: number) => api.get<ProjectFile[]>(`/projects/${projectId}/files`).then((r) => r.data),
+  upload: (projectId: number, files: File[], onProgress?: (percent: number) => void) => {
+    const form = new FormData();
+    files.forEach((f) => form.append('files[]', f, f.name));
+    return api
+      .post<{ message: string; files: ProjectFile[] }>(`/projects/${projectId}/files`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 300000,
+        onUploadProgress: (e) => e.total && onProgress?.(Math.round((e.loaded * 100) / e.total)),
+      })
+      .then((r) => r.data);
+  },
+  remove: (projectId: number, fileId: number) => api.delete<{ message: string }>(`/projects/${projectId}/files/${fileId}`).then((r) => r.data),
+};
+
+export const PROJECT_FILE_ACCEPT =
+  '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.txt,.csv,.md,.jpg,.jpeg,.png,.webp,.gif,.heic,.svg,.psd,.ai,.fig,.zip,.rar,.7z,.mp4,.mov,.mp3,.wav';
+export const PROJECT_FILE_MAX_BYTES = 20 * 1024 * 1024;

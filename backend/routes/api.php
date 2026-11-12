@@ -27,6 +27,11 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 
 // Chat attachments are shown with <img>/<audio>, which cannot send the auth header,
 // so they are served through short-lived signed links handed out to the owner only.
+// Project documents: opened/downloaded through short-lived signed links (handed out to project members only).
+Route::get('/project-files/{file}', [\App\Http\Controllers\ProjectFileController::class, 'download'])
+    ->name('project-files.download')
+    ->middleware(['signed:relative', 'throttle:120,1']);
+
 Route::get('/assistant/files/{message}/{file}', [\App\Http\Controllers\AssistantController::class, 'file'])
     ->name('assistant.file')
     ->middleware(['signed:relative', 'throttle:120,1']);
@@ -136,6 +141,9 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::delete('/projects/{project}', [\App\Http\Controllers\ProjectController::class, 'destroy']);
     Route::post('/projects/{project}/boards', [\App\Http\Controllers\ProjectController::class, 'attachBoard']);
     Route::delete('/projects/{project}/boards/{board}', [\App\Http\Controllers\ProjectController::class, 'detachBoard']);
+    Route::get('/projects/{project}/files', [\App\Http\Controllers\ProjectFileController::class, 'index']);
+    Route::post('/projects/{project}/files', [\App\Http\Controllers\ProjectFileController::class, 'store'])->middleware('throttle:30,1');
+    Route::delete('/projects/{project}/files/{file}', [\App\Http\Controllers\ProjectFileController::class, 'destroy']);
     Route::post('/projects/{project}/cover', [\App\Http\Controllers\ProjectController::class, 'uploadCover'])->middleware('throttle:20,1');
     Route::delete('/projects/{project}/cover', [\App\Http\Controllers\ProjectController::class, 'removeCover']);
 

@@ -25,6 +25,11 @@ class Project extends Model
         return $this->hasMany(Board::class);
     }
 
+    public function files()
+    {
+        return $this->hasMany(ProjectFile::class);
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');

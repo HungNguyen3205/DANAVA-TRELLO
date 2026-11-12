@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, FolderInput, LayoutGrid, ListTodo, Palette, Pencil, Trash2, UserRound } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, FolderInput, LayoutGrid, ListTodo, Palette, Paperclip, Pencil, Trash2, UserRound } from 'lucide-react';
 import { getAvatarUrl } from '../lib/avatar';
 import { ProjectAppearanceModal } from '../components/project/ProjectAppearanceModal';
+import { ProjectFilesPanel } from '../components/project/ProjectFilesPanel';
 import { toast } from 'sonner';
 import api from '../lib/axios';
 import { formatDateVi } from '../lib/boardType';
@@ -120,6 +121,16 @@ export function ProjectDetailPage() {
             </div>
           )}
           </div>
+        </section>
+
+        {/* Shared documents */}
+        <section aria-labelledby="project-files-title" className="rounded-xl border border-border bg-card p-5 space-y-3">
+          <h2 id="project-files-title" className="text-base font-bold text-foreground flex items-center gap-2">
+            <Paperclip size={18} className="text-primary" /> Tài liệu dự án
+            {!!project.files_count && <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-semibold">{project.files_count}</span>}
+          </h2>
+          <p className="text-xs text-muted-foreground -mt-1">Hồ sơ, kế hoạch, hợp đồng… để mọi người trong dự án cùng nắm rõ.</p>
+          <ProjectFilesPanel key={reloadKey} projectId={project.id} />
         </section>
 
         {/* Boards: the same grid as the "Bảng công việc" page, limited to this project */}

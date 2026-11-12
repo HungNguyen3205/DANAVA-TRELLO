@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Check, Loader2, X } from 'lucide-react';
+import { Check, Loader2, Paperclip, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PROJECT_STATUS_OPTIONS, type ProjectStatus } from '../../lib/boardType';
-import { PROJECT_COLORS, projectsApi, type PersonLite, type ProjectSummary } from '../../lib/api/projects';
+import { PROJECT_COLORS, projectFilesApi, projectsApi, type PersonLite, type ProjectSummary } from '../../lib/api/projects';
+import { FileDropZone, ProjectFilesPanel } from './ProjectFilesPanel';
+import { checkProjectFiles, formatBytes } from './projectFileUtils';
 
 /** Create a project, or edit one when `project` is given. */
 export function ProjectFormModal({
@@ -25,6 +27,9 @@ export function ProjectFormModal({
   const [color, setColor] = useState(project?.color ?? PROJECT_COLORS[0]);
   const [managerId, setManagerId] = useState<number | ''>(project?.manager?.id ?? '');
   const [saving, setSaving] = useState(false);
+  // New project: documents picked now are uploaded right after the project is created.
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const dateError = start && end && end < start ? 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.' : '';
 
@@ -43,7 +48,17 @@ export function ProjectFormModal({
     };
     try {
       const saved = project ? await projectsApi.update(project.id, payload) : await projectsApi.create(payload);
-      toast.success(project ? 'Đã lưu dự án.' : 'Đã tạo dự án.');
+      if (!project && pendingFiles.length) {
+        try {
+          setUploadProgress(0);
+          for (let i = 0; i < pendingFiles.length; i += 10) {
+            await projectFilesApi.upload(saved.id, pendingFiles.slice(i, i + 10), setUploadProgress);
+          }
+        } catch {
+          toast.error('Đã tạo dự án nhưng chưa tải lên được một số tài liệu. Anh/chị thử lại trong trang dự án.');
+        }
+      }
+      toast.success(project ? 'Đã lưu dự án.' : `Đã tạo dự án${pendingFiles.length ? ` kèm ${pendingFiles.length} tài liệu` : ''}.`);
       onSaved(saved);
     } catch (err: any) {
       const errors = err?.response?.data?.errors;
@@ -60,7 +75,7 @@ export function ProjectFormModal({
       <form
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl"
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl"
         aria-labelledby="project-form-title"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -115,6 +130,32 @@ export function ProjectFormModal({
               </select>
             </label>
           )}
+
+          <div>
+            <div className="text-sm font-medium text-foreground mb-1.5 flex items-center gap-1.5"><Paperclip size={15} /> Tài liệu dự án</div>
+            <p className="text-xs text-muted-foreground mb-2">Tài liệu ở đây mọi người trong dự án đều xem và tải được.</p>
+            {project ? (
+              <ProjectFilesPanel projectId={project.id} />
+            ) : (
+              <div className="space-y-2">
+                <FileDropZone busy={uploadProgress !== null} progress={uploadProgress}
+                  onFiles={(picked) => setPendingFiles((list) => [...list, ...checkProjectFiles(picked)])} />
+                {pendingFiles.length > 0 && (
+                  <ul className="rounded-xl border border-border divide-y divide-border">
+                    {pendingFiles.map((f, i) => (
+                      <li key={`${f.name}-${i}`} className="flex items-center gap-2 px-3 py-2 text-sm">
+                        <Paperclip size={14} className="shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1 truncate" title={f.name}>{f.name}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatBytes(f.size)}</span>
+                        <button type="button" onClick={() => setPendingFiles((list) => list.filter((_, j) => j !== i))}
+                          className="p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={`Bỏ ${f.name}`}><X size={14} /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
 
           <div>
             <div className="text-sm font-medium text-foreground mb-1.5">Màu nhận diện</div>

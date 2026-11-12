@@ -74,6 +74,7 @@ class ProjectController extends Controller
             'stats' => $this->sumStats($stats, $allBoardIds),
             'members' => $this->unionMembers($members, $allBoardIds)->values(),
             'hidden_boards_count' => $allBoardIds->count() - $boards->count(),
+            'files_count' => $project->files()->count(),
             'boards' => $boards->map(fn (Board $b) => [
                 'id' => $b->id,
                 'public_id' => $b->public_id,
@@ -107,6 +108,7 @@ class ProjectController extends Controller
             $project->delete();
         });
         $this->deleteCoverFile($project->cover_image);
+        ProjectFileController::deleteAllFor($project);
 
         return response()->json(['message' => 'Đã xóa dự án. Các bảng vẫn được giữ nguyên.']);
     }
