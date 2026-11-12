@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import {
   SortableContext,
   useSortable,
@@ -90,6 +91,10 @@ export function BoardColumn({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // The column clips its content, so the "⋯" menu is rendered on <body> next to its button.
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [menuPos, setMenuPos] = useState<CSSProperties | null>(null);
   const fetchBoard = useBoardStore((state) => state.fetchBoard);
 
   // WIP calculations: Only parent/root tasks count towards WIP limit
@@ -108,18 +113,41 @@ export function BoardColumn({
   // Close dropdown menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target) && !dropdownRef.current?.contains(target)) {
         setShowMenu(false);
         setShowColorPicker(false);
       }
     };
+    // Scrolling the board would leave the menu behind: close it instead.
+    const close = () => {
+      setShowMenu(false);
+      setShowColorPicker(false);
+    };
     if (showMenu || showColorPicker) {
       document.addEventListener("mousedown", handleClickOutside);
+      window.addEventListener("resize", close);
+      document.addEventListener("scroll", close, true);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("scroll", close, true);
     };
   }, [showMenu, showColorPicker]);
+
+  /** Place the menu under the "⋯" button (or above it near the bottom of the screen). */
+  const openMenu = () => {
+    const r = menuButtonRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const right = Math.max(8, window.innerWidth - r.right);
+    const roomBelow = window.innerHeight - r.bottom;
+    setMenuPos(roomBelow < 320 && r.top > roomBelow
+      ? { right, bottom: window.innerHeight - r.top + 4, maxHeight: r.top - 12, overflowY: 'auto' }
+      : { right, top: r.bottom + 4, maxHeight: roomBelow - 12, overflowY: 'auto' });
+    setShowMenu(true);
+    setShowColorPicker(false);
+  };
 
   const executeCreateTask = async (title: string) => {
     setIsSubmitting(true);
@@ -257,11 +285,17 @@ export function BoardColumn({
 
             {/* Three Dots Menu Button */}
             <button
+              ref={menuButtonRef}
               className="p-1 text-muted-foreground hover:text-foreground hover:bg-black/5 rounded transition-colors"
               onClick={() => {
-                setShowMenu(!showMenu);
-                setShowColorPicker(false);
+                if (showMenu) {
+                  setShowMenu(false);
+                  setShowColorPicker(false);
+                } else {
+                  openMenu();
+                }
               }}
+              aria-expanded={showMenu}
               aria-label={`Tùy chọn cột: ${column.title}`}
               title="Tùy chọn cột"
             >
@@ -269,8 +303,8 @@ export function BoardColumn({
             </button>
 
             {/* Dropdown Menu */}
-            {showMenu && (
-              <div className="absolute top-full right-0 mt-1 bg-card border border-border shadow-xl rounded-xl p-1.5 z-50 min-w-[190px] animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
+            {showMenu && menuPos && createPortal(
+              <div ref={dropdownRef} style={menuPos} className="fixed z-[70] bg-card border border-border shadow-xl rounded-xl p-1.5 z-50 min-w-[190px] animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
                 {/* Rename */}
                 {canEditColumn && (
                   <button
@@ -357,7 +391,7 @@ export function BoardColumn({
                   </>
                 )}
               </div>
-            )}
+            , document.body)}
           </div>
         </header>
       

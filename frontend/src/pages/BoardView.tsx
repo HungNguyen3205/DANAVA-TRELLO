@@ -21,7 +21,7 @@ export function BoardView() {
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const user = useAuthStore((state) => state.user);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
+  const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; defaultValue?: string; onConfirm: (v: string) => void } | null>(null);
   const [showArchivedModal, setShowArchivedModal] = useState(false);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [showMoveBoard, setShowMoveBoard] = useState(false);
@@ -180,6 +180,8 @@ export function BoardView() {
       setPromptData({
         isOpen: true,
         title: `Đổi tên cột "${c.title}"`,
+        // Start from the current name so a small fix does not mean retyping it.
+        defaultValue: c.title,
         onConfirm: async (title) => {
           if (!title?.trim()) {
             setPromptData(null);
@@ -352,6 +354,7 @@ export function BoardView() {
         <PromptModal 
           isOpen={promptData.isOpen}
           title={promptData.title}
+          defaultValue={promptData.defaultValue}
           onConfirm={promptData.onConfirm}
           onCancel={() => setPromptData(null)}
         />
