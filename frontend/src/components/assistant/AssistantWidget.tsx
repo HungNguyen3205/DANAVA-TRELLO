@@ -442,6 +442,8 @@ export function AssistantWidget() {
   };
 
   const name = state?.name ?? 'Trợ lý công việc DANAVA';
+  // Address the user as "anh" / "chị" from their profile gender.
+  const xh = user?.gender === 'Nam' ? 'anh' : user?.gender === 'Nữ' ? 'chị' : 'anh/chị';
 
   const reminder = reminderOpen && settings && !open && (
     <section className="asst-reminder" role="dialog" aria-label="Cài đặt khóa Gemini cho trợ lý">
@@ -487,7 +489,7 @@ export function AssistantWidget() {
           <button type="button" onClick={() => setGreet(null)} className="p-1.5 rounded-lg hover:bg-white/15" aria-label="Đóng"><X size={18} /></button>
         </header>
         <div className="p-3.5 space-y-2">
-          <div className="text-sm text-foreground leading-relaxed"><MarkdownLite text={greet.text} /></div>
+          <div className="text-sm text-foreground leading-relaxed"><MarkdownLite text={greet.text.replaceAll('anh/chị', xh)} /></div>
           {greet.suggestions.map(([label, q]) => (
             <button key={label} type="button" onClick={() => askNow(q)}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-border text-left text-sm text-foreground hover:bg-accent hover:border-ring/40 transition-colors">
@@ -632,9 +634,9 @@ export function AssistantWidget() {
               {!loadingHistory && messages.length === 0 && (
                 <div className="space-y-3">
                   <div className="rounded-2xl rounded-tl-sm bg-card border border-border px-3.5 py-2.5 text-sm text-foreground max-w-[90%]">
-                    Em chào anh/chị! Em là <b>{name}</b> 👋{'\n'}
+                    Em chào {xh}! Em là <b>{name}</b> 👋{'\n'}
                     <span className="block mt-1 text-muted-foreground">
-                      Anh/chị có thể hỏi em về công việc, chấm công, hoặc <b>dán tin nhắn giao việc</b> (mỗi việc một dòng, có @tên) để em tạo công việc vào đúng bảng.
+                      {xh.charAt(0).toUpperCase() + xh.slice(1)} có thể hỏi em về công việc, chấm công, hoặc <b>dán tin nhắn giao việc</b> (mỗi việc một dòng, có @tên) để em tạo công việc vào đúng bảng.
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">

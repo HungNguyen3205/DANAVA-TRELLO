@@ -11,6 +11,13 @@ class EmployeeAuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function department(): \App\Models\Department
+    {
+        return \App\Models\Department::firstOrCreate(['code' => 'KT'], [
+            'name' => 'Phòng Kỹ thuật', 'status' => 'active', 'created_by' => User::factory()->create()->id,
+        ]);
+    }
+
     public function test_cannot_call_register()
     {
         // Public registration must always be blocked (403)
@@ -33,6 +40,8 @@ class EmployeeAuthTest extends TestCase
         $response = $this->postJson('/api/login', [
             'login' => 'test@example.com',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ]);
 
         $response->assertStatus(200)->assertJsonStructure(['access_token', 'user']);
@@ -48,6 +57,8 @@ class EmployeeAuthTest extends TestCase
         $response = $this->postJson('/api/login', [
             'login' => 'testuser',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ]);
 
         $response->assertStatus(200)->assertJsonStructure(['access_token', 'user']);
@@ -64,6 +75,8 @@ class EmployeeAuthTest extends TestCase
         $response = $this->postJson('/api/login', [
             'login' => 'lockeduser',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ]);
 
         $response->assertStatus(422);
@@ -80,6 +93,8 @@ class EmployeeAuthTest extends TestCase
         $response = $this->postJson('/api/login', [
             'login' => 'deleteduser',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ]);
 
         $response->assertStatus(422);
@@ -97,6 +112,8 @@ class EmployeeAuthTest extends TestCase
                              'name' => 'New Employee',
                              'username' => 'newemp',
                              'password' => 'Password@123',
+                             'gender' => 'Nam',
+                             'department_id' => $this->department()->id,
                          ]);
 
         $response->assertStatus(403);
@@ -116,6 +133,8 @@ class EmployeeAuthTest extends TestCase
                              'password' => 'Password@123',
                              'email' => 'nguyenvana@danava.vn',
                              'position' => 'Lập trình viên backend',
+                             'gender' => 'Nữ',
+                             'department_id' => $this->department()->id,
                          ]);
 
         $response->assertStatus(201);
@@ -142,6 +161,8 @@ class EmployeeAuthTest extends TestCase
                              'name' => 'Short Pass User',
                              'username' => 'shortpass',
                              'password' => '123456', // only 6 chars
+                             'gender' => 'Nam',
+                             'department_id' => $this->department()->id,
                          ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['password']);
@@ -161,6 +182,8 @@ class EmployeeAuthTest extends TestCase
                              'name' => 'Duplicate User',
                              'username' => 'existinguser',
                              'password' => 'Password@123',
+                             'gender' => 'Nam',
+                             'department_id' => $this->department()->id,
                          ]);
 
         $response->assertStatus(422);

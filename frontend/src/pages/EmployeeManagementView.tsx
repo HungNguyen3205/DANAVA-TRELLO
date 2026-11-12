@@ -469,10 +469,15 @@ function CreateEmployeeModal({
   const [position, setPosition] = useState('');
   const [role, setRole] = useState('user');
   const [departmentId, setDepartmentId] = useState<string>('');
+  const [gender, setGender] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!gender || !departmentId) {
+      toast.error('Vui lòng chọn giới tính và phòng ban');
+      return;
+    }
     if (password.length < 8) {
       toast.error('Mật khẩu tạm phải có tối thiểu 8 ký tự');
       return;
@@ -487,13 +492,16 @@ function CreateEmployeeModal({
         email: email.trim() ? email.trim() : null,
         position: position.trim() ? position.trim() : null,
         system_role: role,
-        department_id: departmentId ? Number(departmentId) : null,
+        gender,
+        department_id: Number(departmentId),
       });
       toast.success('Đã tạo tài khoản nhân viên thành công');
       onCreated();
       onClose();
     } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Lỗi khi tạo tài khoản');
+      const errors = e.response?.data?.errors;
+      const first = errors ? (Object.values(errors)[0] as string[])?.[0] : null;
+      toast.error(first || e.response?.data?.message || 'Lỗi khi tạo tài khoản');
     } finally {
       setIsSubmitting(false);
     }
@@ -514,14 +522,14 @@ function CreateEmployeeModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">
-                Tên hiển thị <span className="text-rose-500">*</span>
+                Họ và tên <span className="text-rose-500">*</span>
               </label>
-              <input 
-                required 
-                type="text" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
-                placeholder="VD: Nguyễn Văn A" 
+              <input
+                required
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="VD: Nguyễn Văn A"  
                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" 
               />
             </div>
@@ -575,41 +583,57 @@ function CreateEmployeeModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Chức vụ (Tùy chọn)</label>
-              <input 
-                type="text" 
-                value={position} 
-                onChange={e => setPosition(e.target.value)} 
-                placeholder="VD: Kỹ sư phần mềm" 
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" 
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Phòng ban (Tùy chọn)</label>
+              <label className="block text-xs font-semibold text-foreground mb-1">
+                Phòng ban <span className="text-rose-500">*</span>
+              </label>
               <select
+                required
                 value={departmentId}
                 onChange={e => setDepartmentId(e.target.value)}
                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               >
-                <option value="">-- Chưa phân phòng --</option>
+                <option value="" disabled>-- Chọn phòng ban --</option>
                 {departments.map(d => (
                   <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                 ))}
               </select>
+              {departments.length === 0 && (
+                <p className="text-[11px] text-amber-600 mt-1">Chưa có phòng ban nào, hãy tạo phòng ban trước.</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">
+                Giới tính <span className="text-rose-500">*</span>
+              </label>
+              <GenderSelect value={gender} onChange={setGender} required />
+              <p className="text-[11px] text-muted-foreground mt-1">Trợ lý dùng để xưng hô anh/chị cho đúng.</p>
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Vai trò hệ thống</label>
-            <select 
-              value={role} 
-              onChange={e => setRole(e.target.value)} 
-              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-            >
-              <option value="user">Người dùng (User)</option>
-              <option value="system_admin">Quản trị viên (System Admin)</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Chức vụ (Tùy chọn)</label>
+              <input
+                type="text"
+                value={position}
+                onChange={e => setPosition(e.target.value)}
+                placeholder="VD: Kỹ sư phần mềm"
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">Vai trò hệ thống</label>
+              <select
+                value={role}
+                onChange={e => setRole(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              >
+                <option value="user">Người dùng (User)</option>
+                <option value="system_admin">Quản trị viên (System Admin)</option>
+              </select>
+            </div>
           </div>
 
           <div className="p-3 bg-muted/40 rounded-xl border border-border/60 text-xs text-muted-foreground space-y-1">
@@ -648,6 +672,7 @@ function EditEmployeeModal({
   const [email, setEmail] = useState(employee.email || '');
   const [position, setPosition] = useState(employee.position || '');
   const [phone, setPhone] = useState(employee.phone || '');
+  const [gender, setGender] = useState(employee.gender || '');
   const [role, setRole] = useState(employee.system_role || 'user');
   const [status, setStatus] = useState(employee.account_status || 'active');
   const initialDeptIds = (employee.departments && employee.departments.length > 0)
@@ -666,6 +691,7 @@ function EditEmployeeModal({
         email: email.trim() ? email.trim() : null,
         position: position.trim() ? position.trim() : null,
         phone: phone.trim() ? phone.trim() : null,
+        ...(gender ? { gender } : {}),
         system_role: role,
         account_status: status,
         department_ids: selectedDeptIds,
@@ -737,9 +763,14 @@ function EditEmployeeModal({
                 value={phone} 
                 onChange={e => setPhone(e.target.value)} 
                 placeholder="09..."
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" 
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1">Giới tính</label>
+            <GenderSelect value={gender} onChange={setGender} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -901,5 +932,24 @@ function ResetPasswordModal({ userId, onClose }: { userId: string, onClose: () =
         </form>
       </div>
     </div>
+  );
+}
+
+const GENDERS = ['Nam', 'Nữ', 'Khác'];
+
+function GenderSelect({ value, onChange, required = false }: { value: string; onChange: (v: string) => void; required?: boolean }) {
+  return (
+    <select
+      required={required}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+    >
+      <option value="" disabled>-- Chọn giới tính --</option>
+      {GENDERS.map(g => (
+        <option key={g} value={g}>{g}</option>
+      ))}
+      {value && !GENDERS.includes(value) && <option value={value}>{value}</option>}
+    </select>
   );
 }

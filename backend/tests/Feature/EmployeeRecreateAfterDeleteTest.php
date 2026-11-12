@@ -10,6 +10,13 @@ class EmployeeRecreateAfterDeleteTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function department(): \App\Models\Department
+    {
+        return \App\Models\Department::firstOrCreate(['code' => 'KT'], [
+            'name' => 'Phòng Kỹ thuật', 'status' => 'active', 'created_by' => User::factory()->create()->id,
+        ]);
+    }
+
     private function adminToken(): string
     {
         $admin = User::factory()->create(['system_role' => 'system_admin']);
@@ -26,6 +33,8 @@ class EmployeeRecreateAfterDeleteTest extends TestCase
             'username' => 'daitd',
             'email' => 'daitd@danava.vn',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ])->assertStatus(201);
 
         $old = User::where('username', 'daitd')->firstOrFail();
@@ -37,6 +46,8 @@ class EmployeeRecreateAfterDeleteTest extends TestCase
             'username' => 'daitd',
             'email' => 'daitd@danava.vn',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ])->assertStatus(201);
 
         $this->assertSame(1, User::where('username', 'daitd')->count());
@@ -56,6 +67,8 @@ class EmployeeRecreateAfterDeleteTest extends TestCase
             'username' => 'daitd',
             'email' => 'daitd@danava.vn',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ])->assertStatus(201);
 
         $this->assertSoftDeleted('users', ['id' => $legacy->id, 'username' => 'daitd__deleted_' . $legacy->id]);
@@ -70,6 +83,8 @@ class EmployeeRecreateAfterDeleteTest extends TestCase
             'name' => 'Someone',
             'username' => 'daitd',
             'password' => 'Password@123',
+            'gender' => 'Nam',
+            'department_id' => $this->department()->id,
         ])->assertStatus(422);
     }
 }

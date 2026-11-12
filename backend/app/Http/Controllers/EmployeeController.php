@@ -99,10 +99,17 @@ class EmployeeController extends Controller
             'password' => 'required|string|min:8',
             'email' => 'nullable|string|email|max:255|unique:users,email',
             'position' => 'nullable|string|max:100',
+            'gender' => 'required|in:Nam,Nữ,Khác',
             'system_role' => 'nullable|in:system_admin,admin,user',
-            'department_id' => 'nullable|exists:departments,id',
+            'department_id' => 'required|exists:departments,id',
             'department_ids' => 'nullable|array',
             'department_ids.*' => 'integer|exists:departments,id',
+        ], [
+            'name.required' => 'Vui lòng nhập họ tên.',
+            'gender.required' => 'Vui lòng chọn giới tính.',
+            'gender.in' => 'Giới tính không hợp lệ.',
+            'department_id.required' => 'Vui lòng chọn phòng ban.',
+            'department_id.exists' => 'Phòng ban không tồn tại.',
         ]);
 
         $cleanUsername = strtolower(trim($request->username));
@@ -150,6 +157,7 @@ class EmployeeController extends Controller
                 'email' => $email,
                 'name' => $fullName,
                 'position' => $request->position,
+                'gender' => $request->gender,
                 'password' => Hash::make($request->password),
                 'must_change_password' => true,
                 'account_status' => 'active',

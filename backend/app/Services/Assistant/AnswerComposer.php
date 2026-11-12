@@ -9,8 +9,12 @@ namespace App\Services\Assistant;
  */
 class AnswerComposer
 {
+    /** How the person asking is addressed: "anh", "chị" or "anh/chị". */
+    private string $xh = 'anh/chị';
+
     public function compose(array $ctx, string $assistantName): string
     {
+        $this->xh = $ctx['nguoi_hoi']['xung_ho'] ?? 'anh/chị';
         $name = $ctx['nguoi_hoi']['ten_goi'] ?? '';
         $topics = $ctx['chu_de'] ?? [];
         $parts = [];
@@ -30,7 +34,7 @@ class AnswerComposer
             $parts[] = $this->board($board);
         }
         if (!empty($ctx['du_an'])) {
-            $parts[] = "### 📁 Các dự án của anh/chị\n" . implode("\n", array_map(fn ($b) => $this->projectLine($b), $ctx['du_an']));
+            $parts[] = "### 📁 Các dự án của {$this->xh}\n" . implode("\n", array_map(fn ($b) => $this->projectLine($b), $ctx['du_an']));
         }
         foreach ($ctx['nguoi_duoc_hoi'] ?? [] as $person) {
             $parts[] = $this->person($person);
@@ -43,7 +47,7 @@ class AnswerComposer
             $parts[] = $this->search($ctx['ket_qua_tim_kiem']);
         }
         if (isset($ctx['cham_cong_cua_toi'])) {
-            $parts[] = $this->attendance($ctx['cham_cong_cua_toi'], 'Chấm công tháng ' . $ctx['cham_cong_cua_toi']['thang'] . ' của anh/chị');
+            $parts[] = $this->attendance($ctx['cham_cong_cua_toi'], 'Chấm công tháng ' . $ctx['cham_cong_cua_toi']['thang'] . ' của ' . $this->xh);
         }
 
         $parts = array_values(array_filter($parts));
@@ -51,7 +55,7 @@ class AnswerComposer
             $parts[] = $this->overview($ctx['tong_quan_cua_toi']);
         }
 
-        $intro = $name !== '' ? "Dạ anh/chị **{$name}**, em gửi thông tin ạ:\n\n" : '';
+        $intro = $name !== '' ? "Dạ {$this->xh} **{$name}**, em gửi thông tin ạ:\n\n" : '';
 
         return $intro . implode("\n\n", $parts);
     }
@@ -60,9 +64,9 @@ class AnswerComposer
     {
         $s = $ctx['tong_quan_cua_toi'];
         $name = $ctx['nguoi_hoi']['ten_goi'] ?? '';
-        $lines = ["Em chào anh/chị **{$name}** 👋 Em là **{$assistantName}** đây ạ."];
+        $lines = ["Em chào {$this->xh} **{$name}** 👋 Em là **{$assistantName}** đây ạ."];
         $lines[] = '';
-        $lines[] = '**Hôm nay của anh/chị:**';
+        $lines[] = '**Hôm nay của ' . $this->xh . ':**';
         $lines[] = "- 📋 Việc đang mở: **{$s['viec_chua_xong']}**";
         if ($s['han_hom_nay']) {
             $lines[] = "- ⏰ Hạn hôm nay: **{$s['han_hom_nay']}**";
@@ -77,7 +81,7 @@ class AnswerComposer
 
     private function overview(array $s): string
     {
-        $lines = ['### 📊 Tổng quan công việc của anh/chị'];
+        $lines = ['### 📊 Tổng quan công việc của ' . $this->xh];
         $lines[] = "- Việc đang mở: **{$s['viec_chua_xong']}**";
         $lines[] = "- Hạn hôm nay: **{$s['han_hom_nay']}**";
         $lines[] = '- Quá hạn: ' . ($s['qua_han'] ? "**{$s['qua_han']}** ⚠️" : '**0** ✅');
@@ -89,7 +93,7 @@ class AnswerComposer
 
     private function myTasks(array $data, array $summary): string
     {
-        $title = "### 📋 Việc của anh/chị ({$data['pham_vi']})";
+        $title = "### 📋 Việc của {$this->xh} ({$data['pham_vi']})";
         if (!$data['danh_sach']) {
             return $title . "\nKhông có công việc nào trong phạm vi này ✅";
         }
@@ -147,7 +151,7 @@ class AnswerComposer
         $lines = ["### 👤 {$p['ten']}" . ($p['chuc_vu'] ? " · _{$p['chuc_vu']}_" : '')];
         $tasks = $p['viec_dang_mo_trong_cac_bang_chung'];
         if (!$tasks) {
-            $lines[] = 'Không có việc đang mở trong các bảng anh/chị cùng tham gia.';
+            $lines[] = 'Không có việc đang mở trong các bảng ' . $this->xh . ' cùng tham gia.';
         } else {
             $lines[] = '**Việc đang mở** (' . count($tasks) . '):';
             foreach ($tasks as $t) {

@@ -52,6 +52,8 @@ class KnowledgeRetriever
             'nguoi_hoi' => [
                 'ten' => $user->name,
                 'ten_goi' => $this->firstName($user->name),
+                'gioi_tinh' => $user->gender ?: null,
+                'xung_ho' => self::honorific($user->gender),
                 'chuc_vu' => $user->position,
             ],
             'chu_de' => $topics,
@@ -128,7 +130,7 @@ class KnowledgeRetriever
             'hoan_thanh' => '/da xong|hoan thanh|xong roi|done/',
             'tien_do' => '/tien do|bao cao|tong hop|tinh hinh|thong ke/',
             'chao_hoi' => '/^(chao|hello|hi|xin chao|alo)\b/',
-            'huong_dan' => '/cach|huong dan|lam sao|lam the nao|su dung|dung nhu the nao|o dau|the nao|nhu nao|khong biet|khong hieu|la gi/',
+            'huong_dan' => '/cach|huong dan|lam sao|lam the nao|su dung|dung nhu the nao|o dau|the nao|nhu nao|khong biet|khong hieu|la gi|doi ten|doi ho ten|sua ten|gioi tinh|ho so ca nhan|thong tin ca nhan|doi mat khau|anh dai dien/',
         ];
 
         return array_keys(array_filter($map, fn ($re) => preg_match($re, $q)));
@@ -374,6 +376,16 @@ class KnowledgeRetriever
             'qua_han' => $due !== null && $t->completed_at === null && $due < $now->toDateString(),
             'da_xong' => $t->completed_at !== null,
         ], fn ($v) => $v !== null && $v !== false);
+    }
+
+    /** How to address someone: "anh" (Nam), "chị" (Nữ), otherwise the neutral "anh/chị". */
+    public static function honorific(?string $gender): string
+    {
+        return match (mb_strtolower(trim((string) $gender))) {
+            'nam' => 'anh',
+            'nữ', 'nu' => 'chị',
+            default => 'anh/chị',
+        };
     }
 
     private function firstName(string $name): string

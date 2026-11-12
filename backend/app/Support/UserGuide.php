@@ -141,13 +141,14 @@ class UserGuide
             'id' => 'giao-dien',
             'icon' => 'settings',
             'title' => 'Tài khoản và giao diện',
-            'summary' => 'Đổi thông tin cá nhân, mật khẩu, giao diện sáng/tối.',
+            'summary' => 'Đổi họ tên, giới tính, thông tin cá nhân, mật khẩu, giao diện sáng/tối.',
             'steps' => [
+                'Đổi **họ tên, giới tính, số điện thoại, ngày sinh, ảnh đại diện**: menu trái **Hồ sơ cá nhân** → sửa thông tin → bấm **Lưu thay đổi**.',
                 'Bấm **ảnh đại diện** góc trên phải → **Thông tin cá nhân** hoặc bật **Giao diện tối**.',
                 'Đổi mật khẩu: menu trái **Cài đặt tài khoản**.',
                 'Thu gọn menu trái: bấm nút trên đầu menu (chỉ còn icon).',
             ],
-            'keywords' => ['doi mat khau', 'mat khau', 'giao dien toi', 'dark mode', 'che do toi', 'anh dai dien', 'thong tin ca nhan', 'thu gon menu', 'tai khoan'],
+            'keywords' => ['doi mat khau', 'mat khau', 'giao dien toi', 'dark mode', 'che do toi', 'anh dai dien', 'thong tin ca nhan', 'thu gon menu', 'tai khoan', 'doi ten', 'doi ho ten', 'sua ten', 'ho ten', 'gioi tinh', 'ho so ca nhan', 'so dien thoai', 'ngay sinh'],
         ],
     ];
 

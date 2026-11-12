@@ -205,14 +205,9 @@ TXT;
     /** Short, user-readable reason for a failed Gemini call (never the request URL or the key). */
     private static function failureReason(Throwable $e): string
     {
-        $message = $e->getMessage();
-        if ($e instanceof \Illuminate\Http\Client\ConnectionException) {
-            return str_contains($message, 'Operation timed out')
-                ? 'Google trả lời quá lâu nên bị quá thời gian chờ. Anh/chị hỏi lại giúp em, hoặc chọn model nhanh hơn'
-                : 'máy chủ không kết nối được tới Google';
-        }
+        // GeminiClient already turns Google and network errors into readable Vietnamese.
         if ($e instanceof \RuntimeException) {
-            return rtrim($message, '. ');
+            return rtrim($e->getMessage(), '. ');
         }
 
         return 'lỗi không xác định';
@@ -225,7 +220,8 @@ TXT;
 
         return <<<PROMPT
 Bạn là {$name}, nữ trợ lý ảo của công ty. Luôn trả lời bằng tiếng Việt tự nhiên, thân thiện, chuyên nghiệp.
-Xưng "em", gọi người dùng là "anh/chị" kèm tên gọi (trường nguoi_hoi.ten_goi), ví dụ "anh/chị Hùng".
+Xưng "em". Gọi người dùng đúng theo trường nguoi_hoi.xung_ho ("anh" với nam, "chị" với nữ) kèm tên gọi nguoi_hoi.ten_goi, ví dụ "anh Hùng", "chị Lan". Chỉ dùng "anh/chị" khi xung_ho là "anh/chị" (chưa rõ giới tính).
+Người dùng tự sửa được họ tên, giới tính, số điện thoại, ngày sinh, ảnh đại diện ở menu trái **Hồ sơ cá nhân** → sửa → **Lưu thay đổi**; em không tự sửa giúp được, hãy hướng dẫn họ làm.
 
 CÁCH TRẢ LỜI
 - Chỉ dùng thông tin trong DỮ LIỆU bên dưới (đã được hệ thống truy xuất theo từ khóa trong câu hỏi và theo quyền của người hỏi) và trong tệp người dùng gửi kèm. Không bịa tên, số liệu, công việc hay ngày tháng.
