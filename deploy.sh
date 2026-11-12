@@ -23,10 +23,33 @@ main() {
   git -C "$project_dir" rev-parse HEAD > "$backup_dir/last_deployed_commit.txt"
 
   cd "$backend_dir"
-  env_value() { grep "^$1=" .env | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"; }
 
-  MYSQL_PWD="$(env_value DB_PASSWORD)" \
-    mysqldump --single-transaction --quick -u "$(env_value DB_USERNAME)" "$(env_value DB_DATABASE)" | gzip > "$backup_file"
+  # Ask Laravel for the database connection it really uses (handles quotes, spaces and config cache).
+  # The password goes into a private temporary file (never on screen or in the process list).
+  local cnf db_name
+  cnf="$(mktemp)"
+  chmod 600 "$cnf"
+  trap 'rm -f "$cnf"' RETURN
+  db_name="$(CNF="$cnf" php <<'PHP'
+<?php
+require 'vendor/autoload.php';
+$app = require 'bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$c = config('database.connections.' . config('database.default'));
+$q = fn ($v) => '"' . addcslashes((string) $v, "\"\\") . '"';
+file_put_contents(getenv('CNF'), "[client]\nuser=" . $q($c['username'] ?? '') . "\npassword=" . $q($c['password'] ?? '')
+    . "\nhost=" . $q($c['host'] ?? 'localhost') . "\nport=" . (int) ($c['port'] ?? 3306) . "\n");
+echo $c['database'] ?? '';
+PHP
+)"
+  if [ -z "$db_name" ]; then
+    echo "❌ Không đọc được tên database từ cấu hình Laravel (backend/.env). Không deploy."
+    exit 1
+  fi
+
+  # --no-tablespaces: shared hosting users usually lack the PROCESS privilege it would need.
+  mysqldump --defaults-extra-file="$cnf" --single-transaction --quick --no-tablespaces "$db_name" | gzip > "$backup_file"
+  rm -f "$cnf"
 
   # A real dump is far larger than an empty gzip; stop before touching anything if it failed.
   local size
