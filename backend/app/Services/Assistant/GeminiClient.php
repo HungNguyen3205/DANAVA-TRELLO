@@ -232,15 +232,30 @@ class GeminiClient
         ];
 
         $started = microtime(true);
-        $response = Http::withHeaders(['x-goog-api-key' => (string) $apiKey])
-            ->acceptJson()
-            // Files take longer to read.
-            ->timeout(config('assistant.gemini.timeout', 30) * ($this->hasInline($messages) ? 3 : 1))
-            // Google briefly overloaded (500/503) or the connection could not be opened: try once more.
-            ->retry(2, 1500, fn (\Throwable $e) => $e instanceof RequestException
-                ? in_array($e->response->status(), [500, 503], true)
-                : $e instanceof ConnectionException && !str_contains($e->getMessage(), 'Operation timed out'), throw: false)
-            ->post($url, $payload);
+        // Files take longer to read.
+        $timeout = (int) config('assistant.gemini.timeout', 30) * ($this->hasInline($messages) ? 3 : 1);
+        try {
+            $response = Http::withHeaders(['x-goog-api-key' => (string) $apiKey])
+                ->acceptJson()
+                ->timeout($timeout)
+                // Google briefly overloaded (500/503) or the connection could not be opened: try once more.
+                ->retry(2, 1500, fn (\Throwable $e) => $e instanceof RequestException
+                    ? in_array($e->response->status(), [500, 503], true)
+                    : $e instanceof ConnectionException && !self::isTimeout($e), throw: false)
+                ->post($url, $payload);
+        } catch (ConnectionException $e) {
+            Log::info('assistant.gemini', [
+                'endpoint' => $endpoint,
+                'model' => $model,
+                'status' => null,
+                'ms' => (int) ((microtime(true) - $started) * 1000),
+                'error' => ['message' => mb_substr($e->getMessage(), 0, 200)],
+            ]);
+            // Plain Vietnamese instead of the raw cURL text (which also carries the request URL).
+            throw new RuntimeException(self::isTimeout($e)
+                ? "Google không phản hồi sau {$timeout} giây: model \"{$model}\" đang chậm hoặc quá tải. Anh/chị thử lại sau ít phút, hoặc chọn model khác (vd: gemini-2.5-flash)."
+                : 'Máy chủ không kết nối được tới Google (lỗi mạng). Vui lòng thử lại sau ít phút.');
+        }
 
         // Log timing and token usage only, never prompts, answers or the key.
         Log::info('assistant.gemini', [
@@ -364,6 +379,11 @@ class GeminiClient
         $lower = mb_strtolower((string) $response->json('error.message'));
 
         return str_contains($lower, 'per day') || str_contains($lower, 'daily') || str_contains($lower, 'limit: 0');
+    }
+
+    private static function isTimeout(ConnectionException $e): bool
+    {
+        return str_contains($e->getMessage(), 'Operation timed out');
     }
 
     private static function errorReason(Response $response): ?string

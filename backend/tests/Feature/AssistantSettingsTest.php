@@ -238,6 +238,18 @@ class AssistantSettingsTest extends TestCase
         Http::assertSentCount(2); // retried once
     }
 
+    public function test_google_timeout_shows_a_readable_message(): void
+    {
+        Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException(
+            'cURL error 28: Operation timed out after 30001 milliseconds with 0 bytes received (see https://curl.se/libcurl/c/libcurl-errors.html) for https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent'
+        ));
+
+        $error = $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => self::KEY, 'model' => 'gemini-3.5-flash'])
+            ->assertStatus(422)->json('errors.api_key.0');
+        $this->assertStringStartsWith('Google không phản hồi sau 30 giây: model "gemini-3.5-flash"', $error);
+        $this->assertStringNotContainsString('cURL', $error);
+    }
+
     public function test_saving_the_same_key_or_only_limits_needs_no_confirmation(): void
     {
         $this->fakeGemini();
