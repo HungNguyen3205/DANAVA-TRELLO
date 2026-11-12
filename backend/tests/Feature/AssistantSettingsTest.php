@@ -238,6 +238,31 @@ class AssistantSettingsTest extends TestCase
         Http::assertSentCount(2); // retried once
     }
 
+    public function test_chat_asks_thinking_models_for_light_thinking(): void
+    {
+        app(AssistantSettings::class)->save(self::KEY, 'gemini-3.5-flash-lite', $this->admin->id, 'gemini');
+        $this->fakeGemini();
+
+        $this->actingAs($this->employee)->postJson('/api/assistant/chat', ['message' => 'việc của tôi'])->assertOk();
+        Http::assertSent(fn ($r) => ($r['generationConfig']['thinkingConfig'] ?? null) === ['thinkingLevel' => 'low']);
+
+        $this->assertSame(['thinkingBudget' => 0], \App\Services\Assistant\GeminiClient::lightThinking('gemini-2.5-flash'));
+        $this->assertNull(\App\Services\Assistant\GeminiClient::lightThinking('gemini-2.5-pro'));
+    }
+
+    public function test_model_rejecting_the_thinking_setting_is_asked_again_without_it(): void
+    {
+        app(AssistantSettings::class)->save(self::KEY, 'gemini-3.5-flash', $this->admin->id, 'gemini');
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::sequence()
+            ->push(['error' => ['message' => 'Thinking level is not supported for this model.']], 400)
+            ->push(['candidates' => [['content' => ['parts' => [['text' => 'Câu trả lời từ AI']]]]]]),
+        ]);
+
+        $reply = $this->actingAs($this->employee)->postJson('/api/assistant/chat', ['message' => 'việc của tôi'])->assertOk()->json('reply.content');
+        $this->assertSame('Câu trả lời từ AI', $reply);
+        Http::assertSentCount(2);
+    }
+
     public function test_google_timeout_shows_a_readable_message(): void
     {
         Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException(
@@ -246,7 +271,7 @@ class AssistantSettingsTest extends TestCase
 
         $error = $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => self::KEY, 'model' => 'gemini-3.5-flash'])
             ->assertStatus(422)->json('errors.api_key.0');
-        $this->assertStringStartsWith('Google không phản hồi sau 30 giây: model "gemini-3.5-flash"', $error);
+        $this->assertStringStartsWith('Google không phản hồi sau 45 giây: model "gemini-3.5-flash"', $error);
         $this->assertStringNotContainsString('cURL', $error);
     }
 

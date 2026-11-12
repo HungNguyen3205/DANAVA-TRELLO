@@ -12,6 +12,12 @@ class AnswerComposer
     /** How the person asking is addressed: "anh", "chị" or "anh/chị". */
     private string $xh = 'anh/chị';
 
+    /** Same, capitalised for the start of a sentence. */
+    private function Xh(): string
+    {
+        return mb_strtoupper(mb_substr($this->xh, 0, 1)) . mb_substr($this->xh, 1);
+    }
+
     public function compose(array $ctx, string $assistantName): string
     {
         $this->xh = $ctx['nguoi_hoi']['xung_ho'] ?? 'anh/chị';
@@ -76,7 +82,7 @@ class AnswerComposer
         }
         $lines[] = '- 🕘 Chấm công: ' . $this->attendanceToday($s['cham_cong_hom_nay']);
 
-        return implode("\n", $lines) . "\n\nAnh/chị cứ hỏi em về bảng, dự án, đồng nghiệp hoặc dán tin nhắn giao việc nhé.";
+        return implode("\n", $lines) . "\n\n{$this->Xh()} cứ hỏi em về bảng, dự án, đồng nghiệp hoặc dán tin nhắn giao việc nhé.";
     }
 
     private function overview(array $s): string
@@ -88,7 +94,7 @@ class AnswerComposer
         $lines[] = "- Khẩn cấp: **{$s['khan_cap']}**";
         $lines[] = '- Chấm công hôm nay: ' . $this->attendanceToday($s['cham_cong_hom_nay']);
 
-        return implode("\n", $lines) . "\n\nEm chưa tìm thấy thông tin cụ thể cho câu hỏi này. Anh/chị thử nêu **tên bảng, tên người** hoặc **từ khóa công việc** giúp em nhé.";
+        return implode("\n", $lines) . "\n\nEm chưa tìm thấy thông tin cụ thể cho câu hỏi này. {$this->Xh()} thử nêu **tên bảng, tên người** hoặc **từ khóa công việc** giúp em nhé.";
     }
 
     private function myTasks(array $data, array $summary): string

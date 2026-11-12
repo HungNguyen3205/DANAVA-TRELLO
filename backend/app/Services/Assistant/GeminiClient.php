@@ -231,18 +231,32 @@ class GeminiClient
             'generationConfig' => $generationConfig,
         ];
 
+        // Thinking models (Gemini 2.5 / 3.x) reason before answering, which can take longer than
+        // the timeout. Office questions do not need deep reasoning, so keep it light.
+        $thinking = self::lightThinking($model);
+        if ($thinking && !isset($payload['generationConfig']['thinkingConfig'])) {
+            $payload['generationConfig']['thinkingConfig'] = $thinking;
+        }
+
         $started = microtime(true);
         // Files take longer to read.
-        $timeout = (int) config('assistant.gemini.timeout', 30) * ($this->hasInline($messages) ? 3 : 1);
+        $timeout = (int) config('assistant.gemini.timeout', 45) * ($this->hasInline($messages) ? 3 : 1);
+        $send = fn (array $body) => Http::withHeaders(['x-goog-api-key' => (string) $apiKey])
+            ->acceptJson()
+            ->timeout($timeout)
+            // Google briefly overloaded (500/503) or the connection could not be opened: try once more.
+            ->retry(2, 1500, fn (\Throwable $e) => $e instanceof RequestException
+                ? in_array($e->response->status(), [500, 503], true)
+                : $e instanceof ConnectionException && !self::isTimeout($e), throw: false)
+            ->post($url, $body);
         try {
-            $response = Http::withHeaders(['x-goog-api-key' => (string) $apiKey])
-                ->acceptJson()
-                ->timeout($timeout)
-                // Google briefly overloaded (500/503) or the connection could not be opened: try once more.
-                ->retry(2, 1500, fn (\Throwable $e) => $e instanceof RequestException
-                    ? in_array($e->response->status(), [500, 503], true)
-                    : $e instanceof ConnectionException && !self::isTimeout($e), throw: false)
-                ->post($url, $payload);
+            $response = $send($payload);
+            // A model that does not accept this thinking setting: ask again with Google's default.
+            if ($response->status() === 400 && isset($payload['generationConfig']['thinkingConfig'])
+                && str_contains(mb_strtolower((string) $response->json('error.message')), 'thinking')) {
+                unset($payload['generationConfig']['thinkingConfig']);
+                $response = $send($payload);
+            }
         } catch (ConnectionException $e) {
             Log::info('assistant.gemini', [
                 'endpoint' => $endpoint,
@@ -379,6 +393,16 @@ class GeminiClient
         $lower = mb_strtolower((string) $response->json('error.message'));
 
         return str_contains($lower, 'per day') || str_contains($lower, 'daily') || str_contains($lower, 'limit: 0');
+    }
+
+    /** Least thinking each model family accepts: level "low" on Gemini 3.x, budget 0 on 2.5 Flash / Flash-Lite. */
+    public static function lightThinking(string $model): ?array
+    {
+        return match (true) {
+            (bool) preg_match('/^gemini-3/', $model) => ['thinkingLevel' => 'low'],
+            (bool) preg_match('/^gemini-2\.5-flash/', $model) => ['thinkingBudget' => 0],
+            default => null, // 2.5 Pro cannot turn thinking off; older models do not think.
+        };
     }
 
     private static function isTimeout(ConnectionException $e): bool

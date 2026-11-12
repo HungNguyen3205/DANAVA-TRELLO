@@ -28,7 +28,8 @@ class AssistantHonorificTest extends TestCase
         $woman = User::factory()->create(['name' => 'Trần Thị Lan', 'gender' => 'Nữ', 'account_status' => 'active']);
         $unknown = User::factory()->create(['name' => 'Lê Minh', 'gender' => null, 'account_status' => 'active']);
 
-        $this->assertStringContainsString('Em chào anh **Hùng**', $this->ask($man, 'xin chào'));
+        $this->assertStringContainsString('Em chào anh **Hùng**', $reply = $this->ask($man, 'xin chào'));
+        $this->assertStringContainsString('Anh cứ hỏi em', $reply);
         $this->assertStringContainsString('Em chào chị **Lan**', $this->ask($woman, 'xin chào'));
         $this->assertStringContainsString('Em chào anh/chị **Minh**', $this->ask($unknown, 'xin chào'));
     }

@@ -13,7 +13,7 @@ return [
         // Set to a model your key can use (see https://ai.google.dev/gemini-api/docs/models).
         'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
         'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
-        'timeout' => (int) env('GEMINI_TIMEOUT', 30),
+        'timeout' => (int) env('GEMINI_TIMEOUT', 45),
     ],
 
     // Messages kept per user (older ones are pruned).
