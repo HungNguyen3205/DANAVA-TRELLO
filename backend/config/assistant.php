@@ -2,7 +2,7 @@
 
 return [
     // Display name of the assistant (shown in the chat and used in the system prompt).
-    'name' => env('ASSISTANT_NAME', 'Dana'),
+    'name' => env('ASSISTANT_NAME', 'Trợ lý công việc DANAVA'),
 
     // "live" calls Gemini (requires GEMINI_API_KEY); anything else uses the built-in
     // rule-based demo, which still extracts tasks from pasted messages.

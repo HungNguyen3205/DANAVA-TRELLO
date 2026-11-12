@@ -60,7 +60,7 @@ class AnswerComposer
     {
         $s = $ctx['tong_quan_cua_toi'];
         $name = $ctx['nguoi_hoi']['ten_goi'] ?? '';
-        $lines = ["Em chào anh/chị **{$name}** 👋 Em là **{$assistantName}**, trợ lý công việc của anh/chị."];
+        $lines = ["Em chào anh/chị **{$name}** 👋 Em là **{$assistantName}** đây ạ."];
         $lines[] = '';
         $lines[] = '**Hôm nay của anh/chị:**';
         $lines[] = "- 📋 Việc đang mở: **{$s['viec_chua_xong']}**";

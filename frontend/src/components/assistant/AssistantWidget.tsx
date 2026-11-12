@@ -4,6 +4,8 @@ import { projectsApi } from '../../lib/api/projects';
 import { introFor, type PageIntro } from './pageIntros';
 import { savePrefs, useAssistantPrefs } from './assistantPrefs';
 import { Trash2, X, EyeOff, Loader2, Palette, Upload, MessageCircleQuestion } from 'lucide-react';
+import { CopyMessageButton } from './CopyMessageButton';
+import { FitText } from './FitText';
 import { toast } from 'sonner';
 import { type AvatarMood } from './AssistantAvatar';
 import { RobotAvatar } from './RobotAvatar';
@@ -439,7 +441,7 @@ export function AssistantWidget() {
     window.setTimeout(() => setEntering(false), 950);
   };
 
-  const name = state?.name ?? 'Dana';
+  const name = state?.name ?? 'Trợ lý công việc DANAVA';
 
   const reminder = reminderOpen && settings && !open && (
     <section className="asst-reminder" role="dialog" aria-label="Cài đặt khóa Gemini cho trợ lý">
@@ -449,7 +451,7 @@ export function AssistantWidget() {
             <RobotAvatar mood={reminderMood} look={reminderLook} size={40} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-bold leading-tight">Chào anh/chị! Em là {name} 👋</div>
+            <FitText text={`Em là ${name} 👋`} className="font-bold leading-tight" />
             <div className="text-xs text-white/80 mt-0.5">Em cần khóa Gemini để thông minh hơn</div>
           </div>
           <button type="button" onClick={closeReminder} className="p-1.5 rounded-lg hover:bg-white/15" aria-label="Đóng">
@@ -474,12 +476,12 @@ export function AssistantWidget() {
   );
 
   const greeting = greet && !open && !reminderOpen && !minimized && (
-    <section className="asst-reminder" role="dialog" aria-label={`Trợ lý ${name} giới thiệu trang`}>
+    <section className="asst-reminder" role="dialog" aria-label={`${name} giới thiệu trang`}>
       <div className="rounded-[20px] border border-border bg-card shadow-2xl overflow-hidden">
         <header className="flex items-center gap-2.5 pl-3 pr-2 py-2.5 text-white" style={{ background: 'linear-gradient(120deg, #1E2A5E 0%, #2B3F8F 70%, #F47624 160%)' }}>
           <div className="shrink-0"><RobotAvatar mood="waving" look={{ x: 0, y: 0 }} size={36} /></div>
           <div className="flex-1 min-w-0">
-            <div className="font-bold leading-tight">Em là {name} 👋</div>
+            <FitText text={`Em là ${name} 👋`} className="font-bold leading-tight" />
             <div className="text-xs text-white/80 mt-0.5 truncate">{greet.title}</div>
           </div>
           <button type="button" onClick={() => setGreet(null)} className="p-1.5 rounded-lg hover:bg-white/15" aria-label="Đóng"><X size={18} /></button>
@@ -512,7 +514,7 @@ export function AssistantWidget() {
       <>
         {reminder}
         <button type="button" className="asst-mini-tab" onClick={restore} title="Hiện trợ lý">
-          Trợ lý {name}
+          {name}
         </button>
       </>
     );
@@ -529,7 +531,7 @@ export function AssistantWidget() {
           data-enter={entering ? 'true' : undefined}
           role="button"
           tabIndex={0}
-          aria-label={`Mở trợ lý ${name}`}
+          aria-label={`Mở ${name}`}
           onClick={openPanel}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -556,7 +558,7 @@ export function AssistantWidget() {
           ref={panelRef}
           className="asst-panel"
           role="dialog"
-          aria-label={`Trợ lý ${name}`}
+          aria-label={name}
           onDragEnter={(e) => {
             if (e.dataTransfer.types.includes('Files')) setDragging(true);
           }}
@@ -579,38 +581,43 @@ export function AssistantWidget() {
                 <span className="text-sm font-semibold">Thả ảnh hoặc tệp vào đây</span>
               </div>
             )}
-            <header className="flex items-center gap-2.5 pl-3 pr-2 py-2.5 text-white" style={{ background: 'linear-gradient(120deg, #1E2A5E 0%, #2B3F8F 70%, #F47624 160%)' }}>
+            <header className="flex items-center gap-2.5 pl-3 pr-2 py-2 text-white" style={{ background: 'linear-gradient(120deg, #1E2A5E 0%, #2B3F8F 70%, #F47624 160%)' }}>
               {/* Robot sits inside the header, next to the name */}
               <div ref={panelAvatarRef} className="shrink-0">
                 <RobotAvatar mood={sending && panelMood !== 'nod' ? 'thinking' : panelMood} look={panelLook} size={40} />
               </div>
+              {/* Row 1: the full name on one line + close. Row 2: status + tools, so the name gets the whole width. */}
               <div className="min-w-0 flex-1">
-                <div className="font-bold leading-tight truncate">{name}</div>
-                <div className="text-[11px] text-white/75 flex items-center gap-1.5 whitespace-nowrap">
-                  <span className={`w-1.5 h-1.5 rounded-full ${sending ? 'bg-amber-300 animate-pulse' : 'bg-emerald-300'}`} />
-                  {sending ? 'Đang suy nghĩ…' : 'Trợ lý công việc'}
-                  {state?.mode === 'demo' && <span className="px-1.5 rounded bg-white/20 font-semibold">Thử nghiệm</span>}
+                <div className="flex items-center gap-1">
+                  <FitText text={name} className="flex-1 text-[15px] font-bold leading-tight" />
+                  <button type="button" onClick={() => setOpen(false)} className="shrink-0 -mr-0.5 p-1 rounded-lg hover:bg-white/15" title="Đóng" aria-label="Đóng">
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <div className="min-w-0 flex-1 text-[11px] text-white/75 flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
+                    <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${sending ? 'bg-amber-300 animate-pulse' : 'bg-emerald-300'}`} />
+                    {sending ? 'Đang suy nghĩ…' : 'Sẵn sàng'}
+                    {state?.mode === 'demo' && <span className="px-1.5 rounded bg-white/20 font-semibold">Thử nghiệm</span>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCustomizing((v) => !v)}
+                    className={`shrink-0 p-1 rounded-md hover:bg-white/15 ${customizing ? 'bg-white/20' : ''}`}
+                    title="Tùy chỉnh màu sắc và biểu cảm"
+                    aria-label="Tùy chỉnh trợ lý"
+                    aria-pressed={customizing}
+                  >
+                    <Palette size={14} />
+                  </button>
+                  <button type="button" onClick={clear} className="shrink-0 p-1 rounded-md hover:bg-white/15" title="Xóa lịch sử" aria-label="Xóa lịch sử">
+                    <Trash2 size={14} />
+                  </button>
+                  <button type="button" onClick={minimize} className="shrink-0 p-1 rounded-md hover:bg-white/15" title="Ẩn trợ lý" aria-label="Ẩn trợ lý">
+                    <EyeOff size={14} />
+                  </button>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setCustomizing((v) => !v)}
-                className={`p-1.5 rounded-lg hover:bg-white/15 ${customizing ? 'bg-white/20' : ''}`}
-                title="Tùy chỉnh màu sắc và biểu cảm"
-                aria-label="Tùy chỉnh trợ lý"
-                aria-pressed={customizing}
-              >
-                <Palette size={16} />
-              </button>
-              <button type="button" onClick={clear} className="p-1.5 rounded-lg hover:bg-white/15" title="Xóa lịch sử" aria-label="Xóa lịch sử">
-                <Trash2 size={16} />
-              </button>
-              <button type="button" onClick={minimize} className="p-1.5 rounded-lg hover:bg-white/15" title="Ẩn trợ lý" aria-label="Ẩn trợ lý">
-                <EyeOff size={16} />
-              </button>
-              <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-white/15" title="Đóng" aria-label="Đóng">
-                <X size={18} />
-              </button>
             </header>
 
             {customizing && <RobotCustomizer onClose={() => setCustomizing(false)} />}
@@ -660,6 +667,7 @@ export function AssistantWidget() {
                         onApplied={(created) => created > 0 && playPanel('celebrate', 2600)}
                       />
                     )}
+                    {m.role === 'assistant' && !!m.content.trim() && <CopyMessageButton markdown={m.content} />}
                   </div>
                 </div>
               ))}
