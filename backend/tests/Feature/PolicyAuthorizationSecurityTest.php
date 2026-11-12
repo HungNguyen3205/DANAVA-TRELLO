@@ -117,12 +117,12 @@ class PolicyAuthorizationSecurityTest extends TestCase
 
         // create
         $this->assertTrue($this->columnPolicy->create($this->boardAdmin, $this->board));
-        $this->assertFalse($this->columnPolicy->create($this->boardMember, $this->board));
+        $this->assertTrue($this->columnPolicy->create($this->boardMember, $this->board)); // every member can add columns
         $this->assertFalse($this->columnPolicy->create($this->outsider, $this->board));
 
         // update
         $this->assertTrue($this->columnPolicy->update($this->boardAdmin, $this->column));
-        $this->assertFalse($this->columnPolicy->update($this->boardMember, $this->column));
+        $this->assertTrue($this->columnPolicy->update($this->boardMember, $this->column)); // and rename them
         $this->assertFalse($this->columnPolicy->update($this->outsider, $this->column));
 
         // archive

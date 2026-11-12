@@ -197,6 +197,8 @@ export interface Board {
   background_image?: string | null;
   /** Project this board belongs to (Project > Board > Column > Task). */
   project_id?: number | null;
+  /** Add, rename, recolour and reorder columns (every board member). */
+  can_manage_columns?: boolean;
   project?: { id: number; name: string } | null;
   type?: 'task' | 'project';
   project_status?: 'planning' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled' | null;

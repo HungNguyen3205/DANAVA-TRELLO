@@ -48,6 +48,11 @@ class BoardAccessService
             ->exists();
     }
 
+    public function isSystemAdmin(User $user): bool
+    {
+        return in_array($user->system_role, ['system_admin', 'admin'], true);
+    }
+
     /**
      * Check if user is a member or owner of the board.
      * System Admin does NOT automatically bypass.
@@ -95,6 +100,15 @@ class BoardAccessService
     public function canManage(User $user, Board $board): bool
     {
         return $this->isAdmin($user, $board);
+    }
+
+    /**
+     * Add, rename, archive or delete columns: every member of the board (like Trello).
+     * Board settings, members and deleting the board stay with the board's owner/admins and project managers.
+     */
+    public function canManageColumns(User $user, Board $board): bool
+    {
+        return $this->isMember($user, $board);
     }
 
     /**

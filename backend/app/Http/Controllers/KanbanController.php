@@ -116,6 +116,12 @@ class KanbanController extends Controller
             'wip_enforcement' => 'sometimes|nullable|string|in:warning,strict',
         ]);
 
+        // WIP limits change how the whole team works: board managers only.
+        if ((array_key_exists('wip_limit', $validated) || array_key_exists('wip_enforcement', $validated))
+            && !$request->user()->isBoardAdmin($column->board_id)) {
+            return response()->json(['message' => 'Chỉ chủ bảng, quản trị viên bảng hoặc quản lý dự án mới đặt được giới hạn WIP.'], 403);
+        }
+
         if (array_key_exists('wip_limit', $validated)) {
             $validated['wip_limit'] = (!empty($validated['wip_limit']) && (int)$validated['wip_limit'] > 0)
                 ? (int)$validated['wip_limit']

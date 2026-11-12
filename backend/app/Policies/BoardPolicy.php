@@ -61,7 +61,7 @@ class BoardPolicy
      */
     public function manageColumns(User $user, Board $board): bool
     {
-        return $this->accessService->canManage($user, $board);
+        return $this->accessService->canManageColumns($user, $board); // reorder columns: every member
     }
 
     /**

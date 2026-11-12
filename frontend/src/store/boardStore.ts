@@ -123,6 +123,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         color: bData.color,
         background_image: bData.background_image ?? null,
         project_id: bData.project_id ?? null,
+        can_manage_columns: bData.can_manage_columns ?? true,
         project: bData.project ? { id: bData.project.id, name: bData.project.name } : null,
         type: (bData.type === 'project' ? 'project' : 'task') as 'task' | 'project',
         project_status: bData.project_status ?? null,

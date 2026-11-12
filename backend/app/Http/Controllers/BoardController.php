@@ -180,7 +180,10 @@ class BoardController extends Controller
         $boardData->is_starred = $member ? (bool)$member->is_starred : false;
         $access = app(\App\Services\BoardAccessService::class);
         $viaProject = $access->isProjectManager($request->user(), $board);
-        $boardData->my_role = ($board->owner_id === $userId || $viaProject || ($member && in_array($member->role, ['owner', 'admin']))) ? 'admin' : 'member';
+        // Same rules as the server-side checks (owner, board admin, project manager, system admin).
+        $boardData->my_role = $access->canManage($request->user(), $board) ? 'admin' : 'member';
+        $boardData->can_delete = $access->canDelete($request->user(), $board);
+        $boardData->can_manage_columns = $access->canManageColumns($request->user(), $board);
         // Project owners/managers have full rights (including delete) on the project's boards.
         $boardData->is_owner = ($board->owner_id === $userId || $viaProject || ($member && $member->role === 'owner'));
         $boardData->via_project = $viaProject && !$member && $board->owner_id !== $userId;

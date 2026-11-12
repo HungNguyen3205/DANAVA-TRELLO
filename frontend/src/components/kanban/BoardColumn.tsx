@@ -67,6 +67,9 @@ export function BoardColumn({
     (currentUser && board.users?.some(u => String(u.id) === String(currentUser.id) && (u.role === 'admin' || u.role === 'owner')))
   );
 
+  // Every member can add, rename, recolour and reorder columns; archive/delete/WIP need canManage.
+  const canEditColumn = Boolean(board.can_manage_columns ?? true) || canManage;
+
   const isOwner = Boolean(
     board.is_owner ||
     board.my_role === 'owner' ||
@@ -269,7 +272,7 @@ export function BoardColumn({
             {showMenu && (
               <div className="absolute top-full right-0 mt-1 bg-card border border-border shadow-xl rounded-xl p-1.5 z-50 min-w-[190px] animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md">
                 {/* Rename */}
-                {canManage && (
+                {canEditColumn && (
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -283,7 +286,7 @@ export function BoardColumn({
                 )}
 
                 {/* Change Color */}
-                {canManage && (
+                {canEditColumn && (
                   <button
                     onClick={() => setShowColorPicker(!showColorPicker)}
                     className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-foreground hover:bg-accent rounded-lg transition-colors text-left"
