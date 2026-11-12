@@ -92,7 +92,8 @@ class AssistantUsageTest extends TestCase
 
     public function test_key_check_is_not_counted(): void
     {
-        $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => 'AIzaSyTestKey_1234567890abcdefWXYZ', 'confirm_replace' => true])->assertOk();
+        config(['assistant.gemini.api_key' => null]);
+        $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => 'AIzaSyTestKey_1234567890abcdefWXYZ'])->assertOk();
 
         $this->actingAs($this->admin)->getJson('/api/assistant/settings')->assertJsonPath('me_today.requests', 0);
     }

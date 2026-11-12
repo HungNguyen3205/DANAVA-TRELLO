@@ -53,8 +53,33 @@ class AssistantSettingsController extends Controller
             'limits_updated' => $this->usage->limitsUpdated(),
             'history' => $admin ? AssistantSettings::history() : null,
             'can_manage' => $admin,
+            // One company key, shared by everyone. A new key can be entered only while there is
+            // none or the current one is used up / rejected; only the admin who added it removes it.
+            'can_add_key' => $admin && $this->keyCanBeReplaced(),
+            'can_remove_key' => $admin && $this->isKeyOwner($request),
             ...$extra,
         ];
+    }
+
+    private function keyCanBeReplaced(): bool
+    {
+        return $this->settings->apiKey() === null || $this->settings->keyHealth() !== null;
+    }
+
+    /** The admin who saved the key. A key whose owner account no longer exists is open to any admin. */
+    private function isKeyOwner(Request $request): bool
+    {
+        if ($this->settings->keySource() !== 'app') {
+            return false;
+        }
+        $owner = $this->settings->keyOwnerId();
+
+        return $owner === null || $owner === $request->user()->id || !\App\Models\User::whereKey($owner)->exists();
+    }
+
+    private function ownerName(): string
+    {
+        return AssistantSettings::lastUpdate(AssistantSettings::KEY_SETTING)['by']['name'] ?? 'người đã gắn khóa';
     }
 
     /** PUT /admin/assistant/settings — save (after verifying) the company Gemini key and/or model. */
@@ -65,7 +90,6 @@ class AssistantSettingsController extends Controller
             'model' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9][a-z0-9.\-]*$/'],
             'limit_per_user_daily' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'limit_company_daily' => ['nullable', 'integer', 'min:0', 'max:1000000'],
-            'confirm_replace' => ['nullable', 'boolean'],
         ], [
             'api_key.min' => 'Khóa API quá ngắn, có thể anh/chị chưa sao chép đủ.',
             'api_key.regex' => 'Khóa API chỉ gồm chữ, số, dấu chấm và dấu gạch. Kiểm tra lại có lỡ sao chép thêm khoảng trắng hoặc ký tự lạ không.',
@@ -87,22 +111,22 @@ class AssistantSettingsController extends Controller
             throw ValidationException::withMessages(['api_key' => ['Vui lòng nhập khóa API.']]);
         }
 
-        // Replacing a key that is already working must be confirmed explicitly, so two admins
-        // cannot silently overwrite each other's key.
+        // A working company key is not replaced by another admin: only once it is used up or
+        // rejected by Google, or after the admin who added it removes it.
         $currentKey = $this->settings->apiKey();
-        if ($key !== null && $currentKey !== null && $currentKey !== $key && !$request->boolean('confirm_replace')) {
-            $updated = AssistantSettings::lastUpdate(AssistantSettings::KEY_SETTING);
-
+        $owner = $this->isKeyOwner($request);
+        if ($key !== null && $currentKey !== null && $currentKey !== $key && !$owner && !$this->keyCanBeReplaced()) {
             return response()->json([
-                'code' => 'confirm_replace',
-                'message' => 'Đang có một khóa Gemini hoạt động. Xác nhận nếu muốn thay bằng khóa mới.',
-                'current' => [
-                    'key_hint' => AssistantSettings::hint($currentKey),
-                    'source' => $this->settings->keySource(),
-                    'updated_by' => $updated['by']['name'] ?? null,
-                    'updated_at' => $updated['at'] ?? null,
-                ],
-            ], 409);
+                'code' => 'key_in_use',
+                'message' => "Khóa Gemini {$this->settings->publicStatus()['key_hint']} do {$this->ownerName()} gắn vẫn đang hoạt động cho cả công ty. "
+                    . "Chỉ thay được khi khóa hết lượt, hoặc khi {$this->ownerName()} xóa khóa.",
+            ], 403);
+        }
+        if ($key === null && $model !== null && $currentKey !== null && !$owner && !$this->keyCanBeReplaced()) {
+            return response()->json([
+                'code' => 'key_in_use',
+                'message' => "Chỉ {$this->ownerName()} (người gắn khóa) mới đổi được model.",
+            ], 403);
         }
 
         // Verify the combination that will actually be used before saving it.
@@ -125,6 +149,13 @@ class AssistantSettingsController extends Controller
     /** DELETE /admin/assistant/settings/key */
     public function destroyKey(Request $request)
     {
+        if ($this->settings->keySource() === 'app' && !$this->isKeyOwner($request)) {
+            return response()->json([
+                'code' => 'not_key_owner',
+                'message' => "Chỉ {$this->ownerName()} (người gắn khóa) mới xóa được khóa này.",
+            ], 403);
+        }
+
         $this->settings->removeKey($request->user()->id);
 
         return response()->json($this->payload($request, ['message' => 'Đã xóa khóa API. Trợ lý chuyển về chế độ thử nghiệm.']));

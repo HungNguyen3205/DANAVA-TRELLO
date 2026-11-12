@@ -95,6 +95,12 @@ export interface AssistantSettingsStatus {
   /** 'gemini' = Google AI Studio key, 'vertex' = Vertex AI express key */
   endpoint?: 'gemini' | 'vertex' | null;
   can_manage: boolean;
+  /** A key can be entered: there is none, or the current one is used up / rejected by Google. */
+  can_add_key: boolean;
+  /** Only the admin who added the key may remove it (or change its model). */
+  can_remove_key: boolean;
+  /** Set while the saved key is out of daily quota or rejected; null while it works. */
+  key_health: { state: 'exhausted' | 'invalid'; message: string; at: string } | null;
   message?: string;
   limits: AssistantUsageStatus['limits'];
   me_today: AssistantUsageStatus['me_today'];
@@ -114,13 +120,6 @@ export interface SettingUpdate {
   at: string;
 }
 
-/** Returned with HTTP 409 when a working key would be replaced without confirmation. */
-export interface ConfirmReplaceInfo {
-  code: 'confirm_replace';
-  message: string;
-  current: { key_hint: string; source: 'app' | 'env' | null; updated_by: string | null; updated_at: string | null };
-}
-
 export interface GeminiModelOption {
   id: string;
   name: string;
@@ -130,7 +129,7 @@ export interface GeminiModelOption {
 export const assistantSettingsApi = {
   get: () => api.get<AssistantSettingsStatus>('/assistant/settings').then((r) => r.data),
   models: () => api.get<{ source: 'google' | 'builtin'; models: GeminiModelOption[] }>('/admin/assistant/models').then((r) => r.data),
-  save: (data: { api_key?: string; model?: string; limit_per_user_daily?: number; limit_company_daily?: number; confirm_replace?: boolean }) =>
+  save: (data: { api_key?: string; model?: string; limit_per_user_daily?: number; limit_company_daily?: number }) =>
     api.put<AssistantSettingsStatus>('/admin/assistant/settings', data).then((r) => r.data),
   removeKey: () => api.delete<AssistantSettingsStatus>('/admin/assistant/settings/key').then((r) => r.data),
 };

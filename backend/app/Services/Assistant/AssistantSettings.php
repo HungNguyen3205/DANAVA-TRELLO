@@ -14,6 +14,8 @@ class AssistantSettings
     public const KEY_SETTING = 'assistant.gemini_api_key';
     public const MODEL_SETTING = 'assistant.gemini_model';
     public const ENDPOINT_SETTING = 'assistant.gemini_endpoint';
+    /** Set while the saved key is out of daily quota or rejected by Google; cleared on the next success. */
+    public const HEALTH_SETTING = 'assistant.gemini_key_health';
 
     /** Gemini API (AI Studio keys, "AIza...") or Vertex AI express mode (Google Cloud keys, "AQ...."). */
     public const ENDPOINTS = ['gemini', 'vertex'];
@@ -58,6 +60,43 @@ class AssistantSettings
         return str_starts_with($key, 'AQ.') ? 'vertex' : 'gemini';
     }
 
+    /** The admin who added the saved key (only they may remove it). Null for .env keys. */
+    public function keyOwnerId(): ?int
+    {
+        $id = AppSetting::where('key', self::KEY_SETTING)->value('updated_by');
+
+        return $id === null ? null : (int) $id;
+    }
+
+    /**
+     * Problem with the saved key seen on the last real call, or null while it works.
+     *
+     * @return array{state: 'exhausted'|'invalid', message: string, at: string}|null
+     */
+    public function keyHealth(): ?array
+    {
+        $raw = AppSetting::getValue(self::HEALTH_SETTING);
+        $value = $raw ? json_decode($raw, true) : null;
+
+        return is_array($value) && isset($value['state'], $value['message']) ? $value : null;
+    }
+
+    public function markKeyProblem(string $state, string $message): void
+    {
+        AppSetting::setValue(self::HEALTH_SETTING, json_encode([
+            'state' => $state,
+            'message' => $message,
+            'at' => now()->toIso8601String(),
+        ], JSON_UNESCAPED_UNICODE));
+    }
+
+    public function markKeyWorking(): void
+    {
+        if (AppSetting::getValue(self::HEALTH_SETTING) !== null) {
+            AppSetting::setValue(self::HEALTH_SETTING, null);
+        }
+    }
+
     public function isLive(): bool
     {
         return $this->apiKey() !== null;
@@ -76,6 +115,7 @@ class AssistantSettings
             'mode' => $key ? 'live' : 'demo',
             'endpoint' => $key ? $this->endpoint() : null,
             'key_updated' => self::lastUpdate(self::KEY_SETTING),
+            'key_health' => $key ? $this->keyHealth() : null,
             'model_updated' => self::lastUpdate(self::MODEL_SETTING),
         ];
     }
@@ -110,6 +150,7 @@ class AssistantSettings
             $oldKey = AppSetting::getSecret(self::KEY_SETTING);
             if ($oldKey !== $key) {
                 AppSetting::setSecret(self::KEY_SETTING, $key, $userId);
+                $this->markKeyWorking();
                 AppSettingChange::log($userId, self::KEY_SETTING, $oldKey ? 'replaced' : 'added', self::hint($oldKey), self::hint($key));
             }
         }
@@ -130,6 +171,7 @@ class AssistantSettings
         $oldKey = AppSetting::getSecret(self::KEY_SETTING);
         AppSetting::setSecret(self::KEY_SETTING, null);
         AppSetting::setValue(self::ENDPOINT_SETTING, null);
+        $this->markKeyWorking();
         if ($oldKey) {
             AppSettingChange::log($userId, self::KEY_SETTING, 'removed', self::hint($oldKey), null);
         }

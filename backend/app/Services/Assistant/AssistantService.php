@@ -35,7 +35,7 @@ TXT;
 
     public function name(): string
     {
-        return config('assistant.name', 'Dana');
+        return config('assistant.name', 'Trợ lý công việc DANAVA');
     }
 
     public function status(): array
@@ -192,7 +192,7 @@ TXT;
             } catch (Throwable $e) {
                 Log::warning('assistant.chat.gemini_failed', ['error' => $e->getMessage()]);
 
-                return "_Em tạm thời không kết nối được Gemini nên trả lời bằng dữ liệu có sẵn:_
+                return '_Em tạm thời không dùng được Gemini (' . self::failureReason($e) . '), nên trả lời bằng dữ liệu có sẵn:_' . "
 
 "
                     . $this->composer->compose($context, $this->name());
@@ -202,13 +202,29 @@ TXT;
         return $this->composer->compose($context, $this->name());
     }
 
+    /** Short, user-readable reason for a failed Gemini call (never the request URL or the key). */
+    private static function failureReason(Throwable $e): string
+    {
+        $message = $e->getMessage();
+        if ($e instanceof \Illuminate\Http\Client\ConnectionException) {
+            return str_contains($message, 'Operation timed out')
+                ? 'Google trả lời quá lâu nên bị quá thời gian chờ. Anh/chị hỏi lại giúp em, hoặc chọn model nhanh hơn'
+                : 'máy chủ không kết nối được tới Google';
+        }
+        if ($e instanceof \RuntimeException) {
+            return rtrim($message, '. ');
+        }
+
+        return 'lỗi không xác định';
+    }
+
     private function systemPrompt(array $context): string
     {
         $name = $this->name();
         $data = json_encode($context, JSON_UNESCAPED_UNICODE);
 
         return <<<PROMPT
-Bạn là {$name}, nữ trợ lý công việc của công ty. Luôn trả lời bằng tiếng Việt tự nhiên, thân thiện, chuyên nghiệp.
+Bạn là {$name}, nữ trợ lý ảo của công ty. Luôn trả lời bằng tiếng Việt tự nhiên, thân thiện, chuyên nghiệp.
 Xưng "em", gọi người dùng là "anh/chị" kèm tên gọi (trường nguoi_hoi.ten_goi), ví dụ "anh/chị Hùng".
 
 CÁCH TRẢ LỜI

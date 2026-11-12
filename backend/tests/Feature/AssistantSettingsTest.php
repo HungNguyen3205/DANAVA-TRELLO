@@ -162,22 +162,80 @@ class AssistantSettingsTest extends TestCase
         $this->assertSame('STRING', $out['properties']['tags']['items']['type']);
     }
 
-    public function test_replacing_a_working_key_needs_confirmation(): void
+    public function test_a_working_key_cannot_be_replaced_or_removed_by_another_admin(): void
     {
         $this->fakeGemini();
         $other = User::factory()->create(['name' => 'Admin Hai', 'system_role' => 'system_admin', 'account_status' => 'active']);
         $this->actingAs($other)->putJson('/api/admin/assistant/settings', ['api_key' => self::KEY])->assertOk();
 
+        $this->actingAs($this->admin)->getJson('/api/assistant/settings')
+            ->assertJson(['can_add_key' => false, 'can_remove_key' => false, 'key_updated' => ['by' => ['name' => 'Admin Hai']]]);
+        $this->actingAs($other)->getJson('/api/assistant/settings')
+            ->assertJson(['can_add_key' => false, 'can_remove_key' => true]);
+
         $newKey = 'AIzaSyAnotherKey_0987654321zyxwvuABCD';
         $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => $newKey])
-            ->assertStatus(409)
-            ->assertJsonPath('code', 'confirm_replace')
-            ->assertJsonPath('current.key_hint', '••••WXYZ')
-            ->assertJsonPath('current.updated_by', 'Admin Hai');
+            ->assertForbidden()->assertJsonPath('code', 'key_in_use');
+        $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['model' => 'gemini-2.5-flash-lite'])->assertForbidden();
+        $this->actingAs($this->admin)->deleteJson('/api/admin/assistant/settings/key')
+            ->assertForbidden()->assertJsonPath('message', 'Chỉ Admin Hai (người gắn khóa) mới xóa được khóa này.');
         $this->assertSame(self::KEY, app(AssistantSettings::class)->apiKey()); // unchanged
 
-        $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => $newKey, 'confirm_replace' => true])->assertOk();
+        // Once the owner removes it, another admin may add a key and becomes its owner.
+        $this->actingAs($other)->deleteJson('/api/admin/assistant/settings/key')->assertOk();
+        $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => $newKey])
+            ->assertOk()->assertJson(['can_remove_key' => true]);
         $this->assertSame($newKey, app(AssistantSettings::class)->apiKey());
+    }
+
+    public function test_a_key_out_of_daily_quota_can_be_replaced_by_any_admin(): void
+    {
+        $other = User::factory()->create(['name' => 'Admin Hai', 'system_role' => 'system_admin', 'account_status' => 'active']);
+        app(AssistantSettings::class)->save(self::KEY, null, $other->id, 'gemini');
+
+        $quota = fn (string $id) => Http::response(['error' => ['message' => 'quota', 'details' => [
+            ['@type' => 'type.googleapis.com/google.rpc.QuotaFailure', 'violations' => [['quotaId' => $id]]],
+        ]]], 429);
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::sequence()
+            ->pushResponse($quota('GenerateRequestsPerMinutePerProjectPerModel-FreeTier'))
+            ->pushResponse($quota('GenerateRequestsPerDayPerProjectPerModel-FreeTier'))
+            ->push(['candidates' => [['content' => ['parts' => [['text' => 'OK']]]]]]),
+        ]);
+
+        // A per-minute limit is temporary: the key stays locked.
+        $this->actingAs($this->employee)->postJson('/api/assistant/chat', ['message' => 'việc của tôi'])->assertOk();
+        $this->actingAs($this->admin)->getJson('/api/assistant/settings')->assertJson(['can_add_key' => false, 'key_health' => null]);
+
+        // The daily quota is used up: everyone sees it and any admin may enter a new key.
+        $reply = $this->actingAs($this->employee)->postJson('/api/assistant/chat', ['message' => 'việc của tôi'])->assertOk()->json('reply.content');
+        $this->assertStringContainsString('hết lượt dùng trong ngày', $reply);
+        $this->actingAs($this->admin)->getJson('/api/assistant/settings')
+            ->assertJson(['can_add_key' => true, 'can_remove_key' => false, 'key_health' => ['state' => 'exhausted']]);
+
+        $newKey = 'AIzaSyAnotherKey_0987654321zyxwvuABCD';
+        $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => $newKey])
+            ->assertOk()->assertJson(['key_health' => null, 'can_add_key' => false, 'can_remove_key' => true]);
+        $this->assertSame($newKey, app(AssistantSettings::class)->apiKey());
+    }
+
+    public function test_key_problem_clears_after_the_next_successful_answer(): void
+    {
+        $this->fakeGemini();
+        $this->actingAs($this->admin)->putJson('/api/admin/assistant/settings', ['api_key' => self::KEY])->assertOk();
+        app(AssistantSettings::class)->markKeyProblem('exhausted', 'x');
+
+        $this->actingAs($this->employee)->postJson('/api/assistant/chat', ['message' => 'xin chào'])->assertOk();
+        $this->assertNull(app(AssistantSettings::class)->keyHealth());
+    }
+
+    public function test_chat_fallback_tells_why_gemini_failed(): void
+    {
+        app(AssistantSettings::class)->save(self::KEY, null, $this->admin->id, 'gemini');
+
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['error' => ['message' => 'This model is currently experiencing high demand.']], 503)]);
+        $reply = $this->actingAs($this->employee)->postJson('/api/assistant/chat', ['message' => 'việc của tôi'])->assertOk()->json('reply.content');
+        $this->assertStringContainsString('đang quá tải', $reply);
+        Http::assertSentCount(2); // retried once
     }
 
     public function test_saving_the_same_key_or_only_limits_needs_no_confirmation(): void

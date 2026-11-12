@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, ExternalLink, Eye, EyeOff, KeyRound, Loader2, Trash2, ChevronDown, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, Eye, EyeOff, KeyRound, Loader2, Lock, Trash2, ChevronDown, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { assistantSettingsApi, formatDateTimeVN, type AssistantSettingsStatus, type ConfirmReplaceInfo, type GeminiModelOption } from '../../lib/api/assistant';
+import { assistantSettingsApi, formatDateTimeVN, type AssistantSettingsStatus, type GeminiModelOption } from '../../lib/api/assistant';
 
 const AI_STUDIO_URL = 'https://aistudio.google.com/app/apikey';
 
@@ -61,62 +61,52 @@ export function GeminiKeyForm({ status, onChange, compact = false }: GeminiKeyFo
     return (
       <div className="text-sm text-muted-foreground">
         {status.has_key
-          ? 'Trợ lý đã được kết nối Gemini bởi quản trị viên.'
+          ? 'Trợ lý đã được kết nối Gemini, cả công ty dùng chung.'
           : 'Trợ lý đang chạy chế độ thử nghiệm. Quản trị viên hệ thống sẽ cài đặt khóa Gemini.'}
       </div>
     );
   }
 
+  const owner = status.key_updated?.by?.name;
+  const problem = status.has_key ? status.key_health : null;
+  // The key box shows only when there is no key or the current one can no longer be used.
+  const showKeyInput = status.can_add_key;
+  // The owner may still switch the model of a working key.
+  const showModel = !compact && (showKeyInput || status.can_remove_key);
+
   const save = async () => {
-    const key = apiKey.trim();
+    const key = showKeyInput ? apiKey.trim() : '';
     const modelChanged = model.trim() && model.trim() !== status.model;
     if (!key && !modelChanged) {
-      setError('Vui lòng dán khóa API vào ô trên.');
+      setError(showKeyInput ? 'Vui lòng dán khóa API vào ô trên.' : 'Chọn model khác để lưu.');
       return;
     }
     setSaving(true);
     setError('');
-    const payload = { ...(key ? { api_key: key } : {}), ...(modelChanged ? { model: model.trim() } : {}) };
     try {
-      let res;
-      try {
-        res = await assistantSettingsApi.save(payload);
-      } catch (e: any) {
-        // A working key exists: ask before replacing it (another admin may have set it).
-        const info = e?.response?.status === 409 ? (e.response.data as ConfirmReplaceInfo) : null;
-        if (info?.code !== 'confirm_replace') throw e;
-        const who = info.current.updated_by ? ` do ${info.current.updated_by} cài` : '';
-        const when = info.current.updated_at ? ` lúc ${formatDateTimeVN(info.current.updated_at)}` : '';
-        const source = info.current.source === 'env' ? ' (cấu hình trong file .env)' : '';
-        const ok = window.confirm(
-          `Khóa hiện tại ${info.current.key_hint}${who}${when}${source} đang hoạt động cho cả công ty.
-
-Thay bằng khóa mới? Khóa mới sẽ được kiểm tra trước khi thay.`,
-        );
-        if (!ok) return;
-        res = await assistantSettingsApi.save({ ...payload, confirm_replace: true });
-      }
+      const res = await assistantSettingsApi.save({ ...(key ? { api_key: key } : {}), ...(modelChanged ? { model: model.trim() } : {}) });
       toast.success(res.message || 'Đã lưu khóa Gemini.');
       setApiKey('');
       onChange(res);
     } catch (e: any) {
       const errs = e?.response?.data?.errors;
       setError(errs?.api_key?.[0] || errs?.model?.[0] || e?.response?.data?.message || 'Không lưu được khóa, vui lòng thử lại.');
+      // Someone else may have changed the key meanwhile: refresh what is shown.
+      if (e?.response?.status === 403) assistantSettingsApi.get().then(onChange).catch(() => {});
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async () => {
-    const by = status.key_updated?.by ? ` (do ${status.key_updated.by.name} cài)` : '';
-    if (!window.confirm(`Xóa khóa Gemini ${status.key_hint ?? ''}${by}? Cả công ty sẽ quay về chế độ thử nghiệm.`)) return;
+    if (!window.confirm(`Xóa khóa Gemini ${status.key_hint ?? ''}? Cả công ty sẽ quay về chế độ thử nghiệm cho tới khi có người gắn khóa mới.`)) return;
     setRemoving(true);
     try {
       const res = await assistantSettingsApi.removeKey();
       toast.success(res.message || 'Đã xóa khóa.');
       onChange(res);
-    } catch {
-      toast.error('Không xóa được khóa.');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Không xóa được khóa.');
     } finally {
       setRemoving(false);
     }
@@ -125,19 +115,35 @@ Thay bằng khóa mới? Khóa mới sẽ được kiểm tra trước khi thay.
   return (
     <div className="space-y-3">
       <div
-        className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${
-          status.has_key ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-800 dark:text-amber-300'
+        className={`flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${
+          problem
+            ? 'bg-destructive/10 text-destructive'
+            : status.has_key
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+              : 'bg-amber-500/10 text-amber-800 dark:text-amber-300'
         }`}
       >
-        {status.has_key ? <CheckCircle2 size={16} className="shrink-0" /> : <KeyRound size={16} className="shrink-0" />}
+        {problem ? (
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+        ) : status.has_key ? (
+          <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+        ) : (
+          <KeyRound size={16} className="shrink-0 mt-0.5" />
+        )}
         <span className="min-w-0">
           {status.has_key ? (
             <>
-              Đã kết nối {status.endpoint === 'vertex' ? 'Vertex AI' : 'Gemini'} · khóa <b className="font-mono">{status.key_hint}</b> · model <b>{status.model}</b>
+              {problem ? 'Khóa không dùng được nữa' : `Đã kết nối ${status.endpoint === 'vertex' ? 'Vertex AI' : 'Gemini'}`} · khóa{' '}
+              <b className="font-mono">{status.key_hint}</b> · model <b>{status.model}</b>
               {status.source === 'env' && <span className="opacity-75"> (cấu hình trong file .env)</span>}
               {status.key_updated && (
                 <span className="block text-xs opacity-80 mt-0.5">
-                  Cập nhật lần cuối{status.key_updated.by ? ` bởi ${status.key_updated.by.name}` : ''} lúc {formatDateTimeVN(status.key_updated.at)}
+                  Gắn{owner ? ` bởi ${owner}` : ''} lúc {formatDateTimeVN(status.key_updated.at)} · cả công ty dùng chung
+                </span>
+              )}
+              {problem && (
+                <span className="block text-xs mt-0.5">
+                  {problem.message} ({formatDateTimeVN(problem.at)}). Quản trị viên có thể gắn khóa mới bên dưới.
                 </span>
               )}
             </>
@@ -147,60 +153,77 @@ Thay bằng khóa mới? Khóa mới sẽ được kiểm tra trước khi thay.
         </span>
       </div>
 
-      <GeminiKeyGuide defaultOpen={!status.has_key && !compact} />
+      {status.has_key && !problem && !status.can_remove_key && (
+        <p className="flex items-start gap-2 text-xs text-muted-foreground">
+          <Lock size={14} className="shrink-0 mt-px" />
+          <span>
+            Khóa đang hoạt động nên không cần nhập thêm. Chỉ {owner ?? 'người gắn khóa'} mới xóa được khóa này; ô nhập khóa sẽ hiện lại khi khóa hết lượt
+            hoặc được xóa.
+          </span>
+        </p>
+      )}
 
-      <div>
-        <label htmlFor="gemini-key" className="block text-sm font-semibold text-foreground mb-1.5">
-          {status.has_key ? 'Thay khóa API mới' : 'Khóa API Gemini'}
-        </label>
-        <div className="relative">
-          <input
-            id="gemini-key"
-            type={showKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && save()}
-            placeholder="Dán khóa (AIza… hoặc AQ.…)"
-            autoComplete="off"
-            spellCheck={false}
-            className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-border bg-background font-mono text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => setShowKey((v) => !v)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
-            aria-label={showKey ? 'Ẩn khóa' : 'Hiện khóa'}
-          >
-            {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-      </div>
+      {showKeyInput && (
+        <>
+          <GeminiKeyGuide defaultOpen={!status.has_key && !compact} />
+          <div>
+            <label htmlFor="gemini-key" className="block text-sm font-semibold text-foreground mb-1.5">
+              {status.has_key ? 'Gắn khóa API mới thay khóa hết lượt' : 'Khóa API Gemini'}
+            </label>
+            <div className="relative">
+              <input
+                id="gemini-key"
+                type={showKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && save()}
+                placeholder="Dán khóa (AIza… hoặc AQ.…)"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-border bg-background font-mono text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
+                aria-label={showKey ? 'Ẩn khóa' : 'Hiện khóa'}
+              >
+                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
-      {!compact && <ModelPicker value={model} onChange={setModel} hasKey={status.has_key} />}
+      {showModel && <ModelPicker value={model} onChange={setModel} hasKey={status.has_key} />}
 
       {error && <div className="rounded-lg bg-destructive/10 text-destructive text-sm px-3 py-2 break-words">{linkify(error)}</div>}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-60 whitespace-nowrap"
-        >
-          {saving ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
-          {saving ? 'Đang kiểm tra khóa…' : 'Kiểm tra & lưu'}
-        </button>
-        {status.has_key && status.source === 'app' && (
-          <button
-            type="button"
-            onClick={remove}
-            disabled={removing}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 whitespace-nowrap"
-          >
-            <Trash2 size={15} /> Xóa khóa
-          </button>
-        )}
-      </div>
+      {(showKeyInput || showModel || status.can_remove_key) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {(showKeyInput || showModel) && (
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-60 whitespace-nowrap"
+            >
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+              {saving ? 'Đang kiểm tra…' : showKeyInput ? 'Kiểm tra & lưu' : 'Lưu model'}
+            </button>
+          )}
+          {status.can_remove_key && (
+            <button
+              type="button"
+              onClick={remove}
+              disabled={removing}
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 whitespace-nowrap"
+            >
+              <Trash2 size={15} /> Xóa khóa
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

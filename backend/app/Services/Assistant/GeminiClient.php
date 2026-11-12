@@ -2,6 +2,8 @@
 
 namespace App\Services\Assistant;
 
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -210,6 +212,8 @@ class GeminiClient
         ?string $endpoint = null,
         bool $allowEmpty = false,
     ): string {
+        // Health of the company key is tracked only for real calls with the saved key (not key checks).
+        $savedKey = $apiKey === null;
         $model ??= $this->settings->model();
         $apiKey ??= $this->settings->apiKey();
         $endpoint ??= $this->settings->endpoint();
@@ -232,6 +236,10 @@ class GeminiClient
             ->acceptJson()
             // Files take longer to read.
             ->timeout(config('assistant.gemini.timeout', 30) * ($this->hasInline($messages) ? 3 : 1))
+            // Google briefly overloaded (500/503) or the connection could not be opened: try once more.
+            ->retry(2, 1500, fn (\Throwable $e) => $e instanceof RequestException
+                ? in_array($e->response->status(), [500, 503], true)
+                : $e instanceof ConnectionException && !str_contains($e->getMessage(), 'Operation timed out'), throw: false)
             ->post($url, $payload);
 
         // Log timing and token usage only, never prompts, answers or the key.
@@ -250,7 +258,13 @@ class GeminiClient
         ]);
 
         if ($response->failed()) {
+            if ($savedKey && ($problem = self::keyProblem($response))) {
+                $this->settings->markKeyProblem(...$problem);
+            }
             $this->fail($response, $model);
+        }
+        if ($savedKey) {
+            $this->settings->markKeyWorking();
         }
 
         // Count real assistant usage (not the key check) for the daily limits.
@@ -305,9 +319,51 @@ class GeminiClient
 
         throw new RuntimeException(match (true) {
             $status === 404 => "Không tìm thấy model \"{$model}\" hoặc khóa này không dùng được model đó. Thử model khác trong phần Nâng cao.",
+            $status === 429 && self::isDailyQuota($response) => 'Khóa Gemini đã hết lượt dùng trong ngày (quota). Cần thay khóa khác hoặc đợi Google cấp lại lượt vào ngày mai.',
             $status === 429 => 'Đã hết lượt dùng Gemini tạm thời (quota). Vui lòng thử lại sau ít phút.',
+            $status === 503 => "Model \"{$model}\" của Google đang quá tải. Thử lại sau ít phút hoặc chọn model khác (vd: gemini-2.5-flash).",
             default => 'Gemini lỗi: ' . mb_substr($raw ?: 'HTTP ' . $status, 0, 200),
         });
+    }
+
+    /**
+     * Whether a failure means the key itself can no longer be used (so admins may replace it).
+     * Per-minute limits and overloads are temporary and do not count.
+     *
+     * @return array{0: 'exhausted'|'invalid', 1: string}|null
+     */
+    private static function keyProblem(Response $response): ?array
+    {
+        $raw = (string) ($response->json('error.message') ?? '');
+        $reason = self::errorReason($response);
+        $status = $response->status();
+
+        if ($status === 429) {
+            return self::isDailyQuota($response) ? ['exhausted', 'Khóa đã hết lượt dùng trong ngày (quota).'] : null;
+        }
+        if ($status === 401 || $reason === 'API_KEY_INVALID' || str_contains($raw, 'API key not valid') || str_contains(mb_strtolower($raw), 'expired')) {
+            return ['invalid', 'Google báo khóa không còn hợp lệ (đã bị xóa, hết hạn hoặc sai).'];
+        }
+        if ($status === 403 && in_array($reason, ['SERVICE_DISABLED', 'API_KEY_SERVICE_BLOCKED', 'BILLING_DISABLED'], true)) {
+            return ['invalid', 'Google từ chối khóa (API bị tắt, khóa bị giới hạn hoặc chưa bật thanh toán).'];
+        }
+
+        return null;
+    }
+
+    /** 429 caused by a per-day quota (free tier used up), not a per-minute burst. */
+    private static function isDailyQuota(Response $response): bool
+    {
+        foreach ((array) $response->json('error.details') as $detail) {
+            foreach ((array) ($detail['violations'] ?? []) as $v) {
+                if (is_array($v) && preg_match('/PerDay/i', (string) ($v['quotaId'] ?? ''))) {
+                    return true;
+                }
+            }
+        }
+        $lower = mb_strtolower((string) $response->json('error.message'));
+
+        return str_contains($lower, 'per day') || str_contains($lower, 'daily') || str_contains($lower, 'limit: 0');
     }
 
     private static function errorReason(Response $response): ?string
