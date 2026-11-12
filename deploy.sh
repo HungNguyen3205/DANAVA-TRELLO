@@ -35,7 +35,16 @@ main() {
 require 'vendor/autoload.php';
 $app = require 'bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-$c = config('database.connections.' . config('database.default'));
+// The resolved connection config (also handles DB_URL=mysql://user:pass@host/db).
+$c = Illuminate\Support\Facades\DB::connection()->getConfig();
+if (($c['username'] ?? '') === '') {
+    fwrite(STDERR, "Laravel chưa có tên đăng nhập database. Kết nối: " . config('database.default')
+        . ", driver: " . ($c['driver'] ?? '?') . ", database: " . ($c['database'] ?? '?') . "\n"
+        . "Các khóa DB trong backend/.env: " . implode(', ', preg_grep('/DB|DATABASE/', array_map(
+            fn ($l) => trim(explode('=', $l, 2)[0]), preg_grep('/=/', file('.env') ?: [])
+        ))) . "\n");
+    exit(1);
+}
 $q = fn ($v) => '"' . addcslashes((string) $v, "\"\\") . '"';
 file_put_contents(getenv('CNF'), "[client]\nuser=" . $q($c['username'] ?? '') . "\npassword=" . $q($c['password'] ?? '')
     . "\nhost=" . $q($c['host'] ?? 'localhost') . "\nport=" . (int) ($c['port'] ?? 3306) . "\n");
