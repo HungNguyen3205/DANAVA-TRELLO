@@ -91,7 +91,7 @@ class GeminiClient
     private function hasInline(array $messages): bool
     {
         foreach ($messages as $m) {
-            if (!empty($m['parts'])) {
+            if (!empty($m['parts']) || array_filter($m['raw']['parts'] ?? [], fn ($p) => isset($p['inlineData']))) {
                 return true;
             }
         }
@@ -203,6 +203,38 @@ class GeminiClient
         return $out;
     }
 
+    /**
+     * One step of a tool-using conversation. $contents are raw Gemini contents
+     * (role + parts, including functionCall / functionResponse parts).
+     *
+     * @return array{parts: array, calls: array<int, array{name: string, args: array}>, text: string}
+     */
+    public function generateWithTools(string $systemPrompt, array $contents, array $functionDeclarations, float $temperature = 0.2): array
+    {
+        $tools = [['functionDeclarations' => array_map(fn ($f) => [
+            'name' => $f['name'],
+            'description' => $f['description'],
+            'parameters' => self::toOpenApiSchema($f['parameters']),
+        ], $functionDeclarations)]];
+
+        $parts = $this->call($systemPrompt, array_map(fn ($c) => ['raw' => $c], $contents), [
+            'temperature' => $temperature,
+            'maxOutputTokens' => 4096,
+        ], tools: $tools, rawParts: true);
+
+        $calls = [];
+        $text = '';
+        foreach ($parts as $p) {
+            if (isset($p['functionCall']['name'])) {
+                $calls[] = ['name' => (string) $p['functionCall']['name'], 'args' => (array) ($p['functionCall']['args'] ?? [])];
+            } elseif (isset($p['text']) && empty($p['thought'])) {
+                $text .= $p['text'];
+            }
+        }
+
+        return ['parts' => $parts, 'calls' => $calls, 'text' => trim($text)];
+    }
+
     private function call(
         string $systemPrompt,
         array $messages,
@@ -211,7 +243,9 @@ class GeminiClient
         ?string $model = null,
         ?string $endpoint = null,
         bool $allowEmpty = false,
-    ): string {
+        array $tools = [],
+        bool $rawParts = false,
+    ): string|array {
         // Health of the company key is tracked only for real calls with the saved key (not key checks).
         $savedKey = $apiKey === null;
         $model ??= $this->settings->model();
@@ -223,13 +257,16 @@ class GeminiClient
 
         $payload = [
             'systemInstruction' => ['parts' => [['text' => $systemPrompt]]],
-            'contents' => array_map(fn ($m) => [
+            'contents' => array_map(fn ($m) => $m['raw'] ?? [
                 'role' => $m['role'] === 'model' ? 'model' : 'user',
                 // Optional inline files (images, PDFs, audio) go after the text of that message.
                 'parts' => [...($m['text'] !== '' ? [['text' => $m['text']]] : []), ...($m['parts'] ?? [])],
             ], $messages),
             'generationConfig' => $generationConfig,
         ];
+        if ($tools) {
+            $payload['tools'] = $tools;
+        }
 
         // Thinking models (Gemini 2.5 / 3.x) reason before answering, which can take longer than
         // the timeout. Office questions do not need deep reasoning, so keep it light.
@@ -302,6 +339,14 @@ class GeminiClient
         }
 
         $parts = $response->json('candidates.0.content.parts') ?? [];
+        if ($rawParts) {
+            if (!$parts) {
+                $reason = $response->json('candidates.0.finishReason') ?? $response->json('promptFeedback.blockReason') ?? 'không rõ';
+                throw new RuntimeException('Gemini không trả lời (lý do: ' . $reason . ').');
+            }
+
+            return $parts;
+        }
         $text = trim(implode('', array_map(fn ($p) => $p['text'] ?? '', $parts)));
         if ($text === '' && !$allowEmpty) {
             $reason = $response->json('candidates.0.finishReason') ?? $response->json('promptFeedback.blockReason') ?? 'không rõ';

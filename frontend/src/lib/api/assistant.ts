@@ -157,3 +157,27 @@ export function formatDateTimeVN(iso: string | null | undefined): string {
     timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(new Date(iso));
 }
+
+export type AssistantActionLogEntry = {
+  id: number;
+  user: { id: number; name: string; username: string } | null;
+  tool: string;
+  status: 'success' | 'failed' | 'denied' | 'needs_confirmation';
+  target_type: string | null;
+  target_id: number | null;
+  target_label: string | null;
+  arguments: Record<string, unknown> | null;
+  changes: Record<string, { truoc: unknown; sau: unknown }> | null;
+  message: string | null;
+  request_text: string | null;
+  created_at: string | null;
+};
+
+export type AssistantActionLogPage = { data: AssistantActionLogEntry[]; current_page: number; last_page: number; total: number };
+
+export const assistantActionLogApi = {
+  list: (params: { page?: number; status?: string; q?: string; include_reads?: boolean }) =>
+    api.get<AssistantActionLogPage>('/admin/assistant/action-logs', {
+      params: { page: params.page, include_reads: params.include_reads ? 1 : undefined, status: params.status || undefined, q: params.q || undefined },
+    }).then((r) => r.data),
+};

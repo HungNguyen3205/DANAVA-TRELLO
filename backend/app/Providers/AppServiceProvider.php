@@ -22,5 +22,10 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Gate::policy(\App\Models\Board::class, \App\Policies\BoardPolicy::class);
         \Illuminate\Support\Facades\Gate::policy(\App\Models\KanbanColumn::class, \App\Policies\KanbanColumnPolicy::class);
         \Illuminate\Support\Facades\Gate::policy(\App\Models\Task::class, \App\Policies\TaskPolicy::class);
+
+        // A system admin acting through the chat assistant may work on any board.
+        \Illuminate\Support\Facades\Gate::before(
+            fn ($user) => \App\Services\Assistant\AssistantActions::bypasses($user) ? true : null
+        );
     }
 }

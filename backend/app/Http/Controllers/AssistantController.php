@@ -39,6 +39,9 @@ class AssistantController extends Controller
             'attachments.*.file' => 'Tệp tải lên không hợp lệ.',
         ]);
 
+        // The assistant may look things up and act in several steps.
+        @set_time_limit(180);
+
         return response()->json([
             ...$this->assistant->chat($request->user(), trim((string) ($data['message'] ?? '')), $request->file('attachments', [])),
             'usage' => $this->assistant->statusFor($request->user())['usage'],

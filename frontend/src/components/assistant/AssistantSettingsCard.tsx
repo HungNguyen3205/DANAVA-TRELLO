@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bot, Loader2 } from 'lucide-react';
 import { GeminiKeyForm } from './GeminiKeyForm';
 import { AssistantUsagePanel } from './AssistantUsagePanel';
+import { AssistantActionLogPanel } from './AssistantActionLogPanel';
 import { assistantSettingsApi, type AssistantSettingsStatus } from '../../lib/api/assistant';
 
 /** Settings page card for the company Gemini key (editable by system admins). */
@@ -39,6 +40,7 @@ export function AssistantSettingsCard() {
           <>
             <GeminiKeyForm status={status} onChange={onChange} />
             <AssistantUsagePanel status={status} onChange={onChange} />
+            {status.can_manage && <AssistantActionLogPanel />}
           </>
         )}
       </div>

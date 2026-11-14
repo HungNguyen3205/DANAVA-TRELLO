@@ -154,7 +154,7 @@ export function HomePage() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar">
-      <div className="max-w-[1440px] mx-auto p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
+      <div className="max-w-[1440px] mx-auto p-6 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 space-y-8 animate-in fade-in duration-500">
         
         {/* Modern Welcome Hero Card */}
         <section className="relative overflow-hidden bg-gradient-to-br from-card via-card to-primary/[0.04] border border-border/80 rounded-3xl p-6 sm:p-8 shadow-sm">

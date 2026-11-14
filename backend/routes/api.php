@@ -78,6 +78,7 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
         Route::put('/assistant/settings', [\App\Http\Controllers\AssistantSettingsController::class, 'update'])->middleware('throttle:10,1');
         Route::delete('/assistant/settings/key', [\App\Http\Controllers\AssistantSettingsController::class, 'destroyKey']);
         Route::get('/assistant/models', [\App\Http\Controllers\AssistantSettingsController::class, 'models'])->middleware('throttle:20,1');
+        Route::get('/assistant/action-logs', [\App\Http\Controllers\AssistantActionLogController::class, 'index']);
     });
 
     // Minimal options for dropdowns (any authenticated user)

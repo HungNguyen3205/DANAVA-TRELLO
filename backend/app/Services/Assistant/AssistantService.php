@@ -13,6 +13,8 @@ use Throwable;
 /** Chat entry point: routes pasted assignment lists to task extraction, everything else to Q&A. */
 class AssistantService
 {
+    private const MAX_TOOL_STEPS = 8;
+
     private const TRANSCRIBE_PROMPT = <<<'TXT'
 Chép lại nguyên văn lời nói trong ghi âm bằng tiếng Việt có dấu, đúng chính tả. Giữ đúng tên người, tên dự án, ngày giờ.
 Nếu người nói liệt kê nhiều việc, ghi mỗi việc một dòng bắt đầu bằng "- ". Chỉ trả về nội dung đã chép, không thêm lời bình.
@@ -30,6 +32,7 @@ TXT;
         private AnswerComposer $composer,
         private AssistantUsage $usage,
         private AssistantAttachments $attachments,
+        private AssistantActions $actions,
     ) {
     }
 
@@ -114,7 +117,8 @@ TXT;
         }
 
         $workText = trim(implode("\n\n", array_filter([$message, $docText, $readText])));
-        if ($workText !== '' && $this->extractor->looksLikeTaskList($workText)) {
+        $agent = $live && !$blocked && $this->wantsAction($message);
+        if (!$agent && $workText !== '' && $this->extractor->looksLikeTaskList($workText)) {
             $preview = $this->extractor->extract($user, $workText);
             $count = count($preview['tasks']);
             $text = $count
@@ -142,6 +146,15 @@ TXT;
         $prefix = implode("\n\n", array_map(fn ($n) => "_{$n}_", $notes));
 
         return trim($prefix . ($prefix !== '' && $text !== '' ? "\n\n" : '') . $text);
+    }
+
+    /** Requests to change something (reassign, edit, delete, accounts) are handled by the tool-using assistant. */
+    private function wantsAction(string $text): bool
+    {
+        return (bool) preg_match(
+            '/giao lai|phan lai|phan cong lai|chuyen .{0,20}(cho|sang)|doi nguoi|doi han|gia han|lui han|sua |chinh sua|cap nhat|xoa |huy viec|danh dau|hoan thanh|mo lai|tai khoan|nhan vien moi|mat khau|binh luan|them .{0,15}vao viec|bo .{0,15}khoi viec/u',
+            VietnameseText::fold($text) . ' '
+        );
     }
 
     private function wantsTasks(string $text): bool
@@ -188,7 +201,7 @@ TXT;
                     return ['role' => 'user', 'text' => trim($text), 'parts' => $this->attachments->inlineParts($visual, ['image', 'pdf'])];
                 })->filter(fn ($m) => $m['text'] !== '' || !empty($m['parts']))->values()->all();
 
-                return $this->gemini->generateText($this->systemPrompt($context), $messages);
+                return $this->runAgent($user, $currentId, $message, $this->systemPrompt($user, $context), $messages);
             } catch (Throwable $e) {
                 Log::warning('assistant.chat.gemini_failed', ['error' => $e->getMessage()]);
 
@@ -213,15 +226,72 @@ TXT;
         return 'lỗi không xác định';
     }
 
-    private function systemPrompt(array $context): string
+    /**
+     * Let Gemini call the action tools until it answers in text. Each tool call is checked
+     * against the user's own rights and logged by AssistantActions.
+     */
+    private function runAgent(User $user, int $turnId, string $requestText, string $system, array $messages): string
+    {
+        $contents = array_map(fn ($m) => [
+            'role' => $m['role'],
+            'parts' => [...($m['text'] !== '' ? [['text' => $m['text']]] : []), ...($m['parts'] ?? [])],
+        ], $messages);
+        $declarations = $this->actions->declarations();
+        $done = [];
+
+        for ($step = 0; $step < self::MAX_TOOL_STEPS; $step++) {
+            $result = $this->gemini->generateWithTools($system, $contents, $declarations);
+            if (!$result['calls']) {
+                return $result['text'] !== '' ? $result['text'] : $this->actionsSummary($done);
+            }
+
+            $contents[] = ['role' => 'model', 'parts' => $result['parts']];
+            $responses = [];
+            foreach (array_slice($result['calls'], 0, 10) as $call) {
+                $outcome = $this->actions->execute($user, $call['name'], $call['args'], $turnId, $requestText);
+                if (!in_array($call['name'], AssistantActions::READ_TOOLS, true)) {
+                    $done[] = $outcome['thong_bao'] ?? $outcome['loi'] ?? null;
+                }
+                $responses[] = ['functionResponse' => ['name' => $call['name'], 'response' => $outcome]];
+            }
+            $contents[] = ['role' => 'user', 'parts' => $responses];
+        }
+
+        return $this->actionsSummary($done) ?: 'Yêu cầu này cần quá nhiều bước, anh/chị chia nhỏ giúp em nhé.';
+    }
+
+    private function actionsSummary(array $done): string
+    {
+        $done = array_values(array_filter($done));
+
+        return $done ? "Em đã thực hiện:
+" . implode("
+", array_map(fn ($d) => '- ' . $d, $done)) : 'Em chưa thực hiện được yêu cầu này.';
+    }
+
+    private function systemPrompt(User $user, array $context): string
     {
         $name = $this->name();
+        $today = $this->today();
+        $rights = $this->actions->isAdmin($user)
+            ? 'Người dùng là QUẢN TRỊ VIÊN HỆ THỐNG: được làm mọi việc với công việc trên mọi bảng, và tạo/sửa/khóa/đặt lại mật khẩu/xóa tài khoản nhân viên.'
+            : 'Người dùng là NHÂN VIÊN: được tạo, sửa, giao lại, chuyển cột, đánh dấu xong, xóa công việc (kể cả việc của người khác) trên các bảng họ là thành viên. KHÔNG được tạo tài khoản, sửa, khóa hay xóa nhân viên: nếu họ yêu cầu, lịch sự từ chối và đề nghị liên hệ quản trị viên (không gọi công cụ tài khoản).';
         $data = json_encode($context, JSON_UNESCAPED_UNICODE);
 
         return <<<PROMPT
 Bạn là {$name}, nữ trợ lý ảo của công ty. Luôn trả lời bằng tiếng Việt tự nhiên, thân thiện, chuyên nghiệp.
 Xưng "em". Gọi người dùng đúng theo trường nguoi_hoi.xung_ho ("anh" với nam, "chị" với nữ) kèm tên gọi nguoi_hoi.ten_goi, ví dụ "anh Hùng", "chị Lan". Chỉ dùng "anh/chị" khi xung_ho là "anh/chị" (chưa rõ giới tính).
-Người dùng tự sửa được họ tên, giới tính, số điện thoại, ngày sinh, ảnh đại diện ở menu trái **Hồ sơ cá nhân** → sửa → **Lưu thay đổi**; em không tự sửa giúp được, hãy hướng dẫn họ làm.
+Người dùng tự sửa được họ tên, giới tính, số điện thoại, ngày sinh, ảnh đại diện ở menu trái **Hồ sơ cá nhân** → sửa → **Lưu thay đổi**.
+
+THAO TÁC BẰNG CÔNG CỤ (hôm nay là {$today})
+{$rights}
+- Khi người dùng nhờ làm việc gì (giao/phân lại việc, đổi hạn, sửa, chuyển cột, xong việc, xóa, bình luận, tạo việc, quản lý tài khoản): GỌI CÔNG CỤ để làm thật, không chỉ hướng dẫn.
+- Luôn tra id bằng find_tasks / find_people / list_boards / list_departments trước; không tự đoán id. Nếu tìm ra nhiều kết quả khớp, hỏi lại người dùng chọn cái nào.
+- Ngày tương đối ("mai", "thứ 6", "cuối tuần") tự đổi sang YYYY-MM-DD theo ngày hôm nay.
+- Công cụ trả về can_xac_nhan: hỏi người dùng xác nhận rõ ràng; chỉ gọi lại khi tin nhắn tiếp theo của họ đồng ý.
+- Công cụ báo lỗi hoặc không có quyền: nói đúng lý do, không nói là đã làm.
+- Sau khi làm xong, báo ngắn gọn đã làm gì (✅ ...). Khi tạo tài khoản hoặc đặt lại mật khẩu, ghi rõ tên đăng nhập và mật khẩu tạm.
+- Mọi thao tác đều được hệ thống ghi nhật ký.
 
 CÁCH TRẢ LỜI
 - Chỉ dùng thông tin trong DỮ LIỆU bên dưới (đã được hệ thống truy xuất theo từ khóa trong câu hỏi và theo quyền của người hỏi) và trong tệp người dùng gửi kèm. Không bịa tên, số liệu, công việc hay ngày tháng.
