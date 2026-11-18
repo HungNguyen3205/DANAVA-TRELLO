@@ -157,7 +157,7 @@ export function HomePage() {
       <div className="max-w-[1440px] mx-auto p-6 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 space-y-8 animate-in fade-in duration-500">
         
         {/* Modern Welcome Hero Card */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-card via-card to-primary/[0.04] border border-border/80 rounded-3xl p-6 sm:p-8 shadow-sm">
+        <section className="reveal relative overflow-hidden bg-gradient-to-br from-card via-card to-primary/[0.04] border border-border/80 rounded-3xl p-6 sm:p-8 shadow-sm">
           {/* Subtle background glow decoration */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
           <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
@@ -207,7 +207,7 @@ export function HomePage() {
 
               <button 
                 onClick={() => navigate('/my-tasks')} 
-                className="flex items-center gap-2 px-4 py-2.5 bg-background hover:bg-accent text-foreground border border-border rounded-xl text-sm font-semibold shadow-xs hover:shadow-sm transition-all"
+                className="ds-btn text-sm"
               >
                 <CheckCircle2 size={16} className="text-primary" />
                 <span>Công việc của tôi</span>
@@ -215,7 +215,7 @@ export function HomePage() {
 
               <button
                 onClick={() => navigate('/projects')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-background hover:bg-accent text-foreground border border-border rounded-xl text-sm font-semibold shadow-xs transition-all"
+                className="ds-btn text-sm"
               >
                 <FolderKanban size={16} className="text-primary" />
                 <span>Dự án</span>
@@ -267,7 +267,7 @@ export function HomePage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4 auto-rows-fr">
+                <div className="reveal-stagger grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4 auto-rows-fr">
                   {continueItems.map((board: any) => (
                     <BoardCard
                       key={board.id}

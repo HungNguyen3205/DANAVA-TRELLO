@@ -56,7 +56,7 @@ export function WorkspaceLayout() {
       </SidebarShell>
 
       {/* Main Content Area */}
-      <main className="relative flex-1 overflow-y-auto bg-background p-4 sm:p-6 xl:p-8">
+      <main className="relative flex-1 overflow-y-auto p-4 sm:p-6 xl:p-8">
         <Outlet context={{ workspaces, fetchData }} />
       </main>
 

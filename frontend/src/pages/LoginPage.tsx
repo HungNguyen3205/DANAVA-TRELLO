@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, LayoutTemplate, Sun, Moon } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2, LayoutTemplate, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
 import api from '../lib/axios';
@@ -60,7 +60,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className={`min-h-screen w-full flex items-center justify-center p-4 md:p-8 transition-colors duration-1000 relative overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-slate-100'}`}>
+    <div className={`min-h-screen w-full flex items-center justify-center p-4 md:p-8 transition-colors duration-1000 relative overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-transparent'}`}>
       
       {/* Decorative background Sun/Moon behind the card */}
       <div className={`absolute rounded-full transition-all duration-1000 ease-in-out pointer-events-none blur-[120px]
@@ -70,7 +70,7 @@ export function LoginPage() {
         }`} />
 
       {/* Centered Main Card */}
-      <div className={`w-full max-w-5xl h-[600px] flex flex-col md:flex-row rounded-3xl overflow-hidden shadow-2xl transition-all duration-1000 border relative z-10 ${isDark ? 'border-slate-700/50 shadow-indigo-900/20' : 'border-slate-200 shadow-slate-300/50'}`}>
+      <div className={`w-full max-w-5xl h-[600px] flex flex-col md:flex-row rounded-3xl overflow-hidden shadow-2xl transition-all duration-1000 border relative z-10 reveal ${isDark ? 'border-slate-700/50 shadow-indigo-900/20' : 'border-[var(--line)]'}`}>
         
         {/* Left Side - Illustration Panel */}
         <div className="hidden md:flex md:w-1/2 relative overflow-hidden flex-col transition-all duration-1000">
@@ -131,16 +131,11 @@ export function LoginPage() {
           {/* Brand Content */}
           <div className="relative z-30 p-10 flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden border border-white/20 shadow-sm bg-white/10 backdrop-blur-md">
-                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
-              </div>
-              <h1 className={`text-2xl md:text-3xl font-black tracking-tight drop-shadow-sm transition-colors duration-1000
-                ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                DANAVA WORK
-              </h1>
+              <img src="/logo.png" alt="DANAVA" className={`h-10 w-auto object-contain drop-shadow-sm transition-[filter] duration-1000 ${isDark ? 'brightness-0 invert' : ''}`} />
+              <span className="ds-badge">WORK</span>
             </div>
             <p className={`text-base md:text-lg max-w-sm font-medium leading-relaxed drop-shadow-sm transition-colors duration-1000
-              ${isDark ? 'text-indigo-200/80' : 'text-slate-700'}`}>
+              ${isDark ? 'text-indigo-200/80' : 'text-[var(--text)]'}`}>
               Nền tảng quản trị công việc chuyên nghiệp. Mọi thứ bạn cần ở một nơi.
             </p>
           </div>
@@ -179,34 +174,32 @@ export function LoginPage() {
             
             {/* Mobile Logo */}
             <div className="md:hidden flex flex-col items-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-border/50 bg-background">
-                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" />
-              </div>
-              <h1 className={`text-2xl font-black tracking-tight transition-colors duration-1000 ${isDark ? 'text-white' : 'text-slate-800'}`}>DANAVA WORK</h1>
+              <img src="/logo.png" alt="DANAVA" className={`h-10 w-auto object-contain ${isDark ? 'brightness-0 invert' : ''}`} />
+              <span className="ds-badge">WORK</span>
             </div>
 
             <div className="mb-8 text-center md:text-left">
-              <h2 className={`text-2xl md:text-3xl font-bold transition-colors duration-1000 ${isDark ? 'text-white' : 'text-slate-900'}`}>Đăng nhập</h2>
-              <p className={`mt-2 text-sm transition-colors duration-1000 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Sử dụng tài khoản do Admin cấp</p>
+              <h1 className={`text-[clamp(2rem,3.4vw,2.6rem)] leading-[1.1] transition-colors duration-1000 ${isDark ? 'text-white' : ''}`}>Đăng nhập</h1>
+              <p className={`mt-2 text-sm transition-colors duration-1000 ${isDark ? 'text-slate-400' : 'text-muted-foreground'}`}>Sử dụng tài khoản do Admin cấp</p>
             </div>
             
             {error && (
-              <div className="mb-6 p-3 px-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm flex items-start gap-3 transition-colors duration-1000">
-                <span className="font-bold bg-red-500/20 text-red-600 dark:text-red-400 w-5 h-5 flex items-center justify-center rounded-full shrink-0">!</span>
-                <span className="text-red-600 dark:text-red-400 mt-0.5">{error}</span>
+              <div role="alert" className="ds-notice ds-notice-error mb-6 text-sm flex items-start gap-3 dark:bg-red-500/10 dark:text-red-400">
+                <span className="font-bold bg-[var(--red)]/15 w-5 h-5 flex items-center justify-center rounded-full shrink-0">!</span>
+                <span className="mt-0.5">{error}</span>
               </div>
             )}
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-1.5 group">
-                <label className={`text-sm font-semibold transition-colors duration-1000 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Tài khoản</label>
+                <label className={`text-sm font-semibold transition-colors duration-1000 ${isDark ? 'text-slate-300' : 'text-[var(--ink)]'}`}>Tài khoản</label>
                 <div className="relative">
                   <input 
                     type="text" 
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
-                    className={`w-full p-3.5 rounded-xl border transition-all outline-none duration-300 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500
-                      ${isDark ? 'border-slate-700 bg-slate-800/50 text-white group-hover:border-indigo-500/50' : 'border-slate-200 bg-slate-50 text-slate-900 group-hover:border-indigo-400/50'}`}
+                    className={`w-full p-3.5 h-12 rounded-[14px] border-[1.5px] transition-all outline-none duration-300 focus:ring-4 focus:ring-[#53a5db26] focus:border-[var(--sky)]
+                      ${isDark ? 'border-slate-700 bg-slate-800/50 text-white group-hover:border-indigo-500/50' : 'border-[var(--line)] bg-[var(--field-bg)] text-[var(--ink)] group-hover:border-[#cdd5ea]'}`}
                     placeholder="admin@danava.vn"
                     required 
                   />
@@ -214,15 +207,15 @@ export function LoginPage() {
               </div>
               
               <div className="space-y-1.5 group relative">
-                <label className={`text-sm font-semibold transition-colors duration-1000 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Mật khẩu</label>
+                <label className={`text-sm font-semibold transition-colors duration-1000 ${isDark ? 'text-slate-300' : 'text-[var(--ink)]'}`}>Mật khẩu</label>
                 <div className="relative z-20">
                   <input 
                     type={showPassword ? "text" : "password"} 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full p-3.5 pr-12 rounded-xl border transition-all outline-none duration-300 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500
-                      ${isDark ? 'border-slate-700 bg-slate-800/50 text-white group-hover:border-indigo-500/50' : 'border-slate-200 bg-slate-50 text-slate-900 group-hover:border-indigo-400/50'}
-                      ${showPassword ? 'border-indigo-500 ring-2 ring-indigo-500/20' : ''}`}
+                    className={`w-full p-3.5 pr-12 h-12 rounded-[14px] border-[1.5px] transition-all outline-none duration-300 focus:ring-4 focus:ring-[#53a5db26] focus:border-[var(--sky)]
+                      ${isDark ? 'border-slate-700 bg-slate-800/50 text-white group-hover:border-indigo-500/50' : 'border-[var(--line)] bg-[var(--field-bg)] text-[var(--ink)] group-hover:border-[#cdd5ea]'}
+                      ${showPassword ? 'border-[var(--sky)] ring-4 ring-[#53a5db26]' : ''}`}
                     placeholder="••••••••"
                     required 
                   />
@@ -230,7 +223,7 @@ export function LoginPage() {
                     type="button" 
                     onClick={() => setShowPassword(!showPassword)}
                     className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-md transition-all duration-300
-                      ${showPassword ? 'text-indigo-500' : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600')}`}
+                      ${showPassword ? 'text-[var(--sky)]' : (isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600')}`}
                     tabIndex={-1}
                     title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                   >
@@ -253,7 +246,7 @@ export function LoginPage() {
                       className="sr-only peer" 
                     />
                     <div className={`w-11 h-6 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm shadow-inner transition-colors duration-300
-                      ${isDark ? 'bg-slate-700 peer-checked:bg-indigo-500 border-slate-600' : 'bg-slate-200 peer-checked:bg-indigo-600 border-slate-300'}`}>
+                      ${isDark ? 'bg-slate-700 peer-checked:bg-indigo-500 border-slate-600' : 'bg-slate-200 peer-checked:bg-[var(--blue)] border-slate-300'}`}>
                     </div>
                   </div>
                   <span className={`text-sm font-medium transition-colors select-none
@@ -266,14 +259,13 @@ export function LoginPage() {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full py-3.5 mt-2 relative overflow-hidden group rounded-xl font-bold text-white shadow-lg transition-all duration-300 disabled:opacity-70 disabled:pointer-events-none active:scale-[0.98]
-                  bg-gradient-to-r from-indigo-600 to-violet-600 hover:shadow-indigo-500/25"
+                className="ds-cta w-full mt-2 relative overflow-hidden group disabled:opacity-70 disabled:pointer-events-none"
               >
                 {/* Button shimmer effect */}
                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
                 
                 <div className="relative flex items-center justify-center gap-2">
-                  {loading ? <Loader2 className="animate-spin" size={20} /> : 'Đăng nhập'}
+                  {loading ? <Loader2 className="animate-spin" size={20} /> : <>Đăng nhập <ArrowRight size={18} className="ds-arrow" aria-hidden="true" /></>}
                 </div>
               </button>
             </form>

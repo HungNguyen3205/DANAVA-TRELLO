@@ -49,7 +49,7 @@ export function BoardLayout() {
       </SidebarShell>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-0 overflow-y-auto bg-background flex flex-col relative">
+      <main className="flex-1 min-h-0 overflow-y-auto flex flex-col relative">
         <Outlet />
       </main>
     </div>

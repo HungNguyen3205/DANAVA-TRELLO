@@ -1,227 +1,112 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ==========================================================================
+   DANAVA design system — "soft & airy"
+   Raw tokens live here; the shadcn/Tailwind HSL variables below are mapped onto
+   them so existing utility classes (bg-primary, text-muted-foreground, border-border…)
+   follow the brand without touching each component.
+   ========================================================================== */
+
+/* Display face for headings. Only installed copies are used until UTM-Eremitage.ttf is
+   added to /public/fonts (then add: url("/fonts/UTM-Eremitage.ttf") format("truetype")). */
+@font-face {
+  font-family: "UTM Eremitage";
+  src: local("UTM Eremitage");
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
-  
-  /* Backgrounds */
-  --background: 220 23% 97%; /* #F7F8FA App background */
-  --foreground: 222 47% 11%; /* #0F172A Primary text */
-  --card: 0 0% 100%; /* #FFFFFF */
-  --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
 
-  /* Primary action: DANAVA navy */
-  --primary: 224 64% 33%; /* #1E3A8A */
+  /* ---- DANAVA tokens ---- */
+  --bg: #f5f7fb;
+  --cream: #fff6e3;
+  --ink: #18234f;
+  --muted-ink: #66708c;
+  --blue: #2b4294;
+  --blue-2: #3a58c4;
+  --blue-soft: #eaeefb;
+  --sky: #53a5db;
+  --sky-soft: #e6f3fb;
+  --amber: #f5ae1b;
+  --amber-soft: #fff1d2;
+  --orange: #f2850e;
+  --red: #ee3132;
+  --red-text: #c41f20;
+  --green: #12805a;
+  --green-soft: #e1f5ec;
+  --grad-cta: linear-gradient(135deg, #ffbf3f 0%, #f5ae1b 40%, #f2850e 100%);
+  --grad-blue: linear-gradient(135deg, #3a58c4, #2b4294 55%, #1f3176);
+  --r-sm: 12px;
+  --r: 20px;
+  --r-lg: 28px;
+  --pill: 999px;
+  --ease: cubic-bezier(.22, .8, .24, 1);
+  --spring: cubic-bezier(.3, 1.45, .5, 1);
+  --shadow-sm: 0 1px 2px #18234f0a, 0 4px 14px -6px #18234f14;
+  --shadow: 0 2px 6px #18234f0a, 0 18px 40px -18px #2b429433;
+  --shadow-lg: 0 4px 10px #18234f0d, 0 34px 70px -28px #2b429455;
+  --shadow-amber: 0 10px 24px -10px #f2850ecc;
+  --display: "UTM Eremitage", "Be Vietnam Pro", system-ui, sans-serif;
+  --field-bg: #fbfcff;
+  --thead-bg: #f3f6fd;
+
+  /* ---- shadcn / Tailwind theme (HSL channels) mapped onto the tokens ---- */
+  --background: 220 43% 97%;        /* --bg #f5f7fb */
+  --foreground: 228 53% 20%;        /* --ink #18234f */
+  --card: 0 0% 100%;                /* --card #fff */
+  --card-foreground: 228 53% 20%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 228 53% 20%;
+
+  --primary: 227 55% 37%;           /* --blue #2b4294 */
   --primary-foreground: 0 0% 100%;
 
-  /* Brand accent: DANAVA orange (dark text on it for contrast) */
-  --brand: 24 90% 55%; /* #F47624 */
-  --brand-foreground: 222 47% 11%;
+  --brand: 31 90% 50%;              /* --orange #f2850e (CTA / accents only) */
+  --brand-foreground: 0 0% 100%;
 
-  --success: 142 72% 29%; /* #15803D */
+  --success: 159 75% 29%;           /* --green #12805a */
   --success-foreground: 0 0% 100%;
 
-  /* Secondary/Hover elements */
-  --secondary: 214 33% 95%; /* #EEF2F7 */
-  --secondary-foreground: 215 25% 27%; /* #334155 */
+  --secondary: 224 44% 95%;         /* #edf0f8 */
+  --secondary-foreground: 226 30% 25%; /* --text #2d3654 */
 
-  --muted: 216 33% 96%; /* #F1F4F8 */
-  --muted-foreground: 219 12% 41%; /* #5B6475 (4.5:1+ on white) */
+  --muted: 220 47% 96%;             /* #f1f4fa */
+  --muted-foreground: 224 16% 47%;  /* --muted #66708c */
 
-  --accent: 222 60% 96%; /* #EEF2FB navy-tinted hover */
-  --accent-foreground: 224 64% 33%;
+  --accent: 226 68% 95%;            /* --blue-soft #eaeefb */
+  --accent-foreground: 227 55% 37%; /* --blue */
 
-  /* Alerts/Danger */
-  --destructive: 0 72% 51%; /* #DC2626 */
+  --destructive: 360 85% 56%;       /* --red #ee3132 */
   --destructive-foreground: 0 0% 100%;
 
-  /* Borders */
-  --border: 215 24% 91%; /* #E3E8EF */
-  --input: 215 24% 88%;
-  --ring: 224 61% 48%; /* #2F55C4 focus ring */
+  --border: 223 35% 92%;            /* --line #e4e8f2 */
+  --input: 223 35% 92%;
+  --ring: 204 65% 59%;              /* --sky #53a5db */
 
   --radius: 1rem;
-  
-  /* Custom Kanban Variables */
-  --surface: #FFFFFF;
-  --panel: #FFFFFF;
-  --text: #172033;
-  --subtle: #98A2B3;
-  --line: #E6EAF0;
-  
-  /* Pastel Columns Base */
-  --col-todo-bg: #F1F4FB;
-  --col-todo-color: #2F4CB0;
-  --col-progress-bg: #F1F6FF;
-  --col-progress-color: #4F7DF3;
-  --col-review-bg: #FFF9EA;
-  --col-review-color: #E6A92D;
-  --col-done-bg: #EFFAF6;
-  --col-done-color: #2FAF83;
+
+  /* ---- Kanban / legacy variables ---- */
+  --surface: #ffffff;
+  --panel: #ffffff;
+  --text: #2d3654;
+  --subtle: #8a93ad;
+  --line: #e4e8f2;
+
+  --col-todo-bg: #eef1fb;
+  --col-todo-color: #2b4294;
+  --col-progress-bg: #eaf4fb;
+  --col-progress-color: #3a8fc8;
+  --col-review-bg: #fff6e3;
+  --col-review-color: #d9900a;
+  --col-done-bg: #e9f7f0;
+  --col-done-color: #12805a;
 }
 
 * {
   box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
-  font-size: 14px; /* Slightly smaller for premium look */
-  line-height: 1.5;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.25);
-  border-color: hsl(var(--primary));
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-input,
-textarea {
-  color: hsl(var(--foreground));
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: 10px;
-  padding: 8px 12px;
-  min-width: 0;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-select {
-  color: hsl(var(--foreground));
-  background-color: hsl(var(--card));
-  border: 1px solid hsl(var(--border) / 0.8);
-  border-radius: 12px;
-  padding: 8px 12px;
-  min-width: 0;
-  font-size: 13.5px;
-  font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%231E3A8A' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.75rem center;
-  background-repeat: no-repeat;
-  background-size: 1.15rem 1.15rem;
-  padding-right: 2.5rem !important;
-  cursor: pointer;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-}
-
-select:hover {
-  border-color: hsl(var(--primary) / 0.6);
-  background-color: hsl(var(--accent) / 0.25);
-}
-
-select:focus {
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 3px rgba(47, 76, 176, 0.2);
-  outline: none;
-}
-
-.dark select {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2393ACF5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-}
-
-select option {
-  background-color: hsl(var(--card));
-  color: hsl(var(--foreground));
-  padding: 10px 14px;
-  font-weight: 500;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: hsl(var(--muted-foreground));
-}
-
-input[type="checkbox"] {
-  accent-color: hsl(var(--primary));
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  border-radius: 4px;
-}
-
-textarea {
-  resize: vertical;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: hsl(var(--foreground));
-}
-
-/* Reset to horizontal row when label uses Tailwind horizontal flex or contains inline elements/checkboxes */
-label.flex:not(.flex-col):not([class*="flex-col"]),
-label.inline-flex:not(.flex-col):not([class*="flex-col"]),
-label[class*="items-center"]:not(.flex-col):not([class*="flex-col"]),
-label[class*="flex-row"],
-label:has(> input[type="checkbox"]):not(.flex-col):not([class*="flex-col"]),
-label:has(> input[type="radio"]):not(.flex-col):not([class*="flex-col"]) {
-  flex-direction: row;
-  margin-bottom: 0;
-}
-
-h1, h2, h3, h4, p {
-  margin-top: 0;
-}
-
-h1 {
-  font-size: 24px;
-  letter-spacing: -0.5px;
-  font-weight: 700;
-}
-
-h2 {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-h3 {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-::selection {
-  background: rgba(108, 92, 231, 0.2);
 }
 
 .custom-scrollbar {
@@ -307,113 +192,497 @@ h3 {
   --col-done-bg: rgba(47, 175, 131, 0.15);
   --col-done-color: #34d399;
 }
-* {
-  box-sizing: border-box;
+
+/* The design system is light-only; dark mode keeps the app's own palette and only
+   re-points the DANAVA tokens that the base styles below read. */
+.dark {
+  --field-bg: hsl(var(--card));
+  --thead-bg: hsl(var(--muted));
+  --blue-soft: hsl(var(--accent));
+  --sky-soft: hsl(var(--accent));
+  --green-soft: rgba(18, 128, 90, 0.18);
+  --amber-soft: rgba(245, 174, 27, 0.16);
+  --shadow-sm: 0 1px 2px #0006, 0 4px 14px -6px #0008;
+  --shadow: 0 2px 6px #0006, 0 18px 40px -18px #000a;
+  --shadow-lg: 0 4px 10px #0007, 0 34px 70px -28px #000c;
 }
+
+/* ---------- Base ---------- */
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
-  background: hsl(var(--background));
+  background: var(--bg);
   color: var(--text);
-  font-family: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+.dark body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
 button,
 input,
 select,
 textarea {
   font: inherit;
 }
+
 button {
   cursor: pointer;
+  transition:
+    background-color 0.2s var(--ease),
+    border-color 0.2s var(--ease),
+    color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease),
+    transform 0.25s var(--spring);
 }
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
-button,
-input,
-select,
-textarea {
-  outline-offset: 3px;
-}
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--orange);
-}
-button {
-  transition:
-    background 0.18s,
-    border-color 0.18s;
-}
-a {
-  color: inherit;
-}
-input,
-select,
-textarea {
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 9px 11px;
-  min-width: 0;
-  font-size: 14px;
-}
-input[type="checkbox"] {
-  accent-color: var(--orange);
-  width: 17px;
-  height: 17px;
+button svg {
   flex-shrink: 0;
 }
-textarea {
-  resize: vertical;
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 16px;
+
+/* Everything in :where() has zero specificity, so any Tailwind class on an element wins. */
+:where(:focus-visible) {
+  outline: 3px solid var(--sky);
+  outline-offset: 3px;
 }
+
+::selection {
+  background: var(--amber-soft);
+}
+
 fieldset {
   border: 0;
   padding: 0;
   margin: 0;
   min-width: 0;
 }
-h1,
-h2,
-h3,
-h4,
-p {
+
+/* ---------- Headings ---------- */
+h1, h2, h3, h4, p {
   margin-top: 0;
 }
-h1 {
-  font-size: 28px;
-  letter-spacing: -0.7px;
-  font-weight: 650;
-  line-height: 1.3;
+:where(h1, h2) {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--blue);
+  text-wrap: balance;
 }
-h2 {
-  font-size: 18px;
-  font-weight: 600;
+/* App screens are dense, so the in-app h1 is smaller than the marketing clamp(2.5rem, 5.2vw, 4.4rem). */
+:where(h1) {
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  line-height: 1.08;
 }
-h3 {
-  font-size: 15px;
-  font-weight: 600;
+:where(h2) {
+  font-size: clamp(1.25rem, 1.8vw, 1.6rem);
+  line-height: 1.15;
+}
+:where(h3) {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+:where(h1, h2) em {
+  font-style: normal;
+  color: var(--orange);
+  background: linear-gradient(transparent 62%, #f5ae1b66 62%, #f5ae1b66 88%, transparent 88%) no-repeat;
+  padding-inline: 0.06em;
+}
+.dark :where(h1, h2) {
+  color: hsl(var(--foreground));
 }
 small {
   font-size: 12px;
 }
-button svg {
-  flex-shrink: 0;
+
+/* ---------- Form fields ---------- */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), textarea, select) {
+  color: hsl(var(--foreground));
+  background-color: var(--field-bg);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 9px 14px;
+  min-width: 0;
+  font-size: 15px;
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease),
+    background-color 0.2s var(--ease);
 }
-::selection {
-  background: #f4762440;
+/* Fields that don't set their own size get the full 48px touch height. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select):where(:not([class*="h-"], [class*="py-"], [class*="p-"])) {
+  min-height: 48px;
+}
+:where(input, textarea, select):where(:hover:not(:focus, :disabled)) {
+  border-color: #cdd5ea;
+}
+:where(input, textarea, select):where(:focus) {
+  outline: none;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 4px #53a5db26;
+}
+:where(input, textarea, select):where(:focus-visible) {
+  outline: none;
+}
+:where(input, textarea)::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+textarea {
+  resize: vertical;
+}
+
+select option {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  padding: 10px 14px;
+  font-weight: 500;
+}
+
+/* Custom checkbox: 22px, navy when ticked, tick pops in with a spring. */
+:where(input[type="checkbox"]) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin: 0;
+  border: 1.5px solid #c9d1e6;
+  border-radius: 36%;
+  background-color: var(--field-bg);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3e%3cpath d='M3.5 8.4 6.6 11.4 12.5 5' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0 0;
+  cursor: pointer;
+  vertical-align: middle;
+  transition:
+    background-color 0.2s var(--ease),
+    border-color 0.2s var(--ease),
+    background-size 0.35s var(--spring);
+}
+:where(input[type="checkbox"]):where(:hover:not(:disabled)) {
+  border-color: var(--blue-2);
+}
+:where(input[type="checkbox"]):where(:checked, :indeterminate) {
+  background-color: var(--blue);
+  border-color: var(--blue);
+  background-size: 78% 78%;
+}
+:where(input[type="checkbox"]):where(:indeterminate) {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M4 8h8' stroke='white' stroke-width='2.2' stroke-linecap='round'/%3e%3c/svg%3e");
+}
+:where(input[type="checkbox"]):where(:focus-visible) {
+  outline: 3px solid var(--sky);
+  outline-offset: 2px;
+}
+.dark :where(input[type="checkbox"]) {
+  border-color: hsl(var(--border));
+}
+.dark :where(input[type="checkbox"]):where(:checked, :indeterminate) {
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+input[type="radio"] {
+  accent-color: var(--blue);
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: hsl(var(--foreground));
+}
+
+/* Reset to horizontal row when label uses Tailwind horizontal flex or contains inline elements/checkboxes */
+label.flex:not(.flex-col):not([class*="flex-col"]),
+label.inline-flex:not(.flex-col):not([class*="flex-col"]),
+label[class*="items-center"]:not(.flex-col):not([class*="flex-col"]),
+label[class*="flex-row"],
+label:has(> input[type="checkbox"]):not(.flex-col):not([class*="flex-col"]),
+label:has(> input[type="radio"]):not(.flex-col):not([class*="flex-col"]) {
+  flex-direction: row;
+  margin-bottom: 0;
+}
+
+/* ---------- Tables ---------- */
+:where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 580px;
+}
+:where(th, td) {
+  padding: 15px 18px;
+  text-align: left;
+}
+:where(td) {
+  border-top: 1px solid var(--line);
+}
+:where(thead th) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--thead-bg);
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.dark :where(thead th) {
+  color: hsl(var(--foreground));
+}
+
+/* ---------- Components ---------- */
+@layer components {
+  /* Main call to action: amber→orange gradient pill. Any `bg-brand` button is a CTA. */
+  .ds-cta,
+  :is(button, a).bg-brand {
+    background: var(--grad-cta);
+    color: #fff;
+    font-weight: 700;
+    border: 0;
+    border-radius: var(--pill);
+    box-shadow: var(--shadow-amber);
+    transition:
+      transform 0.3s var(--spring),
+      box-shadow 0.25s var(--ease),
+      filter 0.2s var(--ease);
+  }
+  .ds-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 50px;
+    padding: 13px 26px;
+  }
+  .ds-cta:hover:not(:disabled),
+  :is(button, a).bg-brand:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 30px -12px #f2850ee6;
+    filter: none;
+  }
+  .ds-cta:active:not(:disabled),
+  :is(button, a).bg-brand:active:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .ds-cta .ds-arrow,
+  :is(button, a).bg-brand .ds-arrow {
+    transition: transform 0.3s var(--spring);
+  }
+  .ds-cta:hover .ds-arrow,
+  :is(button, a).bg-brand:hover .ds-arrow {
+    transform: translateX(4px);
+  }
+
+  /* Secondary pill button; .is-active / [aria-pressed=true] is the selected state. */
+  .ds-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 8px 18px;
+    border-radius: var(--pill);
+    border: 1.5px solid var(--line);
+    background: #fff;
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .ds-btn:hover:not(:disabled) {
+    background: var(--blue-soft);
+  }
+  .ds-btn.is-active,
+  .ds-btn[aria-pressed="true"] {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+
+  /* Segmented control: pills inside a white tray. */
+  .ds-segmented {
+    display: inline-flex;
+    gap: 4px;
+    padding: 5px;
+    border-radius: var(--pill);
+    background: hsl(var(--card));
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Small label above a heading. */
+  .ds-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--pill);
+    background: var(--amber-soft);
+    color: #9a5b00;
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+  .ds-eyebrow svg {
+    color: var(--orange);
+  }
+  .dark .ds-eyebrow {
+    color: #f7c766;
+  }
+
+  /* Card / panel */
+  .ds-card {
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: hsl(var(--card));
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.3s var(--ease), transform 0.3s var(--ease);
+  }
+  .ds-card:hover {
+    box-shadow: var(--shadow-lg);
+  }
+  .ds-card-featured {
+    background: var(--grad-blue);
+    border-color: transparent;
+    color: #fff;
+  }
+  .ds-card-featured :where(p, small, span) {
+    color: #c9d4f5;
+  }
+
+  /* Notices */
+  .ds-notice {
+    padding: 12px 16px;
+    border-radius: var(--r);
+    background: var(--blue-soft);
+    color: var(--blue);
+  }
+  .ds-notice-error {
+    background: #fdecec;
+    color: var(--red-text);
+  }
+
+  /* Sticky frosted app header */
+  .ds-header {
+    background: #ffffffd9;
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    backdrop-filter: blur(14px) saturate(1.4);
+    border-bottom: 1px solid var(--line);
+  }
+  .dark .ds-header {
+    background: hsl(var(--card) / 0.85);
+    border-bottom-color: hsl(var(--border));
+  }
+
+  /* Small badge next to the logo */
+  .ds-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: var(--pill);
+    background: var(--blue-soft);
+    color: var(--blue);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+  }
+  .dark .ds-badge {
+    color: hsl(var(--accent-foreground));
+  }
+
+  /* Table frame with horizontal scroll */
+  .ds-table-wrap {
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: hsl(var(--card));
+  }
+}
+
+/* ---------- Page backdrop: three slow-drifting colour blobs ---------- */
+.ds-blobs {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ds-blobs span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  will-change: transform;
+}
+.ds-blobs span:nth-child(1) {
+  width: 42vmax; height: 42vmax; top: -14vmax; left: -10vmax;
+  background: #ffe1a3;
+  animation: ds-drift-a 26s ease-in-out infinite alternate;
+}
+.ds-blobs span:nth-child(2) {
+  width: 46vmax; height: 46vmax; top: 18vh; right: -16vmax;
+  background: #cfe7f7;
+  animation: ds-drift-b 30s ease-in-out infinite alternate;
+}
+.ds-blobs span:nth-child(3) {
+  width: 38vmax; height: 38vmax; bottom: -16vmax; left: 22vw;
+  background: #dfe5fb;
+  animation: ds-drift-c 22s ease-in-out infinite alternate;
+}
+.dark .ds-blobs {
+  display: none;
+}
+@keyframes ds-drift-a { to { transform: translate(8vw, 6vh) scale(1.08); } }
+@keyframes ds-drift-b { to { transform: translate(-6vw, 10vh) scale(0.94); } }
+@keyframes ds-drift-c { to { transform: translate(-10vw, -6vh) scale(1.06); } }
+
+/* ---------- Entrance animation: pages fade up, card grids rise one after another ---------- */
+@keyframes ds-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.reveal {
+  animation: ds-rise 0.6s var(--ease) both;
+}
+.reveal-stagger > * {
+  animation: ds-rise 0.6s var(--ease) both;
+}
+.reveal-stagger > :nth-child(2) { animation-delay: 0.08s; }
+.reveal-stagger > :nth-child(3) { animation-delay: 0.16s; }
+.reveal-stagger > :nth-child(4) { animation-delay: 0.24s; }
+.reveal-stagger > :nth-child(5) { animation-delay: 0.32s; }
+.reveal-stagger > :nth-child(6) { animation-delay: 0.40s; }
+.reveal-stagger > :nth-child(7) { animation-delay: 0.48s; }
+.reveal-stagger > :nth-child(n + 8) { animation-delay: 0.56s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* React Big Calendar Dark Mode Overrides */
@@ -562,6 +831,7 @@ th {
 header:has(#app-header-slot:not(:empty)) .app-global-search { display: none !important; }
 @media (max-width: 1023px) {
   header:has(#app-header-slot:not(:empty)) .app-brand-text { display: none !important; }
+  header:has(#app-header-slot:not(:empty)) .app-brand-mark { display: block !important; }
 }
 @media (max-width: 767px) {
   header:has(#app-header-slot:not(:empty)) .app-board-switch { display: none !important; }
@@ -589,4 +859,27 @@ select:not([multiple]) {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2393ACF5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
   /* The opened option list follows the dark theme too. */
   color-scheme: dark;
+}
+
+/* The horizontal logo is navy; on the dark theme show it in white. */
+.dark .app-brand-text img {
+  filter: brightness(0) invert(1);
+}
+
+/* Layout helpers from the DANAVA system, available for full-width pages. */
+.wrap {
+  width: min(100% - 64px, 1240px);
+  margin-inline: auto;
+}
+.section-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+@media (max-width: 620px) {
+  .wrap {
+    width: calc(100% - 32px);
+  }
 }

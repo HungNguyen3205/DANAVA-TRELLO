@@ -239,7 +239,7 @@ export function BoardsBrowser({ projectId, embedded = false, actions }: {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
+            <div className="reveal-stagger grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
               {filteredBoards.map(board => (
                 <BoardCard 
                   key={board.id}

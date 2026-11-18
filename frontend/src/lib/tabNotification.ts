@@ -3,7 +3,7 @@
  * similar to Facebook / Messenger.
  */
 
-let originalFaviconHref = '/logo.jpg';
+let originalFaviconHref = '/mark.png';
 
 export const updateTabNotification = (unreadCount: number) => {
   const baseTitle = 'DANAVA WORK – Bảng công việc';

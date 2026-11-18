@@ -92,7 +92,7 @@ export function ProjectsPage() {
             )}
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 auto-rows-fr">
+          <div className="reveal-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3 auto-rows-fr">
             {shown.map((p) => <ProjectCard key={p.id} project={p} today={today} onOpen={() => navigate(`/projects/${p.id}`)} onStyle={p.can_manage ? () => setStyling(p) : undefined} />)}
           </div>
         )}

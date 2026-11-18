@@ -54,7 +54,7 @@ export function PersonalLayout() {
       </SidebarShell>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden bg-background flex flex-col relative">
+      <main className="flex-1 overflow-hidden flex flex-col relative">
         <Outlet />
       </main>
     </div>

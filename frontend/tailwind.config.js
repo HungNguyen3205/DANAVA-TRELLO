@@ -18,7 +18,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Be Vietnam Pro"', '"Segoe UI"', 'Arial', 'sans-serif'],
+        sans: ['"Be Vietnam Pro"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+        display: ['"UTM Eremitage"', '"Be Vietnam Pro"', 'system-ui', 'sans-serif'],
       },
       colors: {
         // Brand palette: navy + DANAVA orange. The purple-family palettes are remapped so
@@ -38,6 +39,26 @@ export default {
         fuchsia: {
           50: '#FFF4EC', 100: '#FFE4CF', 200: '#FEC69C', 300: '#FDA163', 400: '#F98A3F',
           500: '#F47624', 600: '#DC5F12', 700: '#B54A0E', 800: '#8F3B12', 900: '#743313', 950: '#3F1806',
+        },
+        // DANAVA design-system tokens (see :root in src/index.css)
+        ds: {
+          bg: "var(--bg)",
+          cream: "var(--cream)",
+          ink: "var(--ink)",
+          text: "var(--text)",
+          line: "var(--line)",
+          blue: "var(--blue)",
+          "blue-2": "var(--blue-2)",
+          "blue-soft": "var(--blue-soft)",
+          sky: "var(--sky)",
+          "sky-soft": "var(--sky-soft)",
+          amber: "var(--amber)",
+          "amber-soft": "var(--amber-soft)",
+          orange: "var(--orange)",
+          red: "var(--red)",
+          "red-text": "var(--red-text)",
+          green: "var(--green)",
+          "green-soft": "var(--green-soft)",
         },
         brand: {
           DEFAULT: "hsl(var(--brand))",
@@ -99,10 +120,36 @@ export default {
           }
         }
       },
+      // Larger, softer corners: 2xl = --r (20px), 3xl = --r-lg (28px)
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        sm: "8px",
+        DEFAULT: "6px",
+        md: "10px",
+        lg: "var(--r-sm)",
+        xl: "16px",
+        "2xl": "var(--r)",
+        "3xl": "var(--r-lg)",
+        pill: "var(--pill)",
+      },
+      // Soft navy-tinted shadows (literal values so coloured shadow utilities still work)
+      boxShadow: {
+        "2xs": "0 1px 2px #18234f0a",
+        xs: "0 1px 2px #18234f0a, 0 2px 8px -4px #18234f14",
+        sm: "0 1px 2px #18234f0a, 0 4px 14px -6px #18234f14",
+        DEFAULT: "0 1px 2px #18234f0a, 0 4px 14px -6px #18234f14",
+        md: "0 2px 6px #18234f0a, 0 18px 40px -18px #2b429433",
+        lg: "0 2px 6px #18234f0a, 0 18px 40px -18px #2b429433",
+        xl: "0 4px 10px #18234f0d, 0 34px 70px -28px #2b429455",
+        "2xl": "0 4px 10px #18234f0d, 0 34px 70px -28px #2b429455",
+        amber: "0 10px 24px -10px #f2850ecc",
+      },
+      transitionTimingFunction: {
+        ds: "cubic-bezier(.22,.8,.24,1)",
+        spring: "cubic-bezier(.3,1.45,.5,1)",
+      },
+      backgroundImage: {
+        "grad-cta": "var(--grad-cta)",
+        "grad-blue": "var(--grad-blue)",
       },
       keyframes: {
         "accordion-down": {

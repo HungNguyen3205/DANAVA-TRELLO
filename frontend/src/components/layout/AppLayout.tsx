@@ -84,14 +84,14 @@ export function AppLayout() {
   const filteredStarredBoards = starredBoards.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans">
+    <div className="flex flex-col h-screen text-foreground overflow-hidden font-sans">
       {isOffline && (
         <div className="bg-red-500 text-white text-center py-1 px-4 text-xs font-medium shrink-0 z-[100] flex justify-center items-center gap-2">
           <LogOut size={12} className="rotate-90" /> Bạn đang ngoại tuyến (Offline). Các thao tác lúc này sẽ không được lưu.
         </div>
       )}
       {/* Top Navigation */}
-      <header className="h-12 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between gap-2 px-3 md:px-4 z-[50] shrink-0 relative">
+      <header className="ds-header h-[60px] md:h-[72px] flex items-center justify-between gap-2 px-3 md:px-5 z-[50] shrink-0 sticky top-0">
         <div className="flex items-center gap-1 md:gap-2 shrink-0">
           <button 
             className="p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground rounded-md transition-colors shrink-0 md:hidden"
@@ -99,13 +99,12 @@ export function AppLayout() {
           >
             <Menu size={18} />
           </button>
-          <Link to="/home" className="flex items-center gap-2 cursor-pointer shrink-0 mr-1 md:mr-2">
-            <div className="w-7 h-7 rounded flex items-center justify-center overflow-hidden shrink-0">
-              <img src="/logo.jpg" alt="DANAVA" className="w-full h-full object-cover" />
-            </div>
-            <h1 className="app-brand-text text-base font-bold tracking-tight bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent whitespace-nowrap hidden sm:block">
-              DANAVA WORK
-            </h1>
+          <Link to="/home" aria-label="DANAVA WORK – Trang chủ" className="flex items-center gap-2 cursor-pointer shrink-0 mr-1 md:mr-2 rounded-full">
+            <img src="/mark.png" alt="" className="app-brand-mark h-9 w-9 object-contain shrink-0 sm:hidden" />
+            <span className="app-brand-text hidden sm:flex items-center gap-2">
+              <img src="/logo.png" alt="DANAVA" className="h-8 md:h-10 w-auto object-contain" />
+              <span className="ds-badge">WORK</span>
+            </span>
           </Link>
 
           {/* Boards Dropdown */}
@@ -194,7 +193,7 @@ export function AppLayout() {
 
           {/* Global Search - Hidden on mobile unless toggled */}
           <div className="app-global-search relative hidden md:block w-56 lg:w-72 ml-1">
-            <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Tìm kiếm"
@@ -207,7 +206,7 @@ export function AppLayout() {
                   setSearchOpenMobile(false);
                 }
               }}
-              className="h-8 w-full rounded-full border border-input bg-background/50 pl-8 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+              className="h-10 w-full rounded-full border-[1.5px] border-input bg-[var(--field-bg)] pl-9 pr-4 text-sm focus:outline-none focus:border-[var(--sky)] focus:ring-4 focus:ring-[#53a5db26] transition-all"
             />
           </div>
 
@@ -226,7 +225,7 @@ export function AppLayout() {
 
           {/* Mobile Search Input Overlay */}
           {searchOpenMobile && (
-            <div className="absolute top-[44px] right-0 w-64 p-2 bg-card border border-border rounded-xl shadow-xl z-50 md:hidden">
+            <div className="absolute top-full mt-3 right-0 w-64 p-2 bg-card border border-border rounded-xl shadow-xl z-50 md:hidden">
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
@@ -320,7 +319,7 @@ export function AppLayout() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden bg-background relative flex flex-col z-0">
+        <main className="flex-1 overflow-hidden relative flex flex-col z-0">
           <Outlet />
         </main>
       </div>

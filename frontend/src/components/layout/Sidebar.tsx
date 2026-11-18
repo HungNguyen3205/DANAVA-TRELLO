@@ -35,7 +35,7 @@ export function SidebarShell({ children, header, footer }: { children: ReactNode
 
       <aside
         data-collapsed={collapsed || undefined}
-        className={`group/sidebar border-r border-border bg-card flex flex-col shrink-0 absolute md:relative z-50 h-full transition-[width,transform] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] ${
+        className={`group/sidebar border-r border-border bg-card/85 backdrop-blur-xl flex flex-col shrink-0 absolute md:relative z-50 h-full transition-[width,transform] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] ${
           collapsed ? 'w-[72px]' : 'w-64'
         } ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
@@ -112,7 +112,7 @@ export function SidebarItem({ icon, label, to, active = false }: { icon: ReactNo
       aria-label={collapsed ? label : undefined}
       {...handlers}
       className={`group/item flex-1 min-h-[30px] max-h-[46px] flex items-center gap-3 pl-1 pr-3 my-px rounded-full text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-        active && !collapsed ? 'bg-primary/[0.07]' : ''
+        active && !collapsed ? 'bg-accent' : 'hover:bg-accent/70'
       }`}
     >
       {/* The current page is a filled round button */}
@@ -120,12 +120,12 @@ export function SidebarItem({ icon, label, to, active = false }: { icon: ReactNo
         className={`shrink-0 h-[min(36px,calc(100%-4px))] aspect-square rounded-full grid place-items-center transition-all duration-300 ${
           active
             ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105'
-            : 'text-muted-foreground group-hover/item:bg-muted group-hover/item:text-foreground'
+            : 'text-muted-foreground group-hover/item:text-primary'
         }`}
       >
         {icon}
       </span>
-      <span className={`${labelClass(collapsed)} ${active ? 'text-primary font-semibold' : 'text-muted-foreground group-hover/item:text-foreground'}`}>{label}</span>
+      <span className={`${labelClass(collapsed)} ${active ? 'text-primary font-semibold' : 'text-muted-foreground group-hover/item:text-primary'}`}>{label}</span>
     </Link>
   );
 }
