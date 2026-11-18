@@ -43,7 +43,66 @@ class KanbanController extends Controller
                       ->orderBy('order');
             }])->orderBy('order')->get();
 
+        // Cards whose sub-tasks (at any depth) are assigned to me, so "Việc của tôi" can keep them.
+        $rootIds = $columns->flatMap(fn ($c) => $c->tasks->pluck('id'))->all();
+        $mine = $this->rootsWithSubtasksAssignedTo($request->user()->id, $rootIds);
+        foreach ($columns as $column) {
+            foreach ($column->tasks as $task) {
+                $task->setAttribute('has_my_subtask', isset($mine[$task->id]));
+            }
+        }
+
         return response()->json($columns);
+    }
+
+    /**
+     * Root task ids (as array keys) that have an active sub-task, at any depth, assigned to the user
+     * either as its main assignee or as one of its co-assignees.
+     *
+     * @param  array<int>  $rootIds
+     * @return array<int, true>
+     */
+    private function rootsWithSubtasksAssignedTo(int $userId, array $rootIds): array
+    {
+        if (!$rootIds) {
+            return [];
+        }
+
+        $rootOf = array_combine($rootIds, $rootIds); // task id => root id
+        $level = $rootIds;
+        $found = [];
+
+        // Sub-tasks nest only a few levels; the cap guards against a bad parent cycle.
+        for ($depth = 0; $depth < 6 && $level; $depth++) {
+            $children = Task::query()
+                ->whereIn('parent_task_id', $level)
+                ->whereNull('archived_at')
+                ->get(['id', 'parent_task_id', 'assignee_id']);
+            if ($children->isEmpty()) {
+                break;
+            }
+
+            $coAssigned = DB::table('task_assignees')
+                ->whereIn('task_id', $children->pluck('id'))
+                ->where('user_id', $userId)
+                ->pluck('task_id')
+                ->flip();
+
+            $level = [];
+            foreach ($children as $child) {
+                if (isset($rootOf[$child->id])) {
+                    continue; // already seen
+                }
+                $root = $rootOf[$child->parent_task_id];
+                $rootOf[$child->id] = $root;
+                $level[] = $child->id;
+                if ((int) $child->assignee_id === $userId || isset($coAssigned[$child->id])) {
+                    $found[$root] = true;
+                }
+            }
+        }
+
+        return $found;
     }
 
     /**

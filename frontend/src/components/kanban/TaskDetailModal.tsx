@@ -8,6 +8,7 @@ import {
 import type { Task, Board } from '../../types';
 import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
+import { isMyTask } from '../../lib/myTasksFilter';
 import { useBoardStore } from '../../store/boardStore';
 import { toast } from 'sonner';
 import { getAvatarUrl } from '../../lib/avatar';
@@ -582,7 +583,9 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                         subtasks: res.data.subtasks || [],
                         task_groups: res.data.taskGroups || res.data.task_groups || [],
                         totalSubtasksCount: res.data.subtasks?.length || 0,
-                        doneSubtasksCount: res.data.subtasks?.filter((s: any) => s.completed_at).length || 0
+                        doneSubtasksCount: res.data.subtasks?.filter((s: any) => s.completed_at).length || 0,
+                        // Keep "Việc của tôi" in step when I assign myself to a sub-task here.
+                        hasMySubtask: (res.data.subtasks || []).some((s: Task) => isMyTask(s, currentUser?.id)),
                       };
                       setDraft(updated);
                       useBoardStore.getState().setBoard(b => {

@@ -125,6 +125,8 @@ export interface Task {
   activity_logs?: any[];
   totalSubtasksCount?: number;
   doneSubtasksCount?: number;
+  /** A sub-task of this card (any depth) is assigned to the signed-in user. */
+  hasMySubtask?: boolean;
   totalChecklistsItems?: number;
   doneChecklistsItems?: number;
   commentsCount?: number;

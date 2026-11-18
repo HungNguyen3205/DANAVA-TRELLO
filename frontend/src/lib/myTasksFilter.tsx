@@ -5,14 +5,19 @@ import type { Task } from '../types';
 /**
  * "Việc của tôi" filter for a board's views (Kanban, Danh sách, Lịch).
  * A card counts as mine when I'm its assignee, one of its co-assignees or collaborators,
- * or when I'm assigned to any of its sub-tasks (the sub-task lives inside that card).
+ * or when I'm assigned to any of its sub-tasks (the sub-task lives inside that card). The board API
+ * sends only root cards, so sub-task assignment arrives as the `hasMySubtask` flag.
  */
 export function isMyTask(task: Task, userId: string | number | null | undefined): boolean {
   if (userId == null || userId === '') return false;
   const me = String(userId);
   if (task.assigneeId != null && String(task.assigneeId) === me) return true;
+  // Sub-tasks loaded straight from the API keep the raw snake_case field.
+  const rawAssignee = (task as { assignee_id?: string | number | null }).assignee_id;
+  if (rawAssignee != null && String(rawAssignee) === me) return true;
   if (task.assignees?.some((u) => String(u.id) === me)) return true;
   if (task.collaborators?.some((id) => String(id) === me)) return true;
+  if (task.hasMySubtask) return true;
   return task.subtasks?.some((s) => isMyTask(s, me)) ?? false;
 }
 

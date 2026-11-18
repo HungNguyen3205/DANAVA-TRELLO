@@ -107,6 +107,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           comments: [],
           totalSubtasksCount: t.total_subtasks_count || 0,
           doneSubtasksCount: t.done_subtasks_count || 0,
+          hasMySubtask: !!t.has_my_subtask,
           totalChecklistsItems: t.total_checklists_items || 0,
           doneChecklistsItems: t.done_checklists_items || 0,
           commentsCount: t.comments_count || 0,
