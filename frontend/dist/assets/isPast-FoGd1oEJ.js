@@ -1,0 +1,1 @@
+import{l as e}from"./index-KRlheH-0.js";function t(t){return+e(t)<Date.now()}export{t};
