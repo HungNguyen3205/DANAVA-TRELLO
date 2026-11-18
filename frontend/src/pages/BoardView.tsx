@@ -15,11 +15,13 @@ import { useBoardRoute } from '../components/layout/BoardRouteContext';
 import { ArchivedColumnsModal } from '../components/kanban/ArchivedColumnsModal';
 import { BoardHeaderBar } from '../components/board/BoardHeaderBar';
 import { TaskExcelImportModal } from '../components/kanban/TaskExcelImportModal';
+import { isMyTask, OnlyMineToggle, useOnlyMine } from '../lib/myTasksFilter';
 
 export function BoardView() {
   const { boardId } = useBoardRoute();
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const user = useAuthStore((state) => state.user);
+  const [onlyMine, toggleOnlyMine] = useOnlyMine(boardId);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; defaultValue?: string; onConfirm: (v: string) => void } | null>(null);
   const [showArchivedModal, setShowArchivedModal] = useState(false);
@@ -291,6 +293,8 @@ export function BoardView() {
               />
             </div>
 
+            <OnlyMineToggle active={onlyMine} onToggle={toggleOnlyMine} />
+
             {board.columns && board.columns.length > 0 && (
               <button
                 type="button"
@@ -309,6 +313,7 @@ export function BoardView() {
             {(() => {
               const normalizedSearch = searchQuery.toLowerCase().trim();
               const visibleTasks = board.tasks.filter((t) => {
+                if (onlyMine && !isMyTask(t, user?.id)) return false;
                 if (!normalizedSearch) return true;
                 if (t.title.toLowerCase().includes(normalizedSearch)) return true;
                 if (t.description?.toLowerCase().includes(normalizedSearch)) return true;

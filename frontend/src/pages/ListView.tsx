@@ -14,6 +14,8 @@ import { BoardHeaderBar } from '../components/board/BoardHeaderBar';
 import { CustomSelect } from '../components/ui/CustomSelect';
 import { StatusSelect } from '../components/ui/StatusSelect';
 import { TaskExcelImportModal } from '../components/kanban/TaskExcelImportModal';
+import { isMyTask, OnlyMineToggle, useOnlyMine } from '../lib/myTasksFilter';
+import { useAuthStore } from '../store/authStore';
 
 const THEME_HEX_MAP: Record<string, string> = {
   violet: '#2F4CB0',
@@ -27,6 +29,8 @@ import { useBoardStore } from '../store/boardStore';
 
 export function ListView() {
   const { boardId } = useBoardRoute();
+  const user = useAuthStore((state) => state.user);
+  const [onlyMine, toggleOnlyMine] = useOnlyMine(boardId);
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [promptData, setPromptData] = useState<{ isOpen: boolean; title: string; onConfirm: (v: string) => void } | null>(null);
@@ -82,6 +86,7 @@ export function ListView() {
     if (!board) return [];
     const normalizedSearch = searchQuery.toLowerCase().trim();
     return board.tasks.filter((t) => {
+      if (onlyMine && !isMyTask(t, user?.id)) return false;
       if (!normalizedSearch) return true;
       if (t.title.toLowerCase().includes(normalizedSearch)) return true;
       if (t.description?.toLowerCase().includes(normalizedSearch)) return true;
@@ -89,7 +94,7 @@ export function ListView() {
       if (assignee && assignee.name.toLowerCase().includes(normalizedSearch)) return true;
       return false;
     });
-  }, [board, searchQuery]);
+  }, [board, searchQuery, onlyMine, user?.id]);
 
   // Group tasks based on groupBy state
   const groupedTasks = useMemo(() => {
@@ -181,6 +186,7 @@ export function ListView() {
                 className="w-full h-9 pl-9 pr-3 text-xs lg:text-[13px] bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-2xs placeholder:text-muted-foreground/70"
               />
             </div>
+            <OnlyMineToggle active={onlyMine} onToggle={toggleOnlyMine} size="md" />
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">

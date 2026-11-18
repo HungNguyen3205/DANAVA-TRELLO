@@ -19,6 +19,8 @@ import type { Board, Task, Column } from '../types';
 import { getAvatarUrl } from '../lib/avatar';
 import { useBoardRoute } from '../components/layout/BoardRouteContext';
 import { BoardHeaderBar } from '../components/board/BoardHeaderBar';
+import { isMyTask, OnlyMineToggle, useOnlyMine } from '../lib/myTasksFilter';
+import { useAuthStore } from '../store/authStore';
 
 const locales = {
   'vi': viLocale,
@@ -159,6 +161,8 @@ import { useBoardStore } from '../store/boardStore';
 
 export function CalendarView() {
   const { boardId } = useBoardRoute();
+  const user = useAuthStore((state) => state.user);
+  const [onlyMine, toggleOnlyMine] = useOnlyMine(boardId);
   const [searchParams, setSearchParams] = useSearchParams();
   
   const { board, setBoard, fetchBoard, loading } = useBoardStore();
@@ -278,6 +282,7 @@ export function CalendarView() {
     
     const normalizedSearch = searchQuery.toLowerCase().trim();
     const visibleTasks = board.tasks.filter((t) => {
+      if (onlyMine && !isMyTask(t, user?.id)) return false;
       if (!normalizedSearch) return true;
       if (t.title.toLowerCase().includes(normalizedSearch)) return true;
       return false;
@@ -305,7 +310,7 @@ export function CalendarView() {
     });
 
     return { events: scheduledEvents, unscheduled: unscheduledTasks };
-  }, [board, searchQuery]);
+  }, [board, searchQuery, onlyMine, user?.id]);
 
   const daysWithTasksSet = useMemo(() => {
     const set = new Set<string>();
@@ -408,6 +413,7 @@ export function CalendarView() {
                   className="w-full pl-9 pr-3 py-2 text-[13px] bg-card border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                 />
               </div>
+              <OnlyMineToggle active={onlyMine} onToggle={toggleOnlyMine} size="md" />
             </div>
             
             <button 
