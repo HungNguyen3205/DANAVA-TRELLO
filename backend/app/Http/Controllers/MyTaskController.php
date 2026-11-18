@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskComment;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -16,12 +17,25 @@ class MyTaskController extends Controller
         $todayEnd = Carbon::now($tz)->endOfDay()->utc();
         $upcomingEnd = Carbon::now($tz)->addDays(7)->endOfDay()->utc();
 
+        // scope: 'assigned' (mặc định), 'mentioned' (được tag), 'assigned_or_mentioned'
+        $scope = $request->query('scope', 'assigned');
+        $mentionedIds = in_array($scope, ['mentioned', 'assigned_or_mentioned'], true)
+            ? $this->mentionedTaskIds($user)
+            : [];
+
         $query = Task::with(['parent', 'column.board', 'sprint', 'assignees'])
-            ->where(function ($q) use ($user) {
+            ->where(function ($q) use ($user, $scope, $mentionedIds) {
+                if ($scope === 'mentioned') {
+                    $q->whereIn('tasks.id', $mentionedIds ?: [0]);
+                    return;
+                }
                 $q->where('tasks.assignee_id', $user->id)
                   ->orWhereHas('assignees', function ($sub) use ($user) {
                       $sub->where('users.id', $user->id);
                   });
+                if ($scope === 'assigned_or_mentioned' && $mentionedIds) {
+                    $q->orWhereIn('tasks.id', $mentionedIds);
+                }
             })
             ->inUserBoards($user->id);
 
@@ -119,7 +133,7 @@ class MyTaskController extends Controller
         $tasks = $query->paginate($perPage);
 
         // Transform response
-        $tasks->getCollection()->transform(function ($task) use ($user) {
+        $tasks->getCollection()->transform(function ($task) use ($user, $mentionedIds) {
             $board = $task->column ? $task->column->board : null;
             $workspace = $board ? $board->workspace : null;
             $isSubtask = !empty($task->parent_task_id);
@@ -157,9 +171,36 @@ class MyTaskController extends Controller
                 'assignees' => $assignees,
                 'co_assignees_count' => max(0, $assignees->count() - 1),
                 'my_contribution_percent' => $myContributionPercent,
+                'is_mentioned' => in_array((int) $task->id, $mentionedIds, true),
             ];
         });
 
         return response()->json($tasks);
+    }
+
+    /**
+     * Task có bình luận nhắc đến @username của người dùng (cùng quy tắc tách @mention
+     * với NotificationService::parseMentions, để "@hung" không khớp nhầm "@hung.nguyen").
+     */
+    private function mentionedTaskIds($user): array
+    {
+        if (empty($user->username)) {
+            return [];
+        }
+
+        $username = mb_strtolower($user->username);
+
+        return TaskComment::query()
+            ->where('content', 'like', '%@' . addcslashes($user->username, '%_\\') . '%')
+            ->get(['task_id', 'content'])
+            ->filter(function ($c) use ($username) {
+                preg_match_all('/@([a-zA-Z0-9_\.\-]+)/u', (string) $c->content, $m);
+                return in_array($username, array_map('mb_strtolower', $m[1] ?? []), true);
+            })
+            ->pluck('task_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

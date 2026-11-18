@@ -29,6 +29,7 @@ interface Task {
   assignees?: { id: number; name: string; username?: string; avatar?: string; contribution_percent?: number }[];
   co_assignees_count?: number;
   my_contribution_percent?: number | null;
+  is_mentioned?: boolean;
 }
 
 export const MyTasksPage = () => {
@@ -37,6 +38,7 @@ export const MyTasksPage = () => {
   const [filter, setFilter] = useState<'todo' | 'in_progress' | 'overdue' | 'upcoming' | 'completed' | 'all'>('todo');
   const [taskTypeFilter, setTaskTypeFilter] = useState<'all' | 'root' | 'subtask'>('all');
   const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'solo' | 'shared'>('all');
+  const [scope, setScope] = useState<'assigned' | 'mentioned' | 'assigned_or_mentioned'>('assigned');
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
@@ -55,6 +57,7 @@ export const MyTasksPage = () => {
 
       if (taskTypeFilter !== 'all') params.append('task_type', taskTypeFilter);
       if (assignmentFilter !== 'all') params.append('assignment_type', assignmentFilter);
+      if (scope !== 'assigned') params.append('scope', scope);
 
       if (search) {
         params.append('search', search);
@@ -82,7 +85,7 @@ export const MyTasksPage = () => {
 
   useEffect(() => {
     fetchTasks();
-  }, [filter, taskTypeFilter, assignmentFilter]); 
+  }, [filter, taskTypeFilter, assignmentFilter, scope]); 
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -233,6 +236,29 @@ export const MyTasksPage = () => {
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">Phạm vi:</span>
+            {[
+              { id: 'assigned', label: 'Được giao' },
+              { id: 'mentioned', label: 'Được tag' },
+              { id: 'assigned_or_mentioned', label: 'Được giao hoặc được tag' },
+            ].map(s => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setScope(s.id as any)}
+                title={s.id === 'mentioned' ? 'Việc có bình luận nhắc đến @tên của bạn' : undefined}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
+                  scope === s.id
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-semibold text-muted-foreground mr-1">Hình thức:</span>
             {[
               { id: 'all', label: 'Tất cả' },
@@ -297,6 +323,12 @@ export const MyTasksPage = () => {
                           ) : (
                             <span className="whitespace-nowrap px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 border border-blue-200/40 dark:border-blue-900/40">
                               Task chính
+                            </span>
+                          )}
+
+                          {task.is_mentioned && (
+                            <span className="whitespace-nowrap px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-200/40 dark:border-amber-900/40" title="Bạn được nhắc đến (@) trong bình luận">
+                              @ Được tag
                             </span>
                           )}
 
