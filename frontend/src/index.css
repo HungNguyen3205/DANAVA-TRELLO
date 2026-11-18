@@ -88,6 +88,9 @@
 
   --radius: 1rem;
 
+  /* Height of the sticky app header (60px on phones, 72px from md up) */
+  --app-header-h: 60px;
+
   /* ---- Kanban / legacy variables ---- */
   --surface: #ffffff;
   --panel: #ffffff;
@@ -882,4 +885,15 @@ select:not([multiple]) {
   .wrap {
     width: calc(100% - 32px);
   }
+}
+
+/* The page area sits in its own stacking layer under the sticky header, so full-screen dialogs
+   opened inside it start just below the header instead of sliding underneath it. */
+@media (min-width: 768px) {
+  :root {
+    --app-header-h: 72px;
+  }
+}
+.app-main .fixed.inset-0 {
+  top: var(--app-header-h);
 }

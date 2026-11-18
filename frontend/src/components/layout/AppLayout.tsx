@@ -319,7 +319,7 @@ export function AppLayout() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden relative flex flex-col z-0">
+        <main className="app-main flex-1 overflow-hidden relative flex flex-col z-0">
           <Outlet />
         </main>
       </div>
