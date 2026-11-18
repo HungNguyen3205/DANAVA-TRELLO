@@ -1,1 +1,0 @@
-import{l as e}from"./index-C0UJgqLC.js";function t(t){return+e(t)<Date.now()}export{t};
