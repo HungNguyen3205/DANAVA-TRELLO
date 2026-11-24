@@ -22,6 +22,7 @@ import { AssigneeSelect } from './AssigneeSelect';
 import { TaskMemberPicker } from './TaskMemberPicker';
 import { TaskContributionModal } from './TaskContributionModal';
 import { RemoveAssigneeWarningModal } from './RemoveAssigneeWarningModal';
+import { TrelloSourceDetails, type TrelloSource } from './TrelloSourceDetails';
 
 function formatDateDisplay(dateStr?: string): string {
   if (!dateStr) return '';
@@ -180,6 +181,8 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
     }
   }, [draft.description, isEditingDesc]);
   
+  const [trelloSource, setTrelloSource] = useState<TrelloSource | null>(null);
+
   // Label states
   const [labelSearch, setLabelSearch] = useState("");
   const [editingLabel, setEditingLabel] = useState<any>(null);
@@ -196,6 +199,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
     api.get(`/tasks/${task.id}`).then(res => {
       if (!mounted) return;
       const t = res.data;
+      setTrelloSource(t.trello_source ?? null);
       const fullTask: Task = {
         ...draft,
         subtasks: t.subtasks || [],
@@ -600,6 +604,8 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 }}
               />
             </div>
+
+            <TrelloSourceDetails source={trelloSource} />
 
             {/* Attachments */}
             {draft.attachments && draft.attachments.length > 0 && (

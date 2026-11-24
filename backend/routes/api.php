@@ -131,6 +131,9 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::get('/analytics/overview', [WorkspaceController::class, 'globalDashboard']);
 
     // Direct Boards (Hoàn toàn Board-first, không phụ thuộc vào Không gian làm việc)
+    Route::post('/imports/trello/preview', [\App\Http\Controllers\TrelloImportController::class, 'preview'])->middleware('throttle:5,1');
+    Route::post('/imports/trello/confirm', [\App\Http\Controllers\TrelloImportController::class, 'confirm'])->middleware('throttle:10,1');
+    Route::get('/imports/trello/{token}/snapshot', [\App\Http\Controllers\TrelloImportController::class, 'snapshot'])->middleware('throttle:10,1');
     // User guide (also used by the assistant)
     Route::get('/guide', [\App\Http\Controllers\GuideController::class, 'index']);
 

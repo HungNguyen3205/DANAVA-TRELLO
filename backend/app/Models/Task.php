@@ -19,6 +19,7 @@ class Task extends Model
 
     protected $fillable = [
         'external_key',
+        'trello_source',
         'parent_task_id',
         'task_group_id',
         'column_id', 
@@ -50,6 +51,7 @@ class Task extends Model
     protected function casts(): array
     {
         return [
+            'trello_source' => 'array',
             'archived_at' => 'datetime',
             'completed_at' => 'datetime',
             'quality_reviewed_at' => 'datetime',

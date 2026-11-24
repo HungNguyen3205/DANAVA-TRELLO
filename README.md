@@ -563,3 +563,16 @@ Nếu phát hiện lỗ hổng, không công bố dữ liệu khai thác trong i
 Developed by **DANAVA Solutions**
 
 </div>
+# Nhập bảng từ Trello
+
+Sau khi cập nhật mã nguồn, chạy `php artisan migrate --force` trong `backend/`, build `npm ci && npm run build` trong `frontend/` và triển khai `frontend/dist` theo quy trình cPanel hiện có.
+
+Ở trang **Tất cả bảng của bạn** hoặc phần bảng trong dự án, chọn **Nhập từ Trello**. Nhập URL bảng, API key và token quyền `read` hoặc tải bản xuất JSON của một bảng, tối đa 20 MB. API key tạo tại https://trello.com/apps/admin. Giao diện có liên kết tạo token quyền đọc trong một ngày. Chỉ điền token trong ứng dụng qua HTTPS. Backend dùng token cho các GET tới Trello trong bước xem trước, không lưu token vào cơ sở dữ liệu.
+
+Kiểm tra số cột, thẻ, thẻ lưu trữ, checklist, bình luận và liên kết tệp. Tìm và ghép tài khoản nhân viên, chọn dự án đích rồi xác nhận. Tài khoản được ghép nhận quyền thành viên. Người nhập sở hữu bảng mới. Checklist trở thành nhóm việc con theo giao diện hiện có. Bình luận giữ thời gian và tên người viết gốc trong nội dung, dùng tài khoản được ghép hoặc người nhập để lưu tác giả nội bộ.
+
+Bản nhập đầu tiên được ghi trong một giao dịch database. Xác nhận lại sau lỗi mạng trả về cùng bảng, không tạo bản sao. Mỗi tài khoản nhập một bảng nguồn một lần. Nhập lại trả về bảng đã nhập, không cập nhật thay đổi phát sinh ở Trello. Phiên xem trước chưa nhập hết hạn sau một giờ. Khôi phục bảng từ thùng rác nếu muốn mở lại kết quả nhập cũ.
+
+Tệp đính kèm được giữ dưới dạng liên kết nguồn trong **Nguồn Trello** ở chi tiết công việc, chưa sao chép nội dung tệp. Có thể cần đăng nhập Trello. Custom Fields được giữ để đọc trong phần này. Ngày giờ gốc được giữ, còn trường lịch của DANAVA chỉ hỗ trợ ngày. Thời điểm hoàn thành thẻ được ước tính từ hoạt động cuối, việc checklist hoàn thành dùng thời điểm nhập. Butler, Power-Up và quyền Trello cần cấu hình lại. Lịch sử còn lại được giữ trong dữ liệu nguồn JSON tải từ màn hình kết quả. JSON xuất sẵn có thể chỉ chứa một phần lịch sử, API đọc các trang lịch sử còn truy cập được.
+
+Bản nguồn được mã hóa trong database bằng `APP_KEY`. Giữ nguyên khóa khi triển khai và sao lưu. Bản nhập hiện hỗ trợ tối đa 20.000 thẻ, 2.000 cột và 100.000 hoạt động. Với bảng lớn, cấu hình thời gian chờ PHP/web server phù hợp và giữ cửa sổ đến khi nhận kết quả. Nếu lỗi, thử lại cùng phiên để kiểm tra kết quả đã ghi. Không coi số lượng từ bản JSON là xác nhận đã chuyển đủ toàn bộ dữ liệu trên Trello.

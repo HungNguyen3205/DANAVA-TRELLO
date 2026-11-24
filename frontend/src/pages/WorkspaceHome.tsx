@@ -5,6 +5,7 @@ import { MoveBoardDialog } from '../components/project/MoveBoardDialog';
 import { BoardCard } from '../components/board/BoardCard';
 import type { ReactNode } from 'react';
 import { NewBoardModal, type NewBoardPayload } from '../components/workspace/NewBoardModal';
+import { TrelloImportModal } from '../components/workspace/TrelloImportModal';
 import { ProjectsTabs } from '../components/project/ProjectsTabs';
 import api from '../lib/axios';
 import { toast } from 'sonner';
@@ -30,11 +31,12 @@ export function BoardsBrowser({ projectId, embedded = false, actions }: {
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'starred' | 'created' | 'joined'>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isTrelloImportOpen, setIsTrelloImportOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [moving, setMoving] = useState<any | null>(null);
 
-  const fetchBoards = async () => {
-    setLoading(true);
+  const fetchBoards = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await api.get('/me/boards');
       setBoards(res.data || []);
@@ -103,6 +105,12 @@ export function BoardsBrowser({ projectId, embedded = false, actions }: {
     );
   }
 
+  const importButton = (
+    <button onClick={() => setIsTrelloImportOpen(true)} className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-semibold hover:bg-accent">
+      Nhập từ Trello
+    </button>
+  );
+
   const content = (
         <div className={embedded ? 'space-y-5' : 'max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500'}>
 
@@ -113,6 +121,7 @@ export function BoardsBrowser({ projectId, embedded = false, actions }: {
               </h2>
               <div className="flex flex-wrap gap-2">
                 {actions}
+                {importButton}
                 <button
                   onClick={() => setIsCreateOpen(true)}
                   className="h-9 px-3.5 inline-flex items-center gap-1.5 rounded-lg bg-brand text-brand-foreground text-sm font-semibold hover:brightness-95 transition"
@@ -137,6 +146,8 @@ export function BoardsBrowser({ projectId, embedded = false, actions }: {
               </p>
             </div>
 
+            <div className="flex flex-wrap gap-2">
+            {importButton}
             <button 
               onClick={() => setIsCreateOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand text-brand-foreground hover:brightness-95 rounded-xl font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-sm shrink-0 self-start md:self-auto"
@@ -144,6 +155,7 @@ export function BoardsBrowser({ projectId, embedded = false, actions }: {
               <Plus size={18} />
               <span>Tạo bảng mới</span>
             </button>
+            </div>
           </div>
           </>
           )}
@@ -281,14 +293,17 @@ export function BoardsBrowser({ projectId, embedded = false, actions }: {
     />
   );
 
-  const modal = isCreateOpen && (
+  const modal = <>
+    {isTrelloImportOpen && <TrelloImportModal defaultProjectId={projectId} onClose={() => setIsTrelloImportOpen(false)} onImported={() => void fetchBoards(false)} />}
+    {isCreateOpen && (
     <NewBoardModal
       isOpen
       defaultProjectId={projectId}
       onClose={() => setIsCreateOpen(false)}
       onSubmit={handleCreateBoard}
     />
-  );
+    )}
+  </>;
 
   if (embedded) {
     return (

@@ -15,6 +15,7 @@ export default defineConfig({
       "tests/board.test.ts",
       "tests/performance*.{ts,tsx}",
       "tests/excelImport*.{ts,tsx}",
+      "tests/trelloImport*.{ts,tsx}",
       "tests/trash*.{ts,tsx}",
       "tests/wip*.{ts,tsx}",
       "tests/department*.{ts,tsx}",
