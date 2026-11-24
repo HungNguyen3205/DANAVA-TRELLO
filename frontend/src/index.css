@@ -840,10 +840,32 @@ header:has(#app-header-slot:not(:empty)) .app-global-search { display: none !imp
   header:has(#app-header-slot:not(:empty)) .app-board-switch { display: none !important; }
 }
 
-/* Kanban: on tablets and computers, size the lists so four fit across the board (200–300px each). */
-.kanban-scroll { container-type: inline-size; }
+/* Size against the board viewport, including when the sidebar changes width. */
+.kanban-scroll {
+  container-type: inline-size;
+  scroll-padding-inline: 12px;
+}
+.kanban-track {
+  width: max-content;
+  min-width: 100%;
+  padding-inline: 12px;
+}
+.kanban-col,
+.kanban-add-column {
+  width: min(85cqw, 340px);
+  max-width: none;
+}
 @media (min-width: 640px) {
-  .kanban-col { width: clamp(200px, calc((100cqw - 32px - 36px) / 4), 300px); max-width: none; }
+  .kanban-scroll { scroll-padding-inline: 16px; }
+  .kanban-track { padding-inline: 16px; }
+  .kanban-scroll[data-fit-columns="true"] .kanban-col {
+    width: max(240px, calc((100cqw - 32px - var(--kanban-gap-space)) / var(--kanban-column-count)));
+  }
+  /* Four columns, four gaps, and one third of the fifth column. */
+  .kanban-scroll[data-fit-columns="false"] .kanban-col,
+  .kanban-scroll[data-fit-columns="false"] .kanban-add-column {
+    width: max(240px, calc((100cqw - 32px - 48px) * 3 / 13));
+  }
 }
 
 /* Dropdowns (<select>): one chevron on the right in every theme. A later `background:` shorthand

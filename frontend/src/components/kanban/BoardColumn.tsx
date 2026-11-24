@@ -218,7 +218,7 @@ export function BoardColumn({
           opacity: isDragging ? 0.4 : 1,
         }}
         data-tone={toneKey}
-        className={`kanban-col board-glass-col flex flex-col w-[85vw] max-w-[340px] h-full min-h-0 overflow-hidden shrink-0 ${theme.bg} rounded-[16px] snap-center ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
+        className={`kanban-col board-glass-col flex flex-col h-full min-h-0 overflow-hidden shrink-0 ${theme.bg} rounded-[16px] snap-start ${column.completed ? "opacity-80 hover:opacity-100 transition-opacity" : ""} relative`}
         aria-label={column.title}
       >
         <header className={`px-4 pt-4 pb-3 flex items-center justify-between group sticky top-0 z-10 transition-colors ${

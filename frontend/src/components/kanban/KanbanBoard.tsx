@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -40,6 +40,12 @@ export function KanbanBoard({
   disabled: boolean;
 }) {
   const [active, setActive] = useState<Task | Column | null>(null);
+  const [dragWidth, setDragWidth] = useState<number | undefined>();
+  const fitColumns = board.columns.length <= 4;
+  const columnLayout = {
+    '--kanban-column-count': Math.max(board.columns.length, 1),
+    '--kanban-gap-space': `${Math.max(board.columns.length - 1, 0) * 12}px`,
+  } as CSSProperties;
   const [wipWarningPrompt, setWipWarningPrompt] = useState<{
     isOpen: boolean;
     columnTitle: string;
@@ -142,16 +148,26 @@ export function KanbanBoard({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
-      onDragStart={(e) =>
+      onDragStart={(e) => {
+        setDragWidth(e.active.rect.current.initial?.width);
         setActive(
           e.active.data.current?.task || e.active.data.current?.column || null,
-        )
-      }
+        );
+      }}
       onDragCancel={() => setActive(null)}
       onDragEnd={finish}
     >
-      <div className="kanban-scroll flex-1 min-h-0 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar snap-x snap-mandatory">
-        <div className="flex h-full min-h-0 gap-3 min-w-max items-stretch px-3 sm:px-4">
+      {fitColumns && board.columns.length > 0 && (
+        <div className="flex shrink-0 justify-end px-3 pb-2 sm:px-4">
+          <button className="inline-flex items-center gap-1.5 rounded-lg bg-card/50 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground"
+            onClick={() => onColumn(null)}>
+            <Plus size={16} /> Thêm cột
+          </button>
+        </div>
+      )}
+      <div className="kanban-scroll flex-1 min-h-0 overflow-x-auto overflow-y-hidden w-full h-full pb-4 custom-scrollbar snap-x snap-proximity"
+        data-fit-columns={fitColumns} style={columnLayout}>
+        <div className="kanban-track flex h-full min-h-0 gap-3 items-stretch">
           <SortableContext
             items={board.columns.map((c) => `col-${c.id}`)}
             strategy={horizontalListSortingStrategy}
@@ -169,13 +185,13 @@ export function KanbanBoard({
               />
             ))}
           </SortableContext>
-          <button 
-            className="board-glass-add flex items-center justify-center gap-2 w-[280px] shrink-0 border-2 border-dashed border-border/50 text-muted-foreground bg-card/10 hover:bg-card/40 hover:border-border hover:text-foreground rounded-xl py-4 transition-colors font-medium text-sm"
+          {(!fitColumns || board.columns.length === 0) && <button
+            className="kanban-add-column board-glass-add flex items-center justify-center gap-2 shrink-0 border-2 border-dashed border-border/50 text-muted-foreground bg-card/10 hover:bg-card/40 hover:border-border hover:text-foreground rounded-xl py-4 transition-colors font-medium text-sm"
             onClick={() => onColumn(null)}
           >
             <Plus size={18} />
             Thêm cột mới
-          </button>
+          </button>}
         </div>
       </div>
       <DragOverlay>
@@ -203,7 +219,7 @@ export function KanbanBoard({
             }
 
             return (
-              <article className="w-[268px] rotate-2 shadow-2xl opacity-90 bg-card rounded-[12px] border border-primary/30 scale-[1.02] overflow-hidden">
+              <article style={{ width: dragWidth ?? 268 }} className="rotate-2 shadow-2xl opacity-90 bg-card rounded-[12px] border border-primary/30 scale-[1.02] overflow-hidden">
                 <div className="p-3.5">
                   <CardContent task={active} board={board} theme={theme} />
                 </div>
@@ -229,7 +245,7 @@ export function KanbanBoard({
             const columnTasks = board.tasks.filter(t => t.columnId === col.id);
 
             return (
-              <div className={`w-[300px] opacity-90 rotate-2 scale-[1.02] shadow-2xl ${theme.bg} rounded-[16px] p-4 border border-primary/20 flex flex-col max-h-[800px]`}>
+              <div style={{ width: dragWidth ?? 300 }} className={`opacity-90 rotate-2 scale-[1.02] shadow-2xl ${theme.bg} rounded-[16px] p-4 border border-primary/20 flex flex-col max-h-[800px]`}>
                 <div className="flex items-center gap-2.5 mb-4">
                   <div className={`w-6 h-6 rounded flex items-center justify-center ${theme.iconBg}`}>
                     <span className={`w-2 h-2 rounded-full ${theme.dot}`} />
