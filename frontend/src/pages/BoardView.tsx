@@ -309,7 +309,7 @@ export function BoardView() {
           </BoardHeaderBar>
 
           {/* Kanban Board Render */}
-          <div className="flex-1 min-h-0 overflow-hidden relative">
+          <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col">
             {(() => {
               const normalizedSearch = searchQuery.toLowerCase().trim();
               const visibleTasks = board.tasks.filter((t) => {
