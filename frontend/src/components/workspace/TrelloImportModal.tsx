@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ArrowRight, ChevronDown, CircleHelp, Download, ExternalLink, FileJson, KeyRound, Loader2, ShieldCheck, UploadCloud, X } from 'lucide-react';
+import { ArrowRight, ChevronDown, CircleHelp, Download, ExternalLink, FileJson, KeyRound, Loader2, Search, ShieldCheck, UploadCloud, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/axios';
 import { projectsApi, type ProjectSummary } from '../../lib/api/projects';
@@ -20,6 +20,106 @@ function errorMessage(error: unknown): string {
     ?? response?.data?.message ?? 'Chưa nhận được kết quả. Vui lòng thử lại, hệ thống sẽ kiểm tra để tránh nhập trùng.';
 }
 
+function Initial({ name }: { name: string }) {
+  return (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold uppercase text-primary">
+      {name.trim().charAt(0) || '?'}
+    </span>
+  );
+}
+
+/** One Trello member: search an employee to match, with an automatic suggestion for an identical name. */
+function MemberMatch({ member, onChange, onError, disabled }: {
+  member: TrelloPreview['members'][number];
+  onChange: (userId: number | null) => void;
+  onError: (message: string) => void;
+  disabled: boolean;
+}) {
+  // The server suggests an employee with the same username or name; the parent pre-fills memberMap with it.
+  const [selected, setSelected] = useState<Person | null>(member.suggested_user ?? null);
+  const [suggested, setSuggested] = useState(!!member.suggested_user);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Person[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const q = query.trim();
+    // Short queries show no results (filtered when rendering), so nothing to fetch.
+    if (q.length < 2) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setSearching(true);
+      api.get<Person[]>('/users/search', { params: { q }, signal: controller.signal })
+        .then(({ data }) => setResults(data))
+        .catch((failure) => { if (!controller.signal.aborted) onError(errorMessage(failure)); })
+        .finally(() => { if (!controller.signal.aborted) setSearching(false); });
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [query, onError]);
+
+  const choose = (person: Person | null) => {
+    setSelected(person);
+    setSuggested(false);
+    setQuery('');
+    setResults([]);
+    onChange(person?.id ?? null);
+  };
+
+  return (
+    <li className="grid gap-2 rounded-xl border border-border p-3 sm:grid-cols-2 sm:items-start sm:gap-4">
+      <div className="flex min-w-0 items-center gap-2.5 sm:pt-1">
+        <Initial name={member.name} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{member.name}</p>
+          <p className="truncate text-xs text-muted-foreground">{member.username ? `@${member.username} · Trello` : 'Thành viên Trello'}</p>
+        </div>
+      </div>
+      {selected ? (
+        <div className="flex min-w-0 items-center gap-2.5 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1.5">
+          <Initial name={selected.name} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{selected.name}</p>
+            <p className="truncate text-xs text-muted-foreground">@{selected.username}</p>
+          </div>
+          {suggested && <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">Gợi ý</span>}
+          <button type="button" disabled={disabled} onClick={() => choose(null)} aria-label={`Bỏ ghép ${member.name}`}
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"><X size={15} /></button>
+        </div>
+      ) : (
+        <div className="min-w-0">
+          <div className="relative">
+            <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={query} disabled={disabled} onChange={(e) => setQuery(e.target.value)}
+              aria-label={`Tìm nhân viên cho ${member.name}`} placeholder="Gõ tên hoặc tài khoản nhân viên…"
+              className="w-full rounded-lg border border-input bg-background py-2 pl-8 pr-8 text-sm" />
+            {searching && <Loader2 size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />}
+          </div>
+          {query.trim().length >= 2 && !searching && results.length === 0 && (
+            <p className="mt-1.5 px-1 text-xs text-muted-foreground">Không tìm thấy nhân viên phù hợp.</p>
+          )}
+          {query.trim().length >= 2 && results.length > 0 && (
+            <ul className="mt-1.5 max-h-44 overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-sm" role="listbox">
+              {results.map((person) => (
+                <li key={person.id}>
+                  <button type="button" role="option" aria-selected={false} onClick={() => choose(person)}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-accent">
+                    <Initial name={person.name} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm">{person.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">@{person.username}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {query.trim().length < 2 && <p className="mt-1.5 px-1 text-xs text-muted-foreground">Chưa ghép, giữ tên từ Trello.</p>}
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
   onClose: () => void;
   onImported: () => void;
@@ -36,12 +136,11 @@ export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
   const [memberMap, setMemberMap] = useState<Record<string, number | null>>({});
   const [projectId, setProjectId] = useState<number | ''>(defaultProjectId ?? '');
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [search, setSearch] = useState('');
-  const [people, setPeople] = useState<Person[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const showError = useCallback((message: string) => setError(message), []);
 
   useEffect(() => {
     let active = true;
@@ -50,16 +149,6 @@ export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
     return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    if (search.trim().length < 2) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      api.get<Person[]>('/users/search', { params: { q: search.trim() }, signal: controller.signal })
-        .then(({ data }) => setPeople((previous) => [...new Map([...previous, ...data].map((p) => [p.id, p])).values()]))
-        .catch((failure) => { if (!controller.signal.aborted) setError(errorMessage(failure)); });
-    }, 300);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [search]);
 
   const loadPreview = async () => {
     setBusy(true);
@@ -80,7 +169,9 @@ export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
         setResult(response.existing);
       } else {
         setPreview(response);
-        setMemberMap({});
+        setMemberMap(Object.fromEntries(response.members
+          .filter((member) => member.suggested_user)
+          .map((member) => [member.id, member.suggested_user!.id])));
         setAcknowledged(false);
       }
     } catch (failure) {
@@ -258,18 +349,19 @@ export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
                   </label>
                   {preview.members.length > 0 && (
                     <fieldset disabled={busy} className="space-y-3">
-                      <legend className="mb-2 text-sm font-semibold">Ghép thành viên</legend>
-                      <p className="text-xs text-muted-foreground">Tài khoản được ghép sẽ được thêm vào bảng với quyền thành viên. Thành viên bỏ qua được giữ tên trong nguồn Trello.</p>
-                      <input className={field} aria-label="Tìm nhân viên" placeholder="Tìm nhân viên bằng tên hoặc tài khoản, từ 2 ký tự" value={search} onChange={(e) => setSearch(e.target.value)} />
-                      {preview.members.map((member) => (
-                        <label key={member.id} className="grid gap-1 text-sm sm:grid-cols-2 sm:items-center">
-                          <span>{member.name}{member.username ? ` (@${member.username})` : ''}</span>
-                          <select className={field} value={memberMap[member.id] ?? ''} onChange={(e) => setMemberMap((previous) => ({ ...previous, [member.id]: e.target.value ? Number(e.target.value) : null }))}>
-                            <option value="">Bỏ qua ghép tài khoản</option>
-                            {people.map((person) => <option key={person.id} value={person.id}>{person.name} (@{person.username})</option>)}
-                          </select>
-                        </label>
-                      ))}
+                      <legend className="mb-1 flex w-full items-center justify-between gap-2 text-sm font-semibold">
+                        Ghép thành viên
+                        <span className="text-xs font-normal text-muted-foreground">
+                          Đã ghép {Object.values(memberMap).filter(Boolean).length}/{preview.members.length}
+                        </span>
+                      </legend>
+                      <p className="text-xs text-muted-foreground">Gõ tên để tìm nhân viên tương ứng với từng thành viên Trello. Người trùng tên được gợi ý sẵn. Tài khoản được ghép sẽ vào bảng với quyền thành viên; người chưa ghép được giữ tên từ Trello.</p>
+                      <ul className="space-y-2">
+                        {preview.members.map((member) => (
+                          <MemberMatch key={member.id} member={member} disabled={busy} onError={showError}
+                            onChange={(userId) => setMemberMap((previous) => ({ ...previous, [member.id]: userId }))} />
+                        ))}
+                      </ul>
                     </fieldset>
                   )}
                 </>

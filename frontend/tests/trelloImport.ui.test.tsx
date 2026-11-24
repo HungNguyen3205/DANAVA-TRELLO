@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { TrelloImportModal } from '../src/components/workspace/TrelloImportModal';
 import { TrelloSourceDetails } from '../src/components/kanban/TrelloSourceDetails';
 import { trelloImportApi } from '../src/lib/api/trelloImport';
+import api from '../src/lib/axios';
 
 vi.mock('../src/lib/api/trelloImport', () => ({
   trelloImportApi: { preview: vi.fn(), confirm: vi.fn(), downloadSnapshot: vi.fn() },
@@ -69,5 +70,34 @@ describe('Trello import', () => {
     expect(screen.queryByRole('link', { name: 'Unsafe' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Ảnh lỗi' }).getAttribute('href')).toBe('https://trello.com/file.png');
     expect(screen.getByText('<script>alert(1)</script>')).toBeTruthy();
+  });
+  it('suggests an employee with the same name and lets each member search an employee', async () => {
+    const people = [
+            { id: 9, name: 'Lê Tấn Thành', username: 'letanthanh' },
+    ];
+    vi.mocked(api.get).mockImplementation(async (_url, config) => {
+      const q = String((config as { params: { q: string } }).params.q).toLowerCase();
+      return { data: people.filter((p) => p.name.toLowerCase().includes(q) || p.username.includes(q)) };
+    });
+    vi.mocked(trelloImportApi.preview).mockResolvedValue({ ...preview, members: [
+      { id: 'm1', name: 'Nguyễn Nam Hùng', username: 'nguynnamhung2', suggested_user: { id: 7, name: 'Nguyễn Nam Hùng', username: 'namhung' } },
+      { id: 'm2', name: 'Trang Pham', username: 'trangpham' },
+    ] });
+    vi.mocked(trelloImportApi.confirm).mockResolvedValue({
+      board_id: 1, public_id: 'board', name: preview.summary.name, summary: preview.summary,
+      warnings: preview.warnings, snapshot_token: 'snapshot-token',
+    });
+    const user = await showPreview();
+    // The server suggested an employee: shown as matched without any search request.
+    await screen.findByText('Gợi ý');
+    expect(screen.getByText('@namhung')).toBeTruthy();
+    expect(api.get).not.toHaveBeenCalled();
+    // No suggestion for the second member: search and pick an employee.
+    await user.type(screen.getByLabelText('Tìm nhân viên cho Trang Pham'), 'thành');
+    await user.click(await screen.findByRole('option', { name: /Lê Tấn Thành/ }));
+    expect(screen.getByText('Đã ghép 2/2')).toBeTruthy();
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Nhập vào DANAVA' }));
+    await waitFor(() => expect(trelloImportApi.confirm).toHaveBeenCalledWith('preview-token', { m1: 7, m2: 9 }, null));
   });
 });

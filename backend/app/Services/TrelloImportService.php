@@ -83,20 +83,46 @@ class TrelloImportService
                 'payload' => ['board' => $data, 'summary' => $summary, 'warnings' => $warnings],
                 'expires_at' => now()->addHour(),
             ])->save();
+            $suggest = $this->memberSuggester();
 
             return [
                 'preview_token' => $import->preview_token, 'expires_at' => $import->expires_at->toIso8601String(),
                 'summary' => $summary, 'warnings' => $warnings,
-                'members' => collect($data['members'])->map(fn ($m) => [
-                    'id' => $m['id'], 'name' => $m['fullName'] ?? $m['username'] ?? $m['id'],
-                    'username' => $m['username'] ?? null,
-                ])->values(),
+                'members' => collect($data['members'])->map(function ($m) use ($suggest) {
+                    $name = $m['fullName'] ?? $m['username'] ?? $m['id'];
+
+                    return [
+                        'id' => $m['id'], 'name' => $name, 'username' => $m['username'] ?? null,
+                        'suggested_user' => $suggest($name, $m['username'] ?? null),
+                    ];
+                })->values(),
                 'columns' => collect($data['lists'])->sortBy('pos')->map(fn ($l) => [
                     'name' => $l['name'], 'archived' => (bool) ($l['closed'] ?? false),
                     'cards' => collect($data['cards'])->where('idList', $l['id'])->count(),
                 ])->values(),
             ];
         });
+    }
+
+    /**
+     * Suggest the active employee for a Trello member: same username, or the same full name
+     * ignoring accents, case and spacing ("Nguyen Nam Hung" = "Nguyễn Nam Hùng"). Ambiguous names
+     * (two employees with the same name) get no suggestion. Done here in one query so the
+     * browser does not need a search request per member.
+     */
+    private function memberSuggester(): \Closure
+    {
+        $plain = fn (?string $text) => trim(preg_replace('/\s+/', ' ', Str::lower(Str::ascii((string) $text))));
+        $users = User::where('account_status', 'active')->get(['id', 'name', 'username']);
+        $byName = $users->groupBy(fn ($u) => $plain($u->name))->filter(fn ($group) => $group->count() === 1)->map->first();
+        $byUsername = $users->filter(fn ($u) => filled($u->username))->keyBy(fn ($u) => Str::lower($u->username));
+
+        return function (string $name, ?string $username) use ($plain, $byName, $byUsername): ?array {
+            $user = ($username !== null ? $byUsername->get(Str::lower($username)) : null)
+                ?? ($plain($name) !== '' ? $byName->get($plain($name)) : null);
+
+            return $user ? ['id' => $user->id, 'name' => $user->name, 'username' => $user->username] : null;
+        };
     }
 
     public function confirm(User $user, string $token, array $memberMap, ?int $projectId): array

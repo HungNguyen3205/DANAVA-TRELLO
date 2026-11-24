@@ -64,6 +64,36 @@ class TrelloImportTest extends TestCase
         ])->assertOk()->assertJsonPath('summary.cards', 1)->json('preview_token');
     }
 
+    public function test_preview_suggests_employees_by_username_or_name_ignoring_accents(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $hung = User::factory()->create(['name' => 'Nguyễn Nam Hùng', 'username' => 'namhung']);
+        $trang = User::factory()->create(['name' => 'Phạm Thu Trang', 'username' => 'trangpham']);
+        User::factory()->count(2)->create(['name' => 'Trần An']);
+        User::factory()->create(['name' => 'Lê Văn Bình', 'account_status' => 'inactive']);
+        $snapshot = $this->snapshot();
+        $snapshot['members'] = [
+            ['id' => $this->id(21), 'fullName' => 'nguyen  NAM hung', 'username' => 'nguynnamhung2'],
+            ['id' => $this->id(22), 'fullName' => 'Trang Pham', 'username' => 'TrangPham'],
+            ['id' => $this->id(23), 'fullName' => 'Tran An', 'username' => 'tranan9'],
+            ['id' => $this->id(24), 'fullName' => 'Le Van Binh', 'username' => 'binhle'],
+        ];
+
+        $members = collect($this->postJson('/api/imports/trello/preview', [
+            'source' => 'json',
+            'file' => UploadedFile::fake()->createWithContent('board.json', json_encode($snapshot)),
+        ])->assertOk()->json('members'))->keyBy('id');
+
+        // Same name without accents, case or spacing differences.
+        $this->assertSame($hung->id, $members[$this->id(21)]['suggested_user']['id']);
+        // Same username, even though the names differ.
+        $this->assertSame($trang->id, $members[$this->id(22)]['suggested_user']['id']);
+        // Two employees share the name: no guess.
+        $this->assertNull($members[$this->id(23)]['suggested_user']);
+        // Inactive employees are never suggested.
+        $this->assertNull($members[$this->id(24)]['suggested_user']);
+    }
+
     public function test_import_preserves_content_archives_checklist_order_and_comment_attribution(): void
     {
         $owner = User::factory()->create();

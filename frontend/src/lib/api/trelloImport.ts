@@ -26,7 +26,13 @@ export interface TrelloPreview {
   expires_at: string;
   summary: TrelloSummary;
   warnings: string[];
-  members: { id: string; name: string; username?: string }[];
+  members: {
+    id: string;
+    name: string;
+    username?: string | null;
+    /** Active employee with the same username or the same name (ignoring accents), if any. */
+    suggested_user?: { id: number; name: string; username: string } | null;
+  }[];
   columns: { name: string; archived: boolean; cards: number }[];
 }
 
