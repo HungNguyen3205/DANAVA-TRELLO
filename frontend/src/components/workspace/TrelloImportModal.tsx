@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Download, Loader2, X } from 'lucide-react';
+import { ArrowRight, ChevronDown, CircleHelp, Download, ExternalLink, FileJson, KeyRound, Loader2, ShieldCheck, UploadCloud, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/axios';
 import { projectsApi, type ProjectSummary } from '../../lib/api/projects';
 import { trelloImportApi, type TrelloPreview, type TrelloImportResult } from '../../lib/api/trelloImport';
 
 interface Person { id: number; name: string; username: string }
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
 
 function errorMessage(error: unknown): string {
   const response = (error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }).response;
@@ -35,6 +41,7 @@ export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -97,6 +104,17 @@ export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
     }
   };
 
+  const pickFile = (picked?: File) => {
+    if (!picked) return;
+    setError('');
+    if (!/\.json$/i.test(picked.name) && picked.type !== 'application/json') {
+      setError('Chỉ nhận tệp .json xuất từ Trello.');
+      return;
+    }
+    setFile(picked);
+  };
+  const tooLarge = !!file && file.size > 20 * 1024 * 1024;
+
   const field = 'w-full rounded-lg border border-input bg-background p-2.5 text-sm';
   const button = 'rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50';
   const warnings = result?.warnings ?? preview?.warnings;
@@ -116,42 +134,104 @@ export function TrelloImportModal({ onClose, onImported, defaultProjectId }: {
 
           {!preview && !result && (
             <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void loadPreview(); }}>
-              <div className="flex gap-2" role="group" aria-label="Nguồn nhập">
-                {(['api', 'json'] as const).map((value) => (
-                  <button key={value} type="button" disabled={busy} aria-pressed={source === value}
-                    onClick={() => { setSource(value); setError(''); }}
-                    className={`rounded-lg px-4 py-2 text-sm ${source === value ? 'bg-primary text-primary-foreground' : 'bg-accent'}`}>
-                    {value === 'api' ? 'Lấy qua API' : 'Tải JSON'}
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="group" aria-label="Nguồn nhập">
+                {(['api', 'json'] as const).map((value) => {
+                  const Icon = value === 'api' ? KeyRound : FileJson;
+                  const active = source === value;
+                  return (
+                    <button key={value} type="button" disabled={busy} aria-pressed={active}
+                      onClick={() => { setSource(value); setError(''); }}
+                      className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${active ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                      <Icon size={16} />
+                      {value === 'api' ? 'Lấy qua API' : 'Tải JSON'}
+                    </button>
+                  );
+                })}
               </div>
               {source === 'api' ? (
                 <>
-                  <label className="block space-y-1 text-sm">Liên kết bảng Trello
-                    <input className={field} value={boardUrl} onChange={(e) => setBoardUrl(e.target.value)} required disabled={busy} />
+                  <label className="block space-y-1.5 text-sm font-medium">Liên kết bảng Trello
+                    <input className={field} value={boardUrl} onChange={(e) => setBoardUrl(e.target.value)} required disabled={busy} placeholder="https://trello.com/b/…" />
                   </label>
-                  <label className="block space-y-1 text-sm">API key
-                    <input className={field} value={apiKey} onChange={(e) => setApiKey(e.target.value)} required autoComplete="off" disabled={busy} />
-                  </label>
-                  <label className="block space-y-1 text-sm">Token quyền đọc
-                    <input type="password" className={field} value={apiToken} onChange={(e) => setApiToken(e.target.value)} required autoComplete="off" disabled={busy} />
-                  </label>
-                  <p className="text-xs leading-relaxed text-muted-foreground">Lấy API key tại{' '}
-                    <a href="https://trello.com/apps/admin" target="_blank" rel="noreferrer" className="underline">Trello Power-Ups</a>.
-                    {apiKey && <>{' '}<a className="underline" target="_blank" rel="noreferrer"
-                      href={`https://trello.com/1/authorize?expiration=1day&scope=read&response_type=token&key=${encodeURIComponent(apiKey.trim())}`}>Tạo token quyền đọc trong 1 ngày</a>.</>}
-                    {' '}Token chỉ dùng để đọc dữ liệu ở bước xem trước và không lưu vào cơ sở dữ liệu.
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block space-y-1.5 text-sm font-medium">API key
+                      <input className={field} value={apiKey} onChange={(e) => setApiKey(e.target.value)} required autoComplete="off" disabled={busy} placeholder="Dán API key" />
+                    </label>
+                    <label className="block space-y-1.5 text-sm font-medium">Token quyền đọc
+                      <input type="password" className={field} value={apiToken} onChange={(e) => setApiToken(e.target.value)} required autoComplete="off" disabled={busy} placeholder="Dán token" />
+                    </label>
+                  </div>
+                  <details className="group rounded-xl border border-border bg-muted/50 text-sm [&_summary::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 font-medium text-primary">
+                      <CircleHelp size={16} />
+                      Hướng dẫn lấy API key và token
+                      <ChevronDown size={16} className="ml-auto transition-transform group-open:rotate-180" />
+                    </summary>
+                    <ol className="space-y-2.5 border-t border-border px-3 pb-3 pt-3 text-muted-foreground">
+                      {[
+                        <>Mở bảng Trello cần nhập, sao chép địa chỉ trên thanh trình duyệt (dạng <code className="rounded bg-card px-1 text-xs">trello.com/b/…</code>) và dán vào ô <b>Liên kết bảng Trello</b>.</>,
+                        <>Mở trang{' '}<a href="https://trello.com/power-ups/admin" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-primary underline underline-offset-2">Trello Power-Ups Admin<ExternalLink size={12} /></a>{' '}(đăng nhập bằng tài khoản có quyền xem bảng). Bấm <b>New</b>, điền tên bất kỳ (ví dụ “DANAVA Import”), chọn Workspace, nhập email rồi bấm <b>Create</b>.</>,
+                        <>Trong Power-Up vừa tạo, mở tab <b>API key</b> → bấm <b>Generate a new API key</b>. Sao chép chuỗi <b>API key</b> và dán vào ô API key ở trên.</>,
+                        <>Bấm{' '}{apiKey.trim()
+                          ? <a className="inline-flex items-center gap-0.5 font-medium text-primary underline underline-offset-2" target="_blank" rel="noreferrer"
+                              href={`https://trello.com/1/authorize?expiration=1day&scope=read&response_type=token&name=DANAVA%20Import&key=${encodeURIComponent(apiKey.trim())}`}>Tạo token quyền đọc<ExternalLink size={12} /></a>
+                          : <b>Tạo token quyền đọc</b>}{' '}(liên kết hiện ra sau khi nhập API key), chọn <b>Allow</b>, sao chép token và dán vào ô <b>Token quyền đọc</b>.</>,
+                      ].map((step, index) => (
+                        <li key={index} className="flex gap-2.5 leading-relaxed">
+                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                  <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                    <ShieldCheck size={14} className="mt-0.5 shrink-0" />
+                    Token chỉ có quyền đọc, hết hạn sau 1 ngày, chỉ dùng ở bước xem trước và không lưu vào cơ sở dữ liệu.
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-muted-foreground">Trong bảng Trello, mở menu → In và xuất → Xuất JSON. Tải tệp bảng vừa xuất lên đây.</p>
-                  <label className="block space-y-1 text-sm">Tệp JSON, tối đa 20 MB
-                    <input type="file" accept=".json,application/json" required disabled={busy} className={field} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                  </label>
+                  <ol className="space-y-1.5 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                    {['Mở bảng Trello, bấm menu ⋯ ở góc phải.', 'Chọn In và xuất → Xuất JSON.', 'Tải tệp vừa xuất lên ô bên dưới.'].map((step, index) => (
+                      <li key={step} className="flex gap-2.5">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{index + 1}</span>
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                  {file ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><FileJson size={20} /></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{file.name}</p>
+                        <p className={`text-xs ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {formatSize(file.size)}{tooLarge ? ' · Vượt quá 20 MB' : ''}
+                        </p>
+                      </div>
+                      <button type="button" disabled={busy} onClick={() => setFile(null)} aria-label="Bỏ tệp đã chọn"
+                        className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"><X size={16} /></button>
+                    </div>
+                  ) : (
+                    <label
+                      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                      onDragLeave={() => setDragging(false)}
+                      onDrop={(e) => { e.preventDefault(); setDragging(false); pickFile(e.dataTransfer.files?.[0]); }}
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors ${dragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}>
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary"><UploadCloud size={22} /></span>
+                      <span className="text-sm font-medium">Kéo thả tệp vào đây hoặc <span className="text-primary underline-offset-2 hover:underline">chọn tệp</span></span>
+                      <span className="text-xs text-muted-foreground">Tệp .json, tối đa 20 MB</span>
+                      <input type="file" accept=".json,application/json" disabled={busy} className="sr-only" aria-label="Tệp JSON"
+                        onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ''; }} />
+                    </label>
+                  )}
                 </>
               )}
-              <button className={button} disabled={busy} type="submit">{busy ? 'Đang đọc dữ liệu Trello…' : 'Xem trước dữ liệu'}</button>
+              <div className="-mx-5 flex flex-col-reverse gap-2 border-t border-border px-5 pt-4 sm:flex-row sm:justify-end">
+                <button type="button" disabled={busy} onClick={onClose} className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-accent disabled:opacity-50">Hủy</button>
+                <button className={`${button} inline-flex items-center justify-center gap-2`} disabled={busy || (source === 'json' && (!file || tooLarge))} type="submit">
+                  {busy ? <><Loader2 size={16} className="animate-spin" />Đang đọc dữ liệu Trello…</> : <>Xem trước dữ liệu<ArrowRight size={16} /></>}
+                </button>
+              </div>
             </form>
           )}
 
