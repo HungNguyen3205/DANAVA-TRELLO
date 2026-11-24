@@ -24,37 +24,35 @@ main() {
 
   cd "$backend_dir"
 
-  # Ask Laravel for the database connection it really uses (handles quotes, spaces and config cache).
-  # PHP prints one marked line of base64 fields; bash writes them to a private temporary file,
-  # so the password is never on screen or in the process list. This works even when the host's
-  # `php` is a CGI build that ignores environment variables or prints HTTP headers.
-  local cnf db_name db_line db_user db_pass db_host db_port
+  # Find the database account for the backup. The password goes into a private temporary
+  # option file, never on screen or in the process list.
+  #  1) Ask Laravel (handles quotes, DB_URL and config cache). The PHP code is written to a file
+  #     and run as `php file`, like artisan: the host's php (CGI build) mishandles stdin scripts,
+  #     environment variables and STDERR. PHP prints one marked line of base64 fields.
+  #  2) If that fails, read DB_* straight from backend/.env.
+  local cnf php_file php_out db_line db_name db_user db_pass db_host db_port
   cnf="$(mktemp)"
+  php_file="$backend_dir/.deploy-db-config.php"
   chmod 600 "$cnf"
-  trap 'rm -f "$cnf"' RETURN
-  db_line="$(php -q <<'PHP' | grep '^DBCFG:' | tail -n 1
-
+  trap 'rm -f "$cnf" "$php_file"' RETURN
+  cat > "$php_file" <<'PHP'
 <?php
-require 'vendor/autoload.php';
-$app = require 'bootstrap/app.php';
+chdir(__DIR__);
+require __DIR__ . '/vendor/autoload.php';
+$app = require __DIR__ . '/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 // The resolved connection config (also handles DB_URL=mysql://user:pass@host/db).
 $c = Illuminate\Support\Facades\DB::connection()->getConfig();
-if (($c['username'] ?? '') === '') {
-    fwrite(STDERR, "Laravel chưa có tên đăng nhập database. Kết nối: " . config('database.default')
-        . ", driver: " . ($c['driver'] ?? '?') . ", database: " . ($c['database'] ?? '?') . "\n"
-        . "Các khóa DB trong backend/.env: " . implode(', ', preg_grep('/DB|DATABASE/', array_map(
-            fn ($l) => trim(explode('=', $l, 2)[0]), preg_grep('/=/', file('.env') ?: [])
-        ))) . "\n");
-    exit(1);
-}
 $b = fn ($v) => base64_encode((string) $v);
 echo "\nDBCFG:" . implode(':', [
     $b($c['database'] ?? ''), $b($c['username'] ?? ''), $b($c['password'] ?? ''),
     $b($c['host'] ?? 'localhost'), $b((int) ($c['port'] ?? 3306)),
 ]) . "\n";
 PHP
-)" || true
+  chmod 600 "$php_file"
+  php_out="$(php -q "$php_file" 2>&1)" || true
+  rm -f "$php_file"
+  db_line="$(printf '%s\n' "$php_out" | grep '^DBCFG:' | tail -n 1 || true)"
   local f1 f2 f3 f4 f5
   IFS=: read -r f1 f2 f3 f4 f5 <<< "${db_line#DBCFG:}"
   db_name="$(printf '%s' "$f1" | base64 -d 2>/dev/null || true)"
@@ -62,8 +60,20 @@ PHP
   db_pass="$(printf '%s' "$f3" | base64 -d 2>/dev/null || true)"
   db_host="$(printf '%s' "$f4" | base64 -d 2>/dev/null || true)"
   db_port="$(printf '%s' "$f5" | base64 -d 2>/dev/null || true)"
+
   if [ -z "$db_user" ]; then
-    echo "❌ Không đọc được tài khoản database từ cấu hình Laravel (backend/.env). Không deploy."
+    echo "⚠️ Laravel không trả về tài khoản DB, đọc trực tiếp backend/.env."
+    env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | sed -E 's/[[:space:]]+#.*$//; s/^[[:space:]]+|[[:space:]]+$//g; s/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/' | tr -d '\r'; }
+    db_name="$(env_value DB_DATABASE || true)"
+    db_user="$(env_value DB_USERNAME || true)"
+    db_pass="$(env_value DB_PASSWORD || true)"
+    db_host="$(env_value DB_HOST || true)"
+    db_port="$(env_value DB_PORT || true)"
+  fi
+  if [ -z "$db_user" ]; then
+    echo "❌ Không đọc được tài khoản database (backend/.env cần DB_USERNAME). Không deploy."
+    echo "   Kết quả khi hỏi Laravel:"
+    printf '%s\n' "$php_out" | grep -v '^DBCFG:' | head -n 20 | sed 's/^/   | /'
     exit 1
   fi
   quote_cnf() { local v="${1//\\/\\\\}"; printf '"%s"' "${v//\"/\\\"}"; }
