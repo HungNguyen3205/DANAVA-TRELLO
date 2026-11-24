@@ -37,7 +37,7 @@ class TrashManagementTest extends TestCase
         $this->board = Board::create([
             'name' => 'Dự án Website',
             'code' => 'WEB',
-            'public_id' => 'web-trash-test',
+            'public_id' => 'web-trash-12',
             'owner_id' => $this->owner->id,
         ]);
 

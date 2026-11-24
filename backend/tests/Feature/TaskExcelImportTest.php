@@ -38,7 +38,7 @@ class TaskExcelImportTest extends TestCase
         $this->board = Board::create([
             'name' => 'Import Test Board',
             'code' => 'IMP',
-            'public_id' => 'imp-board-123',
+            'public_id' => 'imp-board-12',
             'owner_id' => $this->owner->id,
         ]);
 

@@ -36,7 +36,7 @@ class TaskGroupLifecycleTest extends TestCase
         $this->board = Board::create([
             'workspace_id' => $workspace->id,
             'name' => 'Board Unification Test',
-            'public_id' => 'unification-board-123',
+            'public_id' => 'unify-brd-12',
         ]);
 
         DB::table('board_members')->insert([

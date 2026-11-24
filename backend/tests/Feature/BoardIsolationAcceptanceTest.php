@@ -114,7 +114,7 @@ class BoardIsolationAcceptanceTest extends TestCase
             'owner_id' => $this->hungB->id,
             'color' => '#6366f1',
             'workspace_id' => $this->legacyWorkspace->id,
-            'public_id' => 'hung_pub_12345',
+            'public_id' => 'hung_pub_123',
         ]);
         DB::table('board_members')->insert([
             'board_id' => $this->boardHung->id,
@@ -164,7 +164,7 @@ class BoardIsolationAcceptanceTest extends TestCase
             'owner_id' => $this->namC->id,
             'color' => '#ec4899',
             'workspace_id' => $this->legacyWorkspace->id,
-            'public_id' => 'nam_pub_67890',
+            'public_id' => 'nam_pub_6789',
         ]);
         DB::table('board_members')->insert([
             'board_id' => $this->boardNam->id,
@@ -657,7 +657,7 @@ class BoardIsolationAcceptanceTest extends TestCase
     {
         // Public ID is not predictable integer
         $this->assertFalse(is_numeric($this->boardNam->public_id));
-        $this->assertEquals('nam_pub_67890', $this->boardNam->public_id);
+        $this->assertEquals('nam_pub_6789', $this->boardNam->public_id);
 
         // Calling by-code with valid public_id by non-member B returns 403
         $response = $this->actingAs($this->hungB)->getJson("/api/boards/by-code/{$this->boardNam->public_id}");
@@ -669,7 +669,7 @@ class BoardIsolationAcceptanceTest extends TestCase
         // Calling by-code by authorized member C returns 200 with public_id and relations
         $resC = $this->actingAs($this->namC)->getJson("/api/boards/by-code/{$this->boardNam->public_id}");
         $resC->assertStatus(200);
-        $this->assertEquals('nam_pub_67890', $resC->json('public_id'));
+        $this->assertEquals('nam_pub_6789', $resC->json('public_id'));
     }
 
     /**

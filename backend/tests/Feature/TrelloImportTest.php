@@ -160,12 +160,18 @@ class TrelloImportTest extends TestCase
         $this->actingAs(User::factory()->create());
         $token = $this->preview();
         // A database failure at the final comment write must undo the entire board import.
-        DB::statement("CREATE TRIGGER reject_import_comment BEFORE INSERT ON task_comments BEGIN SELECT RAISE(ABORT, 'test failure'); END");
+        // (Model event, not a DB trigger: CREATE TRIGGER implicitly commits on MySQL and would break the test transaction.)
+        $failComments = true;
+        TaskComment::creating(function () use (&$failComments) {
+            if ($failComments) {
+                throw new \RuntimeException('test failure');
+            }
+        });
         $this->postJson('/api/imports/trello/confirm', ['preview_token' => $token, 'member_map' => []])->assertStatus(500);
         $this->assertDatabaseCount('boards', 0);
         $this->assertDatabaseCount('tasks', 0);
         $this->assertNull(TrelloImport::sole()->result);
-        DB::statement('DROP TRIGGER reject_import_comment');
+        $failComments = false;
         $this->postJson('/api/imports/trello/confirm', ['preview_token' => $token, 'member_map' => []])->assertOk();
         $this->assertDatabaseCount('boards', 1);
     }
