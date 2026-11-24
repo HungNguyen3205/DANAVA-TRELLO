@@ -30,7 +30,7 @@ main() {
   #     and run as `php file`, like artisan: the host's php (CGI build) mishandles stdin scripts,
   #     environment variables and STDERR. PHP prints one marked line of base64 fields.
   #  2) If that fails, read DB_* straight from backend/.env.
-  local cnf php_file php_out db_line db_name db_user db_pass db_host db_port
+  local cnf php_file php_out db_line db_driver db_name db_user db_pass db_host db_port
   cnf="$(mktemp)"
   php_file="$backend_dir/.deploy-db-config.php"
   chmod 600 "$cnf"
@@ -46,20 +46,49 @@ $c = Illuminate\Support\Facades\DB::connection()->getConfig();
 $b = fn ($v) => base64_encode((string) $v);
 echo "\nDBCFG:" . implode(':', [
     $b($c['database'] ?? ''), $b($c['username'] ?? ''), $b($c['password'] ?? ''),
-    $b($c['host'] ?? 'localhost'), $b((int) ($c['port'] ?? 3306)),
+    $b($c['host'] ?? 'localhost'), $b((int) ($c['port'] ?? 3306)), $b($c['driver'] ?? ''),
 ]) . "\n";
 PHP
   chmod 600 "$php_file"
   php_out="$(php -q "$php_file" 2>&1)" || true
   rm -f "$php_file"
   db_line="$(printf '%s\n' "$php_out" | grep '^DBCFG:' | tail -n 1 || true)"
-  local f1 f2 f3 f4 f5
-  IFS=: read -r f1 f2 f3 f4 f5 <<< "${db_line#DBCFG:}"
+  local f1 f2 f3 f4 f5 f6
+  IFS=: read -r f1 f2 f3 f4 f5 f6 <<< "${db_line#DBCFG:}"
   db_name="$(printf '%s' "$f1" | base64 -d 2>/dev/null || true)"
   db_user="$(printf '%s' "$f2" | base64 -d 2>/dev/null || true)"
   db_pass="$(printf '%s' "$f3" | base64 -d 2>/dev/null || true)"
   db_host="$(printf '%s' "$f4" | base64 -d 2>/dev/null || true)"
   db_port="$(printf '%s' "$f5" | base64 -d 2>/dev/null || true)"
+  db_driver="$(printf '%s' "$f6" | base64 -d 2>/dev/null || true)"
+
+  # SQLite (Laravel's default when backend/.env has no DB_CONNECTION): back up the database file.
+  if [ "$db_driver" = "sqlite" ]; then
+    rm -f "$cnf"
+    unset db_pass f3
+    if [ ! -s "$db_name" ]; then
+      echo "❌ Laravel dùng SQLite nhưng không tìm thấy file database: $db_name. Không deploy."
+      exit 1
+    fi
+    echo "   Laravel đang dùng SQLite: $db_name"
+    if command -v sqlite3 >/dev/null 2>&1; then
+      # .backup takes a consistent snapshot even while the site is writing.
+      local snapshot
+      snapshot="$(mktemp)"
+      sqlite3 "$db_name" ".backup '$snapshot'"
+      backup_file="$backup_dir/workspace_${stamp}.sqlite.gz"
+      gzip -c "$snapshot" > "$backup_file"
+      rm -f "$snapshot"
+    else
+      # No sqlite3 CLI: archive the file together with its write-ahead log, if any.
+      backup_file="$backup_dir/workspace_${stamp}.sqlite.tar.gz"
+      local parts=("$(basename "$db_name")")
+      [ -f "$db_name-wal" ] && parts+=("$(basename "$db_name")-wal")
+      tar -czf "$backup_file" -C "$(dirname "$db_name")" "${parts[@]}"
+    fi
+    finish_deploy "$project_dir" "$backend_dir" "$backup_dir" "$backup_file"
+    return
+  fi
 
   if [ -z "$db_user" ]; then
     echo "⚠️ Laravel không trả về tài khoản DB, đọc trực tiếp backend/.env."
@@ -93,7 +122,12 @@ PHP
   # --no-tablespaces: shared hosting users usually lack the PROCESS privilege it would need.
   mysqldump --defaults-extra-file="$cnf" --single-transaction --quick --no-tablespaces "$db_name" | gzip > "$backup_file"
   rm -f "$cnf"
+  finish_deploy "$project_dir" "$backend_dir" "$backup_dir" "$backup_file"
+}
 
+# Check the backup, then update. Shared by the MySQL and SQLite paths.
+finish_deploy() {
+  local project_dir="$1" backend_dir="$2" backup_dir="$3" backup_file="$4"
   # A real dump is far larger than an empty gzip; stop before touching anything if it failed.
   local size
   size=$(stat -c %s "$backup_file")
