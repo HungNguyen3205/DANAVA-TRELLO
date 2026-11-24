@@ -25,12 +25,15 @@ main() {
   cd "$backend_dir"
 
   # Ask Laravel for the database connection it really uses (handles quotes, spaces and config cache).
-  # The password goes into a private temporary file (never on screen or in the process list).
-  local cnf db_name
+  # PHP prints one marked line of base64 fields; bash writes them to a private temporary file,
+  # so the password is never on screen or in the process list. This works even when the host's
+  # `php` is a CGI build that ignores environment variables or prints HTTP headers.
+  local cnf db_name db_line db_user db_pass db_host db_port
   cnf="$(mktemp)"
   chmod 600 "$cnf"
   trap 'rm -f "$cnf"' RETURN
-  db_name="$(CNF="$cnf" php <<'PHP'
+  db_line="$(php -q <<'PHP' | grep '^DBCFG:' | tail -n 1
+
 <?php
 require 'vendor/autoload.php';
 $app = require 'bootstrap/app.php';
@@ -45,12 +48,33 @@ if (($c['username'] ?? '') === '') {
         ))) . "\n");
     exit(1);
 }
-$q = fn ($v) => '"' . addcslashes((string) $v, "\"\\") . '"';
-file_put_contents(getenv('CNF'), "[client]\nuser=" . $q($c['username'] ?? '') . "\npassword=" . $q($c['password'] ?? '')
-    . "\nhost=" . $q($c['host'] ?? 'localhost') . "\nport=" . (int) ($c['port'] ?? 3306) . "\n");
-echo $c['database'] ?? '';
+$b = fn ($v) => base64_encode((string) $v);
+echo "\nDBCFG:" . implode(':', [
+    $b($c['database'] ?? ''), $b($c['username'] ?? ''), $b($c['password'] ?? ''),
+    $b($c['host'] ?? 'localhost'), $b((int) ($c['port'] ?? 3306)),
+]) . "\n";
 PHP
-)"
+)" || true
+  local f1 f2 f3 f4 f5
+  IFS=: read -r f1 f2 f3 f4 f5 <<< "${db_line#DBCFG:}"
+  db_name="$(printf '%s' "$f1" | base64 -d 2>/dev/null || true)"
+  db_user="$(printf '%s' "$f2" | base64 -d 2>/dev/null || true)"
+  db_pass="$(printf '%s' "$f3" | base64 -d 2>/dev/null || true)"
+  db_host="$(printf '%s' "$f4" | base64 -d 2>/dev/null || true)"
+  db_port="$(printf '%s' "$f5" | base64 -d 2>/dev/null || true)"
+  if [ -z "$db_user" ]; then
+    echo "❌ Không đọc được tài khoản database từ cấu hình Laravel (backend/.env). Không deploy."
+    exit 1
+  fi
+  quote_cnf() { local v="${1//\\/\\\\}"; printf '"%s"' "${v//\"/\\\"}"; }
+  {
+    printf '[client]\n'
+    printf 'user=%s\n' "$(quote_cnf "$db_user")"
+    printf 'password=%s\n' "$(quote_cnf "$db_pass")"
+    printf 'host=%s\n' "$(quote_cnf "${db_host:-localhost}")"
+    printf 'port=%s\n' "${db_port:-3306}"
+  } > "$cnf"
+  unset db_pass f3
   if [ -z "$db_name" ]; then
     echo "❌ Không đọc được tên database từ cấu hình Laravel (backend/.env). Không deploy."
     exit 1
