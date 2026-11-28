@@ -10,6 +10,7 @@ import {
 import type { Board, Task } from "../../types";
 import { overdue } from "../../lib/board";
 import { getAvatarUrl } from "../../lib/avatar";
+import { useKanbanSelection } from "./KanbanSelection";
 
 export function CardContent({ task, board, theme }: { task: Task; board: Board; theme?: any }) {
   const totalSubtasks = (task as any).total_subtasks_count ?? task.totalSubtasksCount ?? (task.subtasks?.length || 0);
@@ -160,24 +161,49 @@ export function TaskCard({
     transition,
     isDragging,
   } = useSortable({ id: `task-${task.id}`, data: { type: "Task", task }, disabled });
-  
+  const selection = useKanbanSelection();
+  const selected = !!selection?.selectedIds.has(task.id);
+  const selecting = !!selection && selection.selectedIds.size > 0;
+  // Other cards of a group drag fade out; the dragged one is hidden like a single drag.
+  const groupDragging = !isDragging && !!selection?.draggingIds.has(task.id);
+
   return (
     <article
       ref={setNodeRef}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0 : 1,
+        opacity: isDragging ? 0 : groupDragging ? 0.35 : 1,
       }}
-      className={`board-glass-card relative group shrink-0 bg-card border border-border/60 rounded-[12px] shadow-sm hover:shadow hover:border-primary/30 hover:-translate-y-px transition-all duration-200 overflow-hidden ${isDragging ? "opacity-0" : ""}`}
+      className={`board-glass-card relative group shrink-0 bg-card border rounded-[12px] shadow-sm hover:shadow hover:-translate-y-px transition-all duration-200 overflow-hidden ${isDragging ? "opacity-0" : ""} ${selected ? "border-primary ring-2 ring-primary/60 bg-primary/[0.04]" : "border-border/60 hover:border-primary/30"}`}
     >
       <button
         className="w-full text-left p-3.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        onClick={() => onOpen(task)}
+        onClick={(e) => {
+          // Ctrl/⌘/Shift + click, or any click while cards are selected, picks the card instead of opening it.
+          if (selection && (e.ctrlKey || e.metaKey || e.shiftKey || selecting)) {
+            e.preventDefault();
+            selection.toggle(task.id);
+            return;
+          }
+          onOpen(task);
+        }}
         aria-label={`Mở công việc: ${task.title}`}
+        aria-pressed={selection ? selected : undefined}
       >
         <CardContent task={task} board={board} theme={theme} />
       </button>
+      {selection && !disabled && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => selection.toggle(task.id)}
+          onClick={(e) => e.stopPropagation()}
+          className={`absolute right-9 top-3.5 w-4 h-4 accent-primary cursor-pointer transition-opacity ${selecting ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"}`}
+          title="Chọn để chuyển nhiều việc cùng lúc (hoặc giữ Ctrl/Shift + bấm thẻ)"
+          aria-label={`Chọn công việc: ${task.title}`}
+        />
+      )}
       {!disabled && (
         <button
           ref={setActivatorNodeRef}

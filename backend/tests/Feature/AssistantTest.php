@@ -161,6 +161,50 @@ TXT;
         Notification::assertSentTo($this->u['trang'], \App\Notifications\TaskMemberAssignedNotification::class);
     }
 
+    public function test_checklist_under_a_heading_becomes_one_task_with_subtasks(): void
+    {
+        $text = "1. Nền tảng DANAVA Go\n"
+            . "- [ ] Tìm kiếm chuyến xe theo điểm đi, điểm đến và ngày khởi hành.\n"
+            . "- [ ] Hiển thị thông tin nhà xe, lịch trình, giá vé và số ghế còn trống.\n"
+            . "- [x] Hỗ trợ tiếng Việt và tiếng Anh.\n"
+            . "2. Gửi báo giá cho DC Center\n"
+            . "Website bán hàng\n"
+            . "- [ ] Trang chủ\n"
+            . "- [ ] Giỏ hàng";
+
+        $tasks = $this->actingAs($this->boss)->postJson('/api/assistant/tasks/preview', ['text' => $text])->assertOk()->json('tasks');
+
+        $this->assertCount(3, $tasks);
+        $this->assertSame('Nền tảng DANAVA Go', $tasks[0]['title']);
+        $this->assertSame([
+            ['title' => 'Tìm kiếm chuyến xe theo điểm đi, điểm đến và ngày khởi hành.', 'done' => false],
+            ['title' => 'Hiển thị thông tin nhà xe, lịch trình, giá vé và số ghế còn trống.', 'done' => false],
+            ['title' => 'Hỗ trợ tiếng Việt và tiếng Anh.', 'done' => true],
+        ], $tasks[0]['subtasks']);
+        $this->assertSame('Gửi báo giá cho DC Center', $tasks[1]['title']);
+        $this->assertSame([], $tasks[1]['subtasks']);
+        // A plain line followed by a checklist is the parent too.
+        $this->assertSame('Website bán hàng', $tasks[2]['title']);
+        $this->assertSame(['Trang chủ', 'Giỏ hàng'], array_column($tasks[2]['subtasks'], 'title'));
+    }
+
+    public function test_apply_creates_subtasks_under_the_task(): void
+    {
+        $res = $this->actingAs($this->boss)->postJson('/api/assistant/tasks/apply', ['items' => [[
+            'title' => 'Nền tảng DANAVA Go', 'board_id' => $this->tech->id, 'assignee_ids' => [], 'done' => false,
+            'subtasks' => [['title' => 'Tìm kiếm chuyến xe', 'done' => false], ['title' => 'Hỗ trợ tiếng Anh', 'done' => true]],
+        ]]])->assertOk();
+
+        $this->assertSame(2, $res->json('results.0.task.subtask_count'));
+        $parent = Task::where('title', 'Nền tảng DANAVA Go')->firstOrFail();
+        $subs = $parent->subtasks()->get();
+        $this->assertSame(['Tìm kiếm chuyến xe', 'Hỗ trợ tiếng Anh'], $subs->pluck('title')->all());
+        $this->assertSame($parent->column_id, $subs[0]->column_id);
+        $this->assertNotNull($subs[0]->task_group_id);
+        $this->assertNull($subs[0]->completed_at);
+        $this->assertNotNull($subs[1]->completed_at);
+    }
+
     public function test_non_member_assignee_is_skipped_unless_admin_adds_them(): void
     {
         $item = ['title' => 'Việc mới', 'board_id' => $this->sales->id, 'assignee_ids' => [$this->u['outsider']->id]];

@@ -260,9 +260,11 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     Route::post('/columns/{column}/tasks', [KanbanController::class, 'storeTask']);
     Route::put('/boards/{board}/columns/reorder', [KanbanController::class, 'reorderColumns']);
     Route::put('/boards/{board}/tasks/reorder', [KanbanController::class, 'reorderTasks']);
+    Route::put('/boards/{board}/tasks/bulk-move', [KanbanController::class, 'bulkMoveTasks'])->middleware('throttle:60,1');
     Route::put('/tasks/{task}/move', [KanbanController::class, 'moveTask']);
 
     // Tasks (Global Access by ID)
+    Route::post('/tasks/bulk-delete', [TaskDetailController::class, 'bulkDestroy'])->middleware('throttle:30,1');
     Route::get('/tasks/{task}', [TaskDetailController::class, 'show']);
     Route::put('/tasks/{task}', [TaskDetailController::class, 'update']);
     Route::delete('/tasks/{task}', [TaskDetailController::class, 'destroy']);
@@ -289,6 +291,8 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\ForceChangePassword::cla
     // Subtasks
     Route::get('/tasks/{task}/subtasks', [SubtaskController::class, 'index']);
     Route::post('/tasks/{task}/subtasks', [SubtaskController::class, 'store']);
+    Route::post('/tasks/{task}/subtasks/ai-suggest', [\App\Http\Controllers\SubtaskSuggestionController::class, 'suggest'])->middleware('throttle:20,1');
+    Route::post('/tasks/{task}/subtasks/bulk', [\App\Http\Controllers\SubtaskSuggestionController::class, 'store'])->middleware('throttle:30,1');
     Route::post('/tasks/{task}/groups/{group}/subtasks', [SubtaskController::class, 'store']);
     Route::get('/tasks/subtasks/{subtask}', [SubtaskController::class, 'show']);
     Route::get('/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'show']);

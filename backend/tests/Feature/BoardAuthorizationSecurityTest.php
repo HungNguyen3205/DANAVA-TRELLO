@@ -58,6 +58,60 @@ class BoardAuthorizationSecurityTest extends TestCase
         $this->taskB = Task::create(['column_id' => $this->colB1->id, 'title' => 'Task B1', 'order' => 1000]);
     }
 
+    public function test_bulk_delete_only_removes_tasks_the_user_can_delete(): void
+    {
+        $taskA2 = Task::create(['column_id' => $this->colA2->id, 'title' => 'Task A2', 'order' => 2000]);
+
+        $this->actingAs($this->member)
+            ->postJson('/api/tasks/bulk-delete', ['ids' => [$this->taskA->id, $taskA2->id, $this->taskB->id]])
+            ->assertOk()
+            ->assertJson(['deleted' => 2, 'skipped' => 1]);
+
+        $this->assertSoftDeleted('tasks', ['id' => $this->taskA->id, 'deleted_by' => $this->member->id]);
+        $this->assertSoftDeleted('tasks', ['id' => $taskA2->id]);
+        $this->assertNotSoftDeleted('tasks', ['id' => $this->taskB->id]);
+    }
+
+    public function test_bulk_move_places_tasks_as_a_block_in_order(): void
+    {
+        $a2 = Task::create(['column_id' => $this->colA1->id, 'title' => 'Task A2', 'order' => 2000]);
+        $a3 = Task::create(['column_id' => $this->colA1->id, 'title' => 'Task A3', 'order' => 3000]);
+        $existing = Task::create(['column_id' => $this->colA2->id, 'title' => 'Existing', 'order' => 1000]);
+
+        $this->actingAs($this->member)->putJson("/api/boards/{$this->boardA->id}/tasks/bulk-move", [
+            'task_ids' => [$a3->id, $this->taskA->id],
+            'column_id' => $this->colA2->id,
+            'prev_id' => null,
+            'next_id' => $existing->id,
+        ])->assertOk()->assertJson(['moved' => 2]);
+
+        $order = Task::where('column_id', $this->colA2->id)->orderBy('order')->pluck('id')->all();
+        $this->assertSame([$a3->id, $this->taskA->id, $existing->id], $order);
+        $this->assertSame($this->colA1->id, $a2->fresh()->column_id);
+    }
+
+    public function test_bulk_move_rejects_other_boards_and_strict_wip(): void
+    {
+        // Column of another board.
+        $this->actingAs($this->member)->putJson("/api/boards/{$this->boardA->id}/tasks/bulk-move", [
+            'task_ids' => [$this->taskA->id], 'column_id' => $this->colB1->id,
+        ])->assertStatus(422);
+        // Task of another board.
+        $this->actingAs($this->member)->putJson("/api/boards/{$this->boardA->id}/tasks/bulk-move", [
+            'task_ids' => [$this->taskB->id], 'column_id' => $this->colA2->id,
+        ])->assertStatus(403);
+        $this->assertSame($this->colB1->id, $this->taskB->fresh()->column_id);
+
+        // Strict WIP limit 1: the first task moves, the second is refused.
+        $this->colA2->update(['wip_limit' => 1, 'wip_enforcement' => 'strict']);
+        $a2 = Task::create(['column_id' => $this->colA1->id, 'title' => 'Task A2', 'order' => 2000]);
+        $res = $this->actingAs($this->member)->putJson("/api/boards/{$this->boardA->id}/tasks/bulk-move", [
+            'task_ids' => [$this->taskA->id, $a2->id], 'column_id' => $this->colA2->id,
+        ])->assertStatus(422);
+        $this->assertSame(1, $res->json('moved'));
+        $this->assertSame($this->colA1->id, $a2->fresh()->column_id);
+    }
+
     public function test_outsider_cannot_view_or_modify_board_data(): void
     {
         $this->actingAs($this->outsider);

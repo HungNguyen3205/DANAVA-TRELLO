@@ -121,8 +121,10 @@ TXT;
         if (!$agent && $workText !== '' && $this->extractor->looksLikeTaskList($workText)) {
             $preview = $this->extractor->extract($user, $workText);
             $count = count($preview['tasks']);
+            $subCount = array_sum(array_map(fn ($t) => count($t['subtasks'] ?? []), $preview['tasks']));
+            $subText = $subCount ? " (kèm {$subCount} việc con)" : '';
             $text = $count
-                ? "Em đọc được {$count} công việc. Anh/chị kiểm tra người phụ trách và bảng giúp em, sửa nếu cần rồi bấm \"Tạo công việc\" nhé."
+                ? "Em đọc được {$count} công việc{$subText}. Anh/chị kiểm tra người phụ trách và bảng giúp em, sửa nếu cần rồi bấm \"Tạo công việc\" nhé."
                 : 'Em chưa tách được công việc nào từ tin nhắn này. Anh/chị thử ghi mỗi việc một dòng, có số thứ tự hoặc @tên người phụ trách nhé.';
             $reply = $this->store($user, 'assistant', $this->withNotes($notes, $text), ['type' => 'task_preview', 'preview' => $preview]);
         } else {
@@ -152,7 +154,7 @@ TXT;
     private function wantsAction(string $text): bool
     {
         return (bool) preg_match(
-            '/giao lai|phan lai|phan cong lai|chuyen .{0,20}(cho|sang)|doi nguoi|doi han|gia han|lui han|sua |chinh sua|cap nhat|xoa |huy viec|danh dau|hoan thanh|mo lai|tai khoan|nhan vien moi|mat khau|binh luan|them .{0,15}vao viec|bo .{0,15}khoi viec/u',
+            '/giao lai|phan lai|phan cong lai|chuyen .{0,20}(cho|sang)|doi nguoi|doi han|gia han|lui han|sua |chinh sua|cap nhat|xoa |huy viec|danh dau|hoan thanh|mo lai|tai khoan|nhan vien moi|mat khau|binh luan|them .{0,15}vao viec|bo .{0,15}khoi viec|viec con|task con|sub ?task|checklist/u',
             VietnameseText::fold($text) . ' '
         );
     }
@@ -288,6 +290,7 @@ THAO TÁC BẰNG CÔNG CỤ (hôm nay là {$today})
 - Khi người dùng nhờ làm việc gì (giao/phân lại việc, đổi hạn, sửa, chuyển cột, xong việc, xóa, bình luận, tạo việc, quản lý tài khoản): GỌI CÔNG CỤ để làm thật, không chỉ hướng dẫn.
 - Luôn tra id bằng find_tasks / find_people / list_boards / list_departments trước; không tự đoán id. Nếu tìm ra nhiều kết quả khớp, hỏi lại người dùng chọn cái nào.
 - Ngày tương đối ("mai", "thứ 6", "cuối tuần") tự đổi sang YYYY-MM-DD theo ngày hôm nay.
+- VIỆC CON: khi người dùng gửi một tiêu đề kèm các dòng "- [ ] ..." / gạch đầu dòng, hoặc nói "đổi/tạo thành việc con, task con": tạo MỘT công việc (tiêu đề = dòng tiêu đề, bỏ số thứ tự "1.") bằng create_task và truyền các dòng còn lại vào viec_con. KHÔNG tạo mỗi dòng thành một công việc riêng. Nếu công việc cha đã có sẵn (find_tasks tìm thấy) thì dùng create_subtasks để thêm vào việc đó thay vì tạo việc mới. Nếu chưa biết bảng nào, gọi list_boards rồi hỏi người dùng.
 - Công cụ trả về can_xac_nhan: hỏi người dùng xác nhận rõ ràng; chỉ gọi lại khi tin nhắn tiếp theo của họ đồng ý.
 - Công cụ báo lỗi hoặc không có quyền: nói đúng lý do, không nói là đã làm.
 - Sau khi làm xong, báo ngắn gọn đã làm gì (✅ ...). Khi tạo tài khoản hoặc đặt lại mật khẩu, ghi rõ tên đăng nhập và mật khẩu tạm.

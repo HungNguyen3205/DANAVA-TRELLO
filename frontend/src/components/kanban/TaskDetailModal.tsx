@@ -4,7 +4,7 @@ import {
   X, Trash2, Check, AlignLeft, CheckSquare, 
   MessageSquare, UserPlus, Tag, Paperclip, 
   CalendarDays, CreditCard, Clock, Send, Eye, Share2,
-  PieChart
+  PieChart, Sparkles
 } from 'lucide-react';
 import type { Task, Board } from '../../types';
 import api from '../../lib/axios';
@@ -22,6 +22,7 @@ import { SafeLinkifiedText } from '../common/SafeLinkifiedText';
 import { AssigneeSelect } from './AssigneeSelect';
 import { TaskMemberPicker } from './TaskMemberPicker';
 import { TaskContributionModal } from './TaskContributionModal';
+import { AiSubtaskSplitModal } from './AiSubtaskSplitModal';
 import { RemoveAssigneeWarningModal } from './RemoveAssigneeWarningModal';
 import { TrelloSourceDetails, type TrelloSource } from './TrelloSourceDetails';
 
@@ -49,6 +50,27 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isAiSplitOpen, setIsAiSplitOpen] = useState(false);
+
+  // Reload subtasks + groups after they change (manual edits or "Phân tích AI").
+  const refreshSubtasks = () => {
+    api.get(`/tasks/${task.id}`).then(res => {
+      if (!res.data) return;
+      const patch = {
+        subtasks: res.data.subtasks || [],
+        task_groups: res.data.taskGroups || res.data.task_groups || [],
+        totalSubtasksCount: res.data.subtasks?.length || 0,
+        doneSubtasksCount: res.data.subtasks?.filter((s: any) => s.completed_at).length || 0,
+        // Keep "Việc của tôi" in step when I assign myself to a sub-task here.
+        hasMySubtask: (res.data.subtasks || []).some((s: Task) => isMyTask(s, currentUser?.id)),
+      };
+      setDraft(prev => ({ ...prev, ...patch }));
+      useBoardStore.getState().setBoard(b => {
+        if (!b) return b;
+        return { ...b, tasks: b.tasks.map(bt => bt.id === task.id ? { ...bt, ...patch } : bt) };
+      });
+    });
+  };
   const [isLabelsVisible, setIsLabelsVisible] = useState(false);
   const [isMembersVisible, setIsMembersVisible] = useState(false);
   const [isContributionModalOpen, setIsContributionModalOpen] = useState(false);
@@ -512,12 +534,32 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-bold text-foreground">Mô tả</h3>
                   {!isEditingDesc && (
-                    <button 
-                      onClick={() => setIsEditingDesc(true)}
-                      className="px-3 py-1.5 bg-accent/50 hover:bg-accent text-sm font-medium rounded-md transition-colors"
-                    >
-                      Chỉnh sửa
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {!draft.parentTaskId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!draft.description?.trim()) {
+                              toast.info('Hãy viết mô tả (hoặc dán danh sách việc) trước, rồi bấm Phân tích AI.');
+                              setIsEditingDesc(true);
+                              return;
+                            }
+                            setIsAiSplitOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary text-sm font-semibold rounded-md transition-colors"
+                          title="AI đọc mô tả và đề xuất các việc con, bạn duyệt trước khi tạo"
+                        >
+                          <Sparkles size={14} />
+                          Phân tích AI
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => setIsEditingDesc(true)}
+                        className="px-3 py-1.5 bg-accent/50 hover:bg-accent text-sm font-medium rounded-md transition-colors"
+                      >
+                        Chỉnh sửa
+                      </button>
+                    </div>
                   )}
                 </div>
                 
@@ -580,29 +622,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                 board={board} 
                 isCreateGroupOpen={isCreateGroupOpen}
                 onCloseCreateGroup={() => setIsCreateGroupOpen(false)}
-                onSubtasksChanged={() => {
-                  api.get(`/tasks/${task.id}`).then(res => {
-                    if (res.data) {
-                      const updated = {
-                        ...draft,
-                        subtasks: res.data.subtasks || [],
-                        task_groups: res.data.taskGroups || res.data.task_groups || [],
-                        totalSubtasksCount: res.data.subtasks?.length || 0,
-                        doneSubtasksCount: res.data.subtasks?.filter((s: any) => s.completed_at).length || 0,
-                        // Keep "Việc của tôi" in step when I assign myself to a sub-task here.
-                        hasMySubtask: (res.data.subtasks || []).some((s: Task) => isMyTask(s, currentUser?.id)),
-                      };
-                      setDraft(updated);
-                      useBoardStore.getState().setBoard(b => {
-                        if (!b) return b;
-                        return {
-                          ...b,
-                          tasks: b.tasks.map(bt => bt.id === task.id ? updated : bt)
-                        };
-                      });
-                    }
-                  });
-                }}
+                onSubtasksChanged={refreshSubtasks}
               />
             </div>
 
@@ -1221,6 +1241,15 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
           </div>
         </div>,
         document.body
+      )}
+
+      {isAiSplitOpen && (
+        <AiSubtaskSplitModal
+          taskId={task.id}
+          hasAssignees={(draft.assignees?.length ?? 0) > 0}
+          onClose={() => setIsAiSplitOpen(false)}
+          onCreated={refreshSubtasks}
+        />
       )}
 
       {isContributionModalOpen && (

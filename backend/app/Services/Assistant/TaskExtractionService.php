@@ -95,6 +95,10 @@ class TaskExtractionService
     {
         $tasks = [];
         $contextLines = [];
+        // Index of the task that following checklist / bullet lines belong to (a numbered or "Heading:" line).
+        $parent = null;
+        // Last plain line, which becomes the parent when a checklist follows it directly.
+        $heading = null;
 
         foreach (preg_split('/\R/u', $text) as $line) {
             $trim = trim($line);
@@ -102,14 +106,49 @@ class TaskExtractionService
                 $contextLines[] = '';
                 continue;
             }
-            $isItem = preg_match('/^\s*(\d+\s*[.)]|[-*•])\s*\S/u', $trim)
+            $checklist = self::checklistItem($trim);
+            $numbered = (bool) preg_match('/^\d+\s*[.)]\s*\S/u', $trim);
+            $bullet = (bool) preg_match('/^[-*•+]\s*\S/u', $trim);
+
+            if ($checklist !== null || ($bullet && $parent !== null)) {
+                if ($parent === null && $heading !== null) {
+                    // "Nền tảng X" then "- [ ] ..." lines: the plain line is the parent task.
+                    $tasks[] = $this->draftFromLine($heading, $directory, $boards);
+                    $parent = array_key_last($tasks);
+                    array_pop($contextLines);
+                }
+                if ($parent !== null) {
+                    $sub = $checklist ?? ['title' => preg_replace('/^[-*•+]\s*/u', '', $trim), 'done' => false];
+                    $tasks[$parent]['subtasks'][] = $sub;
+                    $tasks[$parent]['source_line'] .= "\n" . $trim;
+                    continue;
+                }
+                $tasks[] = $this->draftFromLine($checklist['title'], $directory, $boards);
+                $tasks[array_key_last($tasks)]['done'] = $checklist['done'];
+                $heading = null;
+                continue;
+            }
+
+            $isItem = $numbered || $bullet
                 || (str_starts_with($trim, '@') && !preg_match('/^@all\b/i', $trim));
             if ($isItem) {
                 $tasks[] = $this->draftFromLine($trim, $directory, $boards);
+                $parent = $numbered ? array_key_last($tasks) : null;
+                $heading = null;
             } else {
                 $contextLines[] = $trim;
+                $parent = null;
+                $heading = mb_strlen($trim) <= 200 ? rtrim($trim, ': ') : null;
             }
         }
+
+        // A parent's board is easier to guess with its checklist text included.
+        foreach ($tasks as &$task) {
+            if (!empty($task['subtasks']) && !$task['board_id']) {
+                [$task['board_id'], $task['board_reason']] = $this->guessBoard($task['source_line'], $boards);
+            }
+        }
+        unset($task);
 
         // Urgent notes elsewhere in the message ("GẤP BÁO GIÁ ... DC CENTER") mark matching tasks.
         foreach ($this->blocks($contextLines) as $block) {
@@ -190,7 +229,23 @@ class TaskExtractionService
             'priority' => preg_match(self::URGENT, $folded) ? 'Khẩn cấp' : 'Bình thường',
             'done' => $done,
             'due_date' => $this->dueDate($folded),
+            'subtasks' => [],
         ];
+    }
+
+    /**
+     * "- [ ] Việc", "[x] Việc", "☐ Việc", "✅ Việc" → ['title' => 'Việc', 'done' => bool]; null if not a checklist line.
+     */
+    private static function checklistItem(string $line): ?array
+    {
+        if (preg_match('/^(?:[-*•+]\s*)?\[\s*([xX✓✔]?)\s*\]\s*(\S.*)$/u', $line, $m)) {
+            return ['title' => trim($m[2]), 'done' => $m[1] !== ''];
+        }
+        if (preg_match('/^(?:[-*•+]\s*)?([☐□⬜☑✅✔])\s*(\S.*)$/u', $line, $m)) {
+            return ['title' => trim($m[2]), 'done' => !in_array($m[1], ['☐', '□', '⬜'], true)];
+        }
+
+        return null;
     }
 
     /** Board whose name/description shares at least two meaningful words with the task. */
@@ -282,6 +337,8 @@ Quy tắc:
 - priority: một trong "Thấp", "Bình thường", "Cao", "Khẩn cấp". Có chữ GẤP/khẩn/chốt hôm nay thì "Khẩn cấp". Ghi chú gấp ở cuối tin nhắn áp dụng cho việc liên quan.
 - done = true nếu việc được ghi là DONE/đã xong.
 - due_date: YYYY-MM-DD nếu có hạn (hôm nay = {$this->today()}), ngược lại null.
+- VIỆC CON (subtasks): khi một dòng tiêu đề (vd "1. Nền tảng DANAVA Go", "Dự án X:") được theo sau bởi các dòng checklist "- [ ] ...", "[x] ...", "☐ ..." hoặc các gạch đầu dòng con, thì đó là MỘT công việc: title là dòng tiêu đề, còn mỗi dòng bên dưới là một phần tử trong subtasks (giữ nguyên nội dung, bỏ ký hiệu "- [ ]"). KHÔNG tách các dòng đó thành công việc riêng. done của việc con = true nếu dòng ghi [x]/✅/đã xong.
+- Nếu người dùng nói rõ "tạo thành việc con/task con" thì gom toàn bộ các dòng vào subtasks của một công việc có title là tiêu đề chung.
 PROMPT;
 
         $user = "NHÂN VIÊN:\n" . json_encode($people, JSON_UNESCAPED_UNICODE)
@@ -306,6 +363,14 @@ PROMPT;
                             'priority' => ['type' => 'string', 'enum' => self::PRIORITIES],
                             'done' => ['type' => 'boolean'],
                             'due_date' => ['type' => ['string', 'null']],
+                            'subtasks' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => ['title' => ['type' => 'string'], 'done' => ['type' => 'boolean']],
+                                    'required' => ['title'],
+                                ],
+                            ],
                         ],
                         'required' => ['title', 'assignee_user_ids', 'board_id', 'priority', 'done'],
                     ],
@@ -342,6 +407,10 @@ PROMPT;
                 'priority' => in_array($t['priority'] ?? '', self::PRIORITIES, true) ? $t['priority'] : 'Bình thường',
                 'done' => (bool) ($t['done'] ?? false),
                 'due_date' => $due,
+                'subtasks' => array_values(array_filter(array_map(fn ($s) => [
+                    'title' => mb_substr(trim(preg_replace('/^(?:[-*•+]\s*)?\[\s*[xX✓✔]?\s*\]\s*/u', '', (string) ($s['title'] ?? ''))), 0, 255),
+                    'done' => (bool) ($s['done'] ?? false),
+                ], array_slice((array) ($t['subtasks'] ?? []), 0, 100)), fn ($s) => $s['title'] !== '')),
             ];
         }, $result['tasks'] ?? []);
     }

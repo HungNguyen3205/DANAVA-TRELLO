@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { KanbanBoard } from '../components/kanban/KanbanBoard';
+import { KanbanBoard, type BulkMove } from '../components/kanban/KanbanBoard';
 import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
 import { Search, Plus, Archive, FileSpreadsheet, FolderInput } from 'lucide-react';
@@ -213,14 +213,25 @@ export function BoardView() {
   const handleSave = async (
     b: Board,
     _text: string,
-    moveData?: { taskId: string, columnId: string, prevId?: string, nextId?: string } | { reorderColumns: true },
+    moveData?: { taskId: string, columnId: string, prevId?: string, nextId?: string } | { reorderColumns: true } | BulkMove,
   ) => {
     setBoard(b);
     try {
       const id = boardId?.replace('board-', '') || '1';
       const taskMoveData = moveData && 'taskId' in moveData ? moveData : undefined;
 
-      if (moveData && 'reorderColumns' in moveData) {
+      if (moveData && 'bulkMove' in moveData) {
+        // Several selected cards moved together as one block.
+        const m = moveData.bulkMove;
+        await api.put(`/boards/${id}/tasks/bulk-move`, {
+          task_ids: m.taskIds.map(Number),
+          column_id: Number(m.columnId),
+          prev_id: m.prevId ? Number(m.prevId) : null,
+          next_id: m.nextId ? Number(m.nextId) : null,
+        });
+        // Completion state and order come from the server (done columns auto-complete).
+        await fetchBoard(boardId || '1', true);
+      } else if (moveData && 'reorderColumns' in moveData) {
         // Column drag-and-drop: persist only the column order
         const columns = b.columns.map((c, idx) => ({ id: Number(c.id), order: (idx + 1) * 1000 }));
         await api.put(`/boards/${id}/columns/reorder`, { columns });

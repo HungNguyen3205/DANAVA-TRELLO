@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, AlertTriangle, Loader2, X, Sparkles, UserPlus, ExternalLink, LayoutGrid } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Loader2, X, Sparkles, UserPlus, ExternalLink, LayoutGrid, ListChecks } from 'lucide-react';
 import { Picker } from './Picker';
 import { toast } from 'sonner';
 import { assistantApi, type ApplyItem, type ApplyResult, type TaskDraft, type TaskPreview } from '../../lib/api/assistant';
@@ -76,6 +76,7 @@ export function TaskPreviewCard({ messageId, preview, onApplied }: { messageId: 
 
   const selected = rows.filter((r) => r.include);
   const missingBoard = selected.filter((r) => !(r.board_id ?? defaultBoard)).length;
+  const subtaskTotal = selected.reduce((n, r) => n + (r.subtasks?.filter((s) => s.title.trim()).length ?? 0), 0);
 
   const submit = async () => {
     const items: ApplyItem[] = selected.map((r) => ({
@@ -87,6 +88,7 @@ export function TaskPreviewCard({ messageId, preview, onApplied }: { messageId: 
       done: r.done,
       due_date: r.due_date,
       aliases: Object.entries(r.resolved).map(([alias, user_id]) => ({ alias, user_id })),
+      subtasks: (r.subtasks ?? []).map((s) => ({ title: s.title.trim(), done: s.done })).filter((s) => s.title),
     }));
     setSubmitting(true);
     try {
@@ -115,7 +117,10 @@ export function TaskPreviewCard({ messageId, preview, onApplied }: { messageId: 
               {r.ok && r.task ? (
                 <>
                   <span className="font-semibold text-foreground">{r.task.title}</span>
-                  <span className="text-muted-foreground"> → {r.task.board_name} · {r.task.column}</span>
+                  <span className="text-muted-foreground">
+                    {' '}→ {r.task.board_name} · {r.task.column}
+                    {!!r.task.subtask_count && ` · ${r.task.subtask_count} việc con`}
+                  </span>
                   <Link to={`/${r.task.board_code}/kanban`} className="inline-flex items-center gap-0.5 ml-1 text-primary hover:underline">
                     Mở <ExternalLink size={11} />
                   </Link>
@@ -258,6 +263,39 @@ export function TaskPreviewCard({ messageId, preview, onApplied }: { messageId: 
                   Đã xong
                 </label>
               </div>
+              {!!r.subtasks?.length && (
+                <div className="ml-6 rounded-lg border border-border bg-muted/20 px-2 py-1.5 space-y-1">
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                    <ListChecks size={12} className="text-primary" />
+                    {r.subtasks.length} việc con
+                  </div>
+                  {r.subtasks.map((s, si) => (
+                    <div key={si} className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={s.done}
+                        onChange={(e) => update(i, { subtasks: r.subtasks!.map((x, xi) => (xi === si ? { ...x, done: e.target.checked } : x)) })}
+                        className="accent-emerald-600 shrink-0"
+                        aria-label="Việc con đã xong"
+                        title="Đã xong"
+                      />
+                      <input
+                        value={s.title}
+                        onChange={(e) => update(i, { subtasks: r.subtasks!.map((x, xi) => (xi === si ? { ...x, title: e.target.value } : x)) })}
+                        className="flex-1 min-w-0 text-xs bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-1.5 py-0.5"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => update(i, { subtasks: r.subtasks!.filter((_, xi) => xi !== si) })}
+                        className="p-0.5 rounded text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 shrink-0"
+                        aria-label="Bỏ việc con này"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               {Object.keys(r.resolved).length > 0 && (
                 <div className="pl-6 text-[11px] text-emerald-700 dark:text-emerald-400">Em sẽ ghi nhớ tên gọi này cho lần sau.</div>
               )}
@@ -278,6 +316,7 @@ export function TaskPreviewCard({ messageId, preview, onApplied }: { messageId: 
         >
           {submitting && <Loader2 size={13} className="animate-spin" />}
           Tạo {selected.length} công việc
+          {subtaskTotal > 0 && ` + ${subtaskTotal} việc con`}
         </button>
       </div>
     </div>

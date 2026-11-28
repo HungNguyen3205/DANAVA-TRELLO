@@ -3,7 +3,7 @@ import { TaskDetailModal } from '../components/kanban/TaskDetailModal';
 import { PromptModal } from '../components/ui/PromptModal';
 import { 
   Filter, Search, Plus, List as ListIcon,
-  Clock, FileSpreadsheet
+  Clock, FileSpreadsheet, Trash2, X
 } from 'lucide-react';
 import api from '../lib/axios';
 import { toast } from 'sonner';
@@ -37,6 +37,40 @@ export function ListView() {
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [groupBy, setGroupBy] = useState<'status' | 'sprint' | 'assignee' | 'none'>('status');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // Drop the selection when switching boards.
+  useEffect(() => { setSelectedIds(new Set()); }, [boardId]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const { data } = await api.post('/tasks/bulk-delete', { ids: ids.map(Number) });
+      const deleted = Number(data?.deleted ?? 0);
+      const skipped = Number(data?.skipped ?? 0);
+      if (deleted > 0) toast.success(`Đã chuyển ${deleted} công việc vào thùng rác`);
+      if (skipped > 0) toast.warning(`${skipped} công việc không xóa được do không có quyền`);
+      setSelectedIds(new Set());
+      setConfirmBulkDelete(false);
+      fetchBoard(boardId || '1', true);
+    } catch (e) {
+      toast.error('Lỗi khi xóa công việc');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (boardId) {
@@ -95,6 +129,10 @@ export function ListView() {
       return false;
     });
   }, [board, searchQuery, onlyMine, user?.id]);
+
+  const selectedVisibleCount = visibleTasks.filter(t => selectedIds.has(t.id)).length;
+  const allVisibleSelected = visibleTasks.length > 0 && selectedVisibleCount === visibleTasks.length;
+  const someVisibleSelected = selectedVisibleCount > 0;
 
   // Group tasks based on groupBy state
   const groupedTasks = useMemo(() => {
@@ -223,6 +261,33 @@ export function ListView() {
           </div>
         </div>
 
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="px-6 py-2.5 flex items-center justify-between gap-3 border-b border-primary/20 bg-primary/5 animate-in fade-in slide-in-from-top-1 duration-150">
+            <span className="text-[13px] font-semibold text-foreground">
+              Đã chọn {selectedIds.size} công việc
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="h-8 px-3 inline-flex items-center gap-1.5 text-xs font-medium text-foreground rounded-lg hover:bg-accent transition-colors"
+              >
+                <X size={14} />
+                Bỏ chọn
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmBulkDelete(true)}
+                className="h-8 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm transition-colors"
+              >
+                <Trash2 size={14} />
+                Xóa {selectedIds.size} công việc
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* List View Data Table */}
         <div className="flex-1 overflow-auto custom-scrollbar px-6 py-4">
           
@@ -230,7 +295,21 @@ export function ListView() {
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-2 md:gap-4 px-2 md:px-4 py-3 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 bg-card z-10 shadow-sm">
               <div className="col-span-8 md:col-span-4 lg:col-span-5 flex items-center gap-2">
-                <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary" />
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                  title="Chọn tất cả"
+                  checked={allVisibleSelected}
+                  ref={(el) => { if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected; }}
+                  onChange={() => {
+                    setSelectedIds(prev => {
+                      const next = new Set(prev);
+                      if (allVisibleSelected) visibleTasks.forEach(t => next.delete(t.id));
+                      else visibleTasks.forEach(t => next.add(t.id));
+                      return next;
+                    });
+                  }}
+                />
                 <span>Tên công việc</span>
               </div>
               <div className="col-span-4 md:col-span-3 lg:col-span-2">Trạng thái</div>
@@ -287,14 +366,16 @@ export function ListView() {
                           return (
                             <div 
                               key={task.id} 
-                              className="grid grid-cols-12 gap-2 md:gap-4 px-2 md:px-4 py-3 items-center hover:bg-accent/50 transition-colors group cursor-pointer"
-                              onClick={() => handleOpen(task)}
+                              className={`grid grid-cols-12 gap-2 md:gap-4 px-2 md:px-4 py-3 items-center transition-colors group cursor-pointer ${selectedIds.has(task.id) ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-accent/50'}`}
+                              onClick={() => (selectedIds.size > 0 ? toggleSelected(task.id) : handleOpen(task))}
                             >
                               {/* Task Name */}
                               <div className="col-span-8 md:col-span-4 lg:col-span-5 flex items-center gap-2 md:gap-3">
                                 <input 
                                   type="checkbox" 
-                                  className="rounded border-gray-300 text-primary focus:ring-primary opacity-0 group-hover:opacity-100 transition-opacity" 
+                                  className={`rounded border-gray-300 text-primary focus:ring-primary cursor-pointer transition-opacity ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'}`}
+                                  checked={selectedIds.has(task.id)}
+                                  onChange={() => toggleSelected(task.id)}
                                   onClick={(e) => e.stopPropagation()}
                                 />
                                 <div className="flex flex-col min-w-0">
@@ -391,6 +472,39 @@ export function ListView() {
             fetchBoard(boardId || '1', true);
           }} 
         />
+      )}
+
+      {confirmBulkDelete && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F172A]/70 backdrop-blur-[2px] animate-in fade-in duration-200 p-4"
+          onClick={() => !bulkDeleting && setConfirmBulkDelete(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-popover rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold mb-2 text-foreground">Xóa {selectedIds.size} công việc?</h3>
+            <p className="text-[13px] text-muted-foreground mb-6 leading-relaxed">
+              Các công việc đã chọn sẽ được chuyển vào Thùng rác. Bạn có thể khôi phục lại trong Thùng rác.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmBulkDelete(false)}
+                disabled={bulkDeleting}
+                className="px-4 py-2 hover:bg-accent text-foreground font-medium rounded-lg text-sm transition-colors border border-transparent hover:border-border"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="px-4 py-2 bg-red-500 text-white font-medium rounded-lg text-sm hover:bg-red-600 transition-colors shadow-sm disabled:opacity-60"
+              >
+                {bulkDeleting ? 'Đang xóa...' : 'Xóa'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {promptData && (

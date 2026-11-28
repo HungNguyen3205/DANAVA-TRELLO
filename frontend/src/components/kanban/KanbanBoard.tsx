@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -15,13 +15,16 @@ import {
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { Plus } from "lucide-react";
+import { Plus, X, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { Board, Column, Task } from "../../types";
 import { moveColumn, moveTask } from "../../lib/board";
 import { BoardColumn } from "./BoardColumn";
 import { CardContent } from "./TaskCard";
 import { WipConfirmModal } from "./WipConfirmModal";
+import { KanbanSelectionContext } from "./KanbanSelection";
+
+export type BulkMove = { bulkMove: { taskIds: string[]; columnId: string; prevId?: string; nextId?: string } };
 export function KanbanBoard({
   board,
   visibleTasks,
@@ -40,6 +43,96 @@ export function KanbanBoard({
   disabled: boolean;
 }) {
   const [active, setActive] = useState<Task | Column | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
+  const [moving, setMoving] = useState(false);
+
+  const toggle = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  // Esc clears the selection.
+  useEffect(() => {
+    if (selectedIds.size === 0) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") clearSelection(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedIds.size, clearSelection]);
+
+  // Forget cards that left the board (deleted, moved away by someone else...).
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const ids = new Set(board.tasks.map((t) => t.id));
+      const next = new Set([...prev].filter((id) => ids.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [board.tasks]);
+
+  const selection = useMemo(() => ({ selectedIds, toggle, draggingIds }), [selectedIds, toggle, draggingIds]);
+
+  /**
+   * Move the given cards to `target` as one block, in board order, placed before
+   * `beforeId` (a card in the target column) or at the end of the column.
+   */
+  const moveGroup = (ids: string[], target: string, beforeId?: string) => {
+    const group = board.tasks.filter((t) => ids.includes(t.id));
+    if (group.length === 0) return;
+    const destCol = board.columns.find((c) => String(c.id) === String(target));
+    if (!destCol) return;
+
+    const run = async () => {
+      const rest = board.tasks.filter((t) => !ids.includes(t.id));
+      const block = group.map((t) => ({ ...t, columnId: target }));
+      let at = beforeId ? rest.findIndex((t) => t.id === beforeId) : -1;
+      if (at < 0) {
+        const last = rest.map((t) => t.columnId).lastIndexOf(target);
+        at = last >= 0 ? last + 1 : rest.length;
+      }
+      const tasks = [...rest.slice(0, at), ...block, ...rest.slice(at)];
+      const inCol = tasks.filter((t) => t.columnId === target);
+      const first = inCol.findIndex((t) => t.id === block[0].id);
+      const prevId = first > 0 ? inCol[first - 1].id : undefined;
+      const nextId = inCol[first + block.length]?.id;
+
+      setMoving(true);
+      const move: BulkMove = { bulkMove: { taskIds: block.map((t) => t.id), columnId: target, prevId, nextId } };
+      const ok = await (onSave as any)({ ...board, tasks }, `Di chuyển ${block.length} công việc`, move);
+      setMoving(false);
+      if (ok) {
+        toast.success(`Đã chuyển ${block.length} công việc sang "${destCol.title}"`);
+        clearSelection();
+      }
+    };
+
+    // WIP limit: count only root tasks that actually change column.
+    const entering = group.filter((t) => String(t.columnId) !== String(target) && !t.parentTaskId).length;
+    if (entering > 0 && destCol.wip_limit && destCol.wip_limit > 0) {
+      const current = board.tasks.filter((t) => String(t.columnId) === String(target) && !t.parentTaskId).length;
+      if (current + entering > destCol.wip_limit) {
+        if (destCol.wip_enforcement === "strict") {
+          toast.error(`Cột "${destCol.title}" chỉ còn chỗ cho ${Math.max(destCol.wip_limit - current, 0)} công việc (giới hạn WIP ${destCol.wip_limit}, chế độ Nghiêm ngặt).`);
+          return;
+        }
+        setWipWarningPrompt({
+          isOpen: true,
+          columnTitle: destCol.title,
+          wipLimit: destCol.wip_limit,
+          currentCount: current,
+          actionType: "move",
+          onConfirm: () => { setWipWarningPrompt(null); void run(); },
+          onCancel: () => setWipWarningPrompt(null),
+        });
+        return;
+      }
+    }
+    void run();
+  };
   const [dragWidth, setDragWidth] = useState<number | undefined>();
   const fitColumns = board.columns.length <= 4;
   const columnLayout = {
@@ -66,8 +159,19 @@ export function KanbanBoard({
 
   function finish({ active: dragged, over }: DragEndEvent) {
     setActive(null);
+    const group = draggingIds;
+    setDraggingIds(new Set());
     if (!over || dragged.id === over.id) return;
     const data = dragged.data.current;
+
+    // Dragging one of several selected cards moves them all.
+    if (data?.type === "Task" && group.size > 1) {
+      const overTask = over.data.current?.type === "Task" ? (over.data.current.task as Task) : null;
+      const target = overTask ? overTask.columnId : String(over.id).replace("col-", "");
+      const beforeId = overTask && !group.has(overTask.id) ? overTask.id : undefined;
+      moveGroup([...group], target, beforeId);
+      return;
+    }
     
     // Strip prefixes
     const draggedId = String(dragged.id).replace('col-', '').replace('task-', '');
@@ -150,13 +254,16 @@ export function KanbanBoard({
       collisionDetection={closestCorners}
       onDragStart={(e) => {
         setDragWidth(e.active.rect.current.initial?.width);
+        const draggedTask = e.active.data.current?.type === "Task" ? (e.active.data.current.task as Task) : null;
+        setDraggingIds(draggedTask && selectedIds.has(draggedTask.id) && selectedIds.size > 1 ? new Set(selectedIds) : new Set());
         setActive(
           e.active.data.current?.task || e.active.data.current?.column || null,
         );
       }}
-      onDragCancel={() => setActive(null)}
+      onDragCancel={() => { setActive(null); setDraggingIds(new Set()); }}
       onDragEnd={finish}
     >
+      <KanbanSelectionContext.Provider value={selection}>
       {fitColumns && board.columns.length > 0 && (
         <div className="flex shrink-0 justify-end px-3 pb-2 sm:px-4">
           <button className="inline-flex items-center gap-1.5 rounded-lg bg-card/50 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground"
@@ -219,11 +326,21 @@ export function KanbanBoard({
             }
 
             return (
-              <article style={{ width: dragWidth ?? 268 }} className="rotate-2 shadow-2xl opacity-90 bg-card rounded-[12px] border border-primary/30 scale-[1.02] overflow-hidden">
-                <div className="p-3.5">
-                  <CardContent task={active} board={board} theme={theme} />
-                </div>
-              </article>
+              <div className="relative" style={{ width: dragWidth ?? 268 }}>
+                {draggingIds.size > 1 && (
+                  <>
+                    <div className="absolute inset-0 translate-x-2 translate-y-2 rotate-3 rounded-[12px] bg-card border border-primary/20 shadow-lg" />
+                    <span className="absolute -top-2.5 -right-2.5 z-10 min-w-6 h-6 px-1.5 rounded-full bg-primary text-white text-xs font-bold inline-flex items-center justify-center shadow-md">
+                      {draggingIds.size}
+                    </span>
+                  </>
+                )}
+                <article className="relative rotate-2 shadow-2xl opacity-90 bg-card rounded-[12px] border border-primary/30 scale-[1.02] overflow-hidden">
+                  <div className="p-3.5">
+                    <CardContent task={active} board={board} theme={theme} />
+                  </div>
+                </article>
+              </div>
             );
           })() : (() => {
             const col = active as Column;
@@ -265,6 +382,42 @@ export function KanbanBoard({
             );
           })())}
       </DragOverlay>
+
+      </KanbanSelectionContext.Provider>
+
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-popover/95 backdrop-blur px-3 py-2.5 shadow-2xl">
+            <span className="text-[13px] font-semibold text-foreground whitespace-nowrap">
+              Đã chọn {selectedIds.size} việc
+            </span>
+            <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap">· kéo một thẻ để chuyển cả nhóm, hoặc</span>
+            <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+              <ArrowRightLeft size={14} className="text-muted-foreground shrink-0" />
+              {board.columns.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={moving}
+                  onClick={() => moveGroup([...selectedIds], c.id)}
+                  className="h-7 px-2.5 rounded-lg border border-border bg-card hover:bg-primary hover:text-white hover:border-primary text-xs font-medium text-foreground transition-colors whitespace-nowrap disabled:opacity-50 max-w-[10rem] truncate"
+                  title={`Chuyển sang "${c.title}"`}
+                >
+                  {c.title}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="h-7 px-2.5 inline-flex items-center gap-1 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground whitespace-nowrap"
+              title="Bỏ chọn (Esc)"
+            >
+              <X size={13} /> Bỏ chọn
+            </button>
+          </div>
+        </div>
+      )}
 
       {wipWarningPrompt && (
         <WipConfirmModal

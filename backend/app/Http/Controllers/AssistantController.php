@@ -95,6 +95,9 @@ class AssistantController extends Controller
             'items.*.aliases' => 'array|max:20',
             'items.*.aliases.*.alias' => 'required|string|max:120',
             'items.*.aliases.*.user_id' => 'required|integer',
+            'items.*.subtasks' => 'array|max:100',
+            'items.*.subtasks.*.title' => 'required|string|max:255',
+            'items.*.subtasks.*.done' => 'boolean',
         ]);
 
         $results = $applier->apply($request->user(), $data['items']);

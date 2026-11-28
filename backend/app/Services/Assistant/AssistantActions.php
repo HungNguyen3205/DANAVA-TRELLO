@@ -95,7 +95,13 @@ class AssistantActions
                     'han' => $str('Hạn hoàn thành YYYY-MM-DD'),
                     'uu_tien' => $priority,
                     'cot_id' => $id('Cột đặt công việc (mặc định cột đầu tiên)'),
+                    'viec_con' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Danh sách việc con (checklist) tạo bên trong công việc này, mỗi phần tử là tên một việc con. Dùng khi tin nhắn có tiêu đề kèm các dòng "- [ ] ..." hoặc người dùng nói "việc con/task con".'],
                 ], 'required' => ['bang_id', 'tieu_de']]],
+            ['name' => 'create_subtasks', 'description' => 'Thêm nhiều việc con (checklist) vào một công việc ĐÃ CÓ. Dùng find_tasks để lấy id công việc cha trước.',
+                'parameters' => ['type' => 'object', 'properties' => [
+                    'cong_viec_id' => $id('Id công việc cha'),
+                    'viec_con' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Tên các việc con, mỗi phần tử một việc, bỏ ký hiệu "- [ ]"'],
+                ], 'required' => ['cong_viec_id', 'viec_con']]],
             ['name' => 'update_task', 'description' => 'Sửa công việc: đổi tên, mô tả, hạn, ưu tiên, giao lại/thêm/bớt người phụ trách, chuyển cột, đánh dấu xong hoặc mở lại. Chỉ truyền những trường cần đổi.',
                 'parameters' => ['type' => 'object', 'properties' => [
                     'cong_viec_id' => $id('Id công việc (từ find_tasks)'),
@@ -336,6 +342,7 @@ class AssistantActions
             'assignee_ids' => $assignees,
             'priority' => in_array($a['uu_tien'] ?? null, TaskExtractionService::PRIORITIES, true) ? $a['uu_tien'] : 'Bình thường',
             'due_date' => self::date($a['han'] ?? null),
+            'subtasks' => self::subtaskTitles($a['viec_con'] ?? []),
         ]])[0];
         if (!$result['ok']) {
             return ['ok' => false, 'loi' => $result['message']];
@@ -349,7 +356,46 @@ class AssistantActions
         $this->target = ['type' => 'task', 'id' => $task->id, 'label' => $task->title];
         $this->activity($board->id, $task->id, $actor, 'tạo công việc qua Trợ lý AI', null, $task->title);
 
-        return ['ok' => true, 'thong_bao' => "Đã tạo công việc \"{$task->title}\" trong bảng \"{$board->name}\".", 'cong_viec' => $this->taskSummary($task)];
+        $subCount = $task->subtasks()->count();
+        $extra = $subCount ? " kèm {$subCount} việc con" : '';
+
+        return ['ok' => true, 'thong_bao' => "Đã tạo công việc \"{$task->title}\"{$extra} trong bảng \"{$board->name}\".", 'cong_viec' => $this->taskSummary($task)];
+    }
+
+    private function toolCreateSubtasks(User $actor, array $a): array
+    {
+        [$task, $board, $error] = $this->loadTask($actor, $a['cong_viec_id'] ?? 0);
+        if ($error) {
+            return $error;
+        }
+        if ($task->parent_task_id !== null) {
+            return ['ok' => false, 'loi' => 'Đây đã là việc con, không thể thêm việc con vào bên trong (chỉ hỗ trợ 1 cấp).'];
+        }
+        $titles = self::subtaskTitles($a['viec_con'] ?? []);
+        if (!$titles) {
+            return ['ok' => false, 'loi' => 'Chưa có tên việc con nào để thêm.'];
+        }
+
+        $count = $this->applier->addSubtasks($actor, $task, $titles);
+        $this->activity($board->id, $task->id, $actor, "thêm {$count} việc con qua Trợ lý AI", null, implode('; ', array_column($titles, 'title')));
+
+        return ['ok' => true, 'thong_bao' => "Đã thêm {$count} việc con vào \"{$task->title}\".", 'cong_viec' => $this->taskSummary($task)];
+    }
+
+    /** Model-supplied checklist lines → [['title' => ..., 'done' => bool]], markers like "- [ ]" stripped. */
+    private static function subtaskTitles(mixed $items): array
+    {
+        $out = [];
+        foreach (array_slice((array) $items, 0, 100) as $item) {
+            $raw = trim(is_array($item) ? (string) ($item['title'] ?? $item['tieu_de'] ?? '') : (string) $item);
+            $done = (bool) preg_match('/^(?:[-*•+]\s*)?\[\s*[xX✓✔]\s*\]/u', $raw);
+            $title = trim(preg_replace('/^(?:[-*•+]\s*)?(?:\[\s*[xX✓✔]?\s*\]\s*)?/u', '', $raw));
+            if ($title !== '') {
+                $out[] = ['title' => mb_substr($title, 0, 255), 'done' => $done];
+            }
+        }
+
+        return $out;
     }
 
     private function toolUpdateTask(User $actor, array $a): array

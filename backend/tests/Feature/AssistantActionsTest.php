@@ -107,6 +107,23 @@ class AssistantActionsTest extends TestCase
         $this->assertSame('denied', AssistantActionLog::where('tool', 'update_task')->sole()->status);
     }
 
+    public function test_chat_creates_a_task_with_subtasks_and_adds_subtasks_to_an_existing_task(): void
+    {
+        $this->fakeGemini(
+            [['create_task', ['bang_id' => $this->board->id, 'tieu_de' => 'Nền tảng DANAVA Go', 'viec_con' => ['- [ ] Tìm kiếm chuyến xe', '- [x] Hỗ trợ tiếng Anh']]]],
+            [['create_subtasks', ['cong_viec_id' => $this->task->id, 'viec_con' => ['Chuẩn bị bảng giá', 'Gửi email']]]],
+        );
+
+        $this->chat($this->staff, "đổi thành task con giúp em:\n1. Nền tảng DANAVA Go\n- [ ] Tìm kiếm chuyến xe\n- [x] Hỗ trợ tiếng Anh");
+
+        $parent = Task::where('title', 'Nền tảng DANAVA Go')->whereNull('parent_task_id')->sole();
+        $subs = $parent->subtasks()->get();
+        $this->assertSame(['Tìm kiếm chuyến xe', 'Hỗ trợ tiếng Anh'], $subs->pluck('title')->all());
+        $this->assertNotNull($subs[1]->completed_at);
+        $this->assertSame(['Chuẩn bị bảng giá', 'Gửi email'], $this->task->subtasks()->pluck('title')->all());
+        $this->assertSame('success', AssistantActionLog::where('tool', 'create_subtasks')->sole()->status);
+    }
+
     public function test_staff_cannot_create_accounts_or_change_employees(): void
     {
         $this->fakeGemini(

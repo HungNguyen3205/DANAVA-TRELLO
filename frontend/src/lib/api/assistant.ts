@@ -19,6 +19,13 @@ export interface TaskDraft {
   priority: Priority;
   done: boolean;
   due_date: string | null;
+  /** Checklist lines under a heading, created as subtasks of this task. */
+  subtasks?: SubtaskDraft[];
+}
+
+export interface SubtaskDraft {
+  title: string;
+  done: boolean;
 }
 
 export interface TaskPreview {
@@ -76,13 +83,14 @@ export interface ApplyItem {
   due_date: string | null;
   add_to_board?: boolean;
   aliases?: { alias: string; user_id: number }[];
+  subtasks?: SubtaskDraft[];
 }
 
 export interface ApplyResult {
   index: number;
   ok: boolean;
   message?: string;
-  task?: { id: number; title: string; board_id: number; board_name: string; board_code: string; column: string; assignee_ids: number[] };
+  task?: { id: number; title: string; board_id: number; board_name: string; board_code: string; column: string; assignee_ids: number[]; subtask_count?: number };
   skipped_assignees?: { id: number; name: string }[];
 }
 

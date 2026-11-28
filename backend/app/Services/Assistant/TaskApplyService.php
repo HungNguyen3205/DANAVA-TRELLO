@@ -73,6 +73,7 @@ class TaskApplyService
             if ($assigneeIds) {
                 $task->syncAssigneesWithAutoSplit($assigneeIds, $actor->id);
             }
+            $this->addSubtasks($actor, $task, $item['subtasks'] ?? []);
 
             return $task;
         });
@@ -89,9 +90,59 @@ class TaskApplyService
                 'board_code' => $board->public_id,
                 'column' => $column->title,
                 'assignee_ids' => $assigneeIds,
+                'subtask_count' => $task->subtasks()->count(),
             ],
             'skipped_assignees' => $skipped,
         ];
+    }
+
+    /**
+     * Add checklist items as subtasks of $parent (in its first "Việc cần làm" group),
+     * the same way SubtaskController::store lays them out.
+     *
+     * @param array<int, string|array{title?: string, done?: bool}> $items
+     * @return int number of subtasks created
+     */
+    public function addSubtasks(User $actor, Task $parent, array $items, array $assigneeIds = []): int
+    {
+        $items = array_values(array_filter(array_map(function ($item) {
+            $title = trim(is_array($item) ? (string) ($item['title'] ?? '') : (string) $item);
+            return $title === '' ? null : ['title' => mb_substr($title, 0, 255), 'done' => is_array($item) && !empty($item['done'])];
+        }, $items)));
+        if (!$items || $parent->parent_task_id !== null) {
+            return 0;
+        }
+
+        $assigneeIds = array_values(array_unique(array_map('intval', $assigneeIds)));
+
+        return DB::transaction(function () use ($actor, $parent, $items, $assigneeIds) {
+            $group = $parent->taskGroups()->orderBy('position')->first()
+                ?? $parent->taskGroups()->create(['title' => 'Việc cần làm', 'position' => 0, 'created_by' => $actor->id]);
+            $sort = (int) ($parent->subtasks()->max('sort_order') ?? 0);
+
+            foreach ($items as $item) {
+                $subtask = Task::create([
+                    'parent_task_id' => $parent->id,
+                    'task_group_id' => $group->id,
+                    'column_id' => $parent->column_id,
+                    'sprint_id' => $parent->sprint_id,
+                    'assignee_id' => $assigneeIds[0] ?? null,
+                    'created_by' => $actor->id,
+                    'title' => $item['title'],
+                    'priority' => 'Bình thường',
+                    'complexity' => 'M',
+                    'order' => $parent->order ?? 0,
+                    'sort_order' => ++$sort,
+                    'completed_at' => $item['done'] ? now() : null,
+                    'completed_by' => $item['done'] ? $actor->id : null,
+                ]);
+                if ($assigneeIds) {
+                    $subtask->syncAssigneesWithAutoSplit($assigneeIds, $actor->id);
+                }
+            }
+
+            return count($items);
+        });
     }
 
     private function targetColumn(Board $board, bool $done): ?KanbanColumn

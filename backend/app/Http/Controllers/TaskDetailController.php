@@ -346,6 +346,37 @@ class TaskDetailController extends Controller
     }
 
     /**
+     * POST /api/tasks/bulk-delete
+     * Soft-delete (move to trash) several tasks at once. Tasks the user may not
+     * delete are skipped and reported back instead of failing the whole batch.
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => 'required|array|min:1|max:500',
+            'ids.*' => 'integer',
+        ]);
+
+        $user = $request->user();
+        $deleted = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($data, $user, &$deleted, &$skipped) {
+            foreach (Task::whereIn('id', array_unique($data['ids']))->get() as $task) {
+                if (!Gate::forUser($user)->allows('delete', $task)) {
+                    $skipped++;
+                    continue;
+                }
+                $task->update(['deleted_by' => $user->id]);
+                $task->delete();
+                $deleted++;
+            }
+        });
+
+        return response()->json(['deleted' => $deleted, 'skipped' => $skipped]);
+    }
+
+    /**
      * POST /api/tasks/{task}/review
      * Quality review for a task.
      */

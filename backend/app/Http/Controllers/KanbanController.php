@@ -830,6 +830,61 @@ class KanbanController extends Controller
     }
 
     /**
+     * PUT /api/boards/{board}/tasks/bulk-move
+     * Move several tasks to one column as a block, keeping their given order, placed
+     * between prev_id and next_id. Each task goes through moveTask, so WIP limits,
+     * auto-complete and notifications behave exactly like a single drag. Stops at the
+     * first task that cannot move and reports how many already moved.
+     */
+    public function bulkMoveTasks(Request $request, Board $board): JsonResponse
+    {
+        Gate::authorize('view', $board);
+
+        $data = $request->validate([
+            'task_ids' => 'required|array|min:1|max:200',
+            'task_ids.*' => 'integer|distinct',
+            'column_id' => 'required|integer',
+            'prev_id' => 'nullable|integer',
+            'next_id' => 'nullable|integer',
+        ]);
+
+        $column = KanbanColumn::where('board_id', $board->id)->find($data['column_id']);
+        if (!$column) {
+            return response()->json(['message' => 'Cột đích không thuộc bảng này.'], 422);
+        }
+
+        $tasks = Task::whereIn('id', $data['task_ids'])->get()->keyBy('id');
+        $prevId = $data['prev_id'] ?? null;
+        $moved = 0;
+
+        foreach ($data['task_ids'] as $id) {
+            $task = $tasks->get($id);
+            if (!$task) {
+                continue;
+            }
+            $sub = Request::create('/bulk-move', 'PUT', [
+                'column_id' => $column->id,
+                'prev_id' => $prevId,
+                'next_id' => $data['next_id'] ?? null,
+            ]);
+            $sub->setUserResolver(fn () => $request->user());
+
+            $response = $this->moveTask($sub, $task);
+            if ($response->getStatusCode() >= 300) {
+                $error = $response->getData(true)['message'] ?? 'Không chuyển được công việc.';
+                return response()->json([
+                    'message' => $moved ? "Đã chuyển {$moved} công việc, dừng ở \"{$task->title}\": {$error}" : $error,
+                    'moved' => $moved,
+                ], 422);
+            }
+            $prevId = $task->id;
+            $moved++;
+        }
+
+        return response()->json(['message' => "Đã chuyển {$moved} công việc sang \"{$column->title}\".", 'moved' => $moved]);
+    }
+
+    /**
      * Helper to re-sequence active columns to clean order multiples of 1000.
      */
     protected function resequenceColumns(int|string $boardId): void
