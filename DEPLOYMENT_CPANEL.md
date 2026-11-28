@@ -16,6 +16,7 @@ bash update.sh
 cd ~/danava-work/backend
 php artisan optimize:clear
 
+
 # 4) (Chỉ cần làm 1 lần) Cho phép tải tệp tới 20MB: chỉ đổi 3 dòng giới hạn, giữ nguyên các cài đặt PHP khác
 for d in ~/danava-work/backend/public ~/api-work.danava.com.vn; do
   [ -d "$d" ] || continue
