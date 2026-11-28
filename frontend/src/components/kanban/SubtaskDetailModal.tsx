@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Trash2, Check, AlignLeft, CalendarDays, 
   Clock, User, Tag, History, CheckSquare, AlertCircle, Save,
@@ -14,6 +14,7 @@ import { SafeLinkifiedText } from '../common/SafeLinkifiedText';
 import { TaskMemberPicker } from './TaskMemberPicker';
 import { FloatingPanel } from '../ui/FloatingPanel';
 import { TaskContributionModal } from './TaskContributionModal';
+import { useDescriptionImageUpload } from '../../hooks/useDescriptionImageUpload';
 
 interface SubtaskDetailModalProps {
   subtaskId: string | number;
@@ -50,6 +51,16 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  const descRef = useRef<HTMLTextAreaElement | null>(null);
+  const descValueRef = useRef('');
+  descValueRef.current = description;
+  const descImages = useDescriptionImageUpload({
+    taskId: subtaskId,
+    textareaRef: descRef,
+    getValue: () => descValueRef.current,
+    setValue: (next) => { descValueRef.current = next; setDescription(next); },
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -420,11 +431,18 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Thêm mô tả chi tiết cho công việc con (hỗ trợ tự động gắn link an toàn)..."
+                  ref={descRef}
+                  placeholder="Thêm mô tả chi tiết cho công việc con (dán Ctrl+V hoặc kéo thả ảnh vào đây)..."
+                  onPaste={descImages.onPaste}
+                  onDrop={descImages.onDrop}
+                  onDragOver={descImages.onDragOver}
                   className="w-full p-3 bg-background border border-input focus:ring-2 focus:ring-primary/40 rounded-xl text-sm leading-relaxed resize-y outline-none"
                   autoFocus
                 />
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end items-center">
+                  {descImages.uploading && (
+                    <span className="text-xs text-muted-foreground mr-auto">Đang tải ảnh lên...</span>
+                  )}
                   <button
                     type="button"
                     onClick={() => setIsEditingDesc(false)}

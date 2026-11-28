@@ -25,6 +25,7 @@ import { TaskContributionModal } from './TaskContributionModal';
 import { AiSubtaskSplitModal } from './AiSubtaskSplitModal';
 import { RemoveAssigneeWarningModal } from './RemoveAssigneeWarningModal';
 import { TrelloSourceDetails, type TrelloSource } from './TrelloSourceDetails';
+import { useDescriptionImageUpload } from '../../hooks/useDescriptionImageUpload';
 
 function formatDateDisplay(dateStr?: string): string {
   if (!dateStr) return '';
@@ -216,6 +217,36 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
   const update = (value: Partial<Task>) => {
     setDraft(d => ({ ...d, ...value }));
   };
+
+  const descValueRef = useRef('');
+  descValueRef.current = draft.description || '';
+  const descImages = useDescriptionImageUpload({
+    taskId: task.id,
+    textareaRef: descRef,
+    getValue: () => descValueRef.current,
+    setValue: (next) => { descValueRef.current = next; update({ description: next }); },
+    onUploaded: (att) => setDraft(d => ({ ...d, attachments: [att as any, ...(d.attachments || [])] })),
+  });
+
+  const addAttachment = (att: any) => setDraft(d => ({ ...d, attachments: [att, ...(d.attachments || [])] }));
+  const newCommentValueRef = useRef('');
+  newCommentValueRef.current = newComment;
+  const newCommentImages = useDescriptionImageUpload({
+    taskId: task.id,
+    textareaRef: newCommentRef,
+    getValue: () => newCommentValueRef.current,
+    setValue: (next) => { newCommentValueRef.current = next; setNewComment(next); },
+    onUploaded: addAttachment,
+  });
+  const editCommentValueRef = useRef('');
+  editCommentValueRef.current = editingCommentText;
+  const editCommentImages = useDescriptionImageUpload({
+    taskId: task.id,
+    textareaRef: editCommentRef,
+    getValue: () => editCommentValueRef.current,
+    setValue: (next) => { editCommentValueRef.current = next; setEditingCommentText(next); },
+    onUploaded: addAttachment,
+  });
 
   React.useEffect(() => {
     let mounted = true;
@@ -568,15 +599,22 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                     <textarea 
                       ref={descRef}
                       rows={3}
-                      placeholder="Thêm mô tả chi tiết hơn..."
+                      placeholder="Thêm mô tả chi tiết hơn... (dán Ctrl+V hoặc kéo thả ảnh vào đây)"
+                      onPaste={descImages.onPaste}
+                      onDrop={descImages.onDrop}
+                      onDragOver={descImages.onDragOver}
                       className="w-full p-3 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[90px] max-h-[500px] leading-relaxed transition-[height] duration-75"
                       value={draft.description} 
                       onChange={e => update({ description: e.target.value })}
                       onInput={e => adjustTextareaHeight(e.currentTarget, 500)}
                       autoFocus
                     />
+                    {descImages.uploading && (
+                      <p className="text-xs text-muted-foreground">Đang tải ảnh lên...</p>
+                    )}
                     <div className="flex gap-2">
                       <button 
+                        disabled={descImages.uploading}
                         onClick={() => { setIsEditingDesc(false); save(); }}
                         className="px-4 py-1.5 bg-primary text-white text-sm font-medium rounded-md hover:bg-orange-600 transition-colors"
                       >
@@ -687,7 +725,10 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                     <textarea 
                       ref={newCommentRef}
                       rows={1}
-                      placeholder="Viết bình luận... (Enter để gửi, Shift + Enter để xuống dòng)"
+                      placeholder={newCommentImages.uploading ? 'Đang tải ảnh lên...' : 'Viết bình luận... (Enter để gửi, Shift + Enter xuống dòng, Ctrl+V để dán ảnh)'}
+                      onPaste={newCommentImages.onPaste}
+                      onDrop={newCommentImages.onDrop}
+                      onDragOver={newCommentImages.onDragOver}
                       className="w-full p-3 pr-10 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[44px] max-h-[260px] leading-relaxed transition-[height] duration-75"
                       value={newComment} 
                       onChange={e => setNewComment(e.target.value)}
@@ -696,7 +737,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                         if (e.key === 'Enter' && !e.shiftKey) {
                           if ((e.nativeEvent as any).isComposing) return;
                           e.preventDefault();
-                          if (!busy && newComment.trim()) {
+                          if (!busy && !newCommentImages.uploading && newComment.trim()) {
                             handleAddComment();
                           }
                         }
@@ -705,7 +746,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                     <button 
                       className="absolute right-2 bottom-2 p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
                       onClick={handleAddComment}
-                      disabled={busy || !newComment.trim()}
+                      disabled={busy || newCommentImages.uploading || !newComment.trim()}
                       title="Gửi (Enter)"
                     >
                       <Send size={16} />
@@ -744,12 +785,15 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                                   className="w-full p-2.5 rounded-lg bg-background border border-input focus:ring-2 focus:ring-primary/50 text-sm resize-none shadow-sm min-h-[42px] max-h-[260px] leading-relaxed transition-[height] duration-75"
                                   value={editingCommentText}
                                   onChange={e => setEditingCommentText(e.target.value)}
+                                  onPaste={editCommentImages.onPaste}
+                                  onDrop={editCommentImages.onDrop}
+                                  onDragOver={editCommentImages.onDragOver}
                                   onInput={e => adjustTextareaHeight(e.currentTarget)}
                                   onKeyDown={e => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                       if ((e.nativeEvent as any).isComposing) return;
                                       e.preventDefault();
-                                      if (!busy && editingCommentText.trim()) {
+                                      if (!busy && !editCommentImages.uploading && editingCommentText.trim()) {
                                         handleSaveEditComment(c.id);
                                       }
                                     }
@@ -760,7 +804,7 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
                                   <button
                                     type="button"
                                     onClick={() => handleSaveEditComment(c.id)}
-                                    disabled={busy || !editingCommentText.trim()}
+                                    disabled={busy || editCommentImages.uploading || !editingCommentText.trim()}
                                     className="px-3 py-1 bg-primary text-white text-xs font-semibold rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer"
                                   >
                                     Lưu

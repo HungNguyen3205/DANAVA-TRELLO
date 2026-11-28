@@ -1,4 +1,5 @@
 import React from 'react';
+import { getAvatarUrl } from '../../lib/avatar';
 
 interface SafeLinkifiedTextProps {
   text: string;
@@ -45,11 +46,16 @@ function cleanTrailingPunctuation(rawUrl: string): { cleanUrl: string; trailing:
   return { cleanUrl: url, trailing };
 }
 
-export const SafeLinkifiedText: React.FC<SafeLinkifiedTextProps> = ({ text, className = '' }) => {
-  if (!text) {
-    return null;
-  }
+// Markdown image: ![alt](url) — url must be http(s) or one of our /storage/ paths
+const IMAGE_REGEX = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
 
+function resolveImageSrc(url: string): string | null {
+  if (url.startsWith('/storage/') && !url.includes('..')) return getAvatarUrl(url);
+  if (/^https?:\/\//i.test(url) && !DISALLOWED_SCHEMES.test(url)) return url;
+  return null;
+}
+
+function linkify(text: string, keyPrefix: string): React.ReactNode[] {
   // Regex to detect URLs (http://, https://, www.) and email addresses
   // Uses fresh RegExp instance on each call to prevent shared state lastIndex bugs
   const URL_OR_EMAIL_REGEX = /((?:https?:\/\/|www\.)[^\s<>"'\u0000-\u001F]+)|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
@@ -72,7 +78,7 @@ export const SafeLinkifiedText: React.FC<SafeLinkifiedTextProps> = ({ text, clas
     if (isEmail) {
       parts.push(
         <a
-          key={`email-${matchIndex}`}
+          key={`${keyPrefix}email-${matchIndex}`}
           href={`mailto:${matchText}`}
           target="_blank"
           rel="noopener noreferrer nofollow"
@@ -104,7 +110,7 @@ export const SafeLinkifiedText: React.FC<SafeLinkifiedTextProps> = ({ text, clas
       } else {
         parts.push(
           <a
-            key={`url-${matchIndex}`}
+            key={`${keyPrefix}url-${matchIndex}`}
             href={href}
             target="_blank"
             rel="noopener noreferrer nofollow"
@@ -132,6 +138,52 @@ export const SafeLinkifiedText: React.FC<SafeLinkifiedTextProps> = ({ text, clas
   // Push remaining text after the last match
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
+  }
+
+  return parts;
+}
+
+export const SafeLinkifiedText: React.FC<SafeLinkifiedTextProps> = ({ text, className = '' }) => {
+  if (!text) {
+    return null;
+  }
+
+  const parts: React.ReactNode[] = [];
+  const imageRegex = new RegExp(IMAGE_REGEX.source, 'g');
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = imageRegex.exec(text)) !== null) {
+    const src = resolveImageSrc(match[2]);
+    if (!src) continue; // leave unsafe/unknown URLs as plain text
+    if (match.index > lastIndex) {
+      parts.push(...linkify(text.substring(lastIndex, match.index), `t${lastIndex}-`));
+    }
+    parts.push(
+      <a
+        key={`img-${match.index}`}
+        href={src}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        onClick={(e) => e.stopPropagation()}
+        className="block my-2 w-fit max-w-full"
+        title={match[1] || 'Mở ảnh'}
+      >
+        <img
+          src={src}
+          alt={match[1]}
+          loading="lazy"
+          className="max-w-full max-h-[420px] rounded-lg border border-border/60 object-contain bg-background"
+        />
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+    // swallow the newline right after an image so blocks don't double-space
+    if (text[lastIndex] === '\n') lastIndex++;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(...linkify(text.substring(lastIndex), `t${lastIndex}-`));
   }
 
   return (
