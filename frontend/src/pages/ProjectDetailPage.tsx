@@ -72,38 +72,47 @@ export function ProjectDetailPage() {
             <div className="h-1.5" style={{ backgroundColor: projectColor(project) }} />
           )}
           <div className="p-5 space-y-5">
-          <div className="flex flex-wrap items-start gap-3">
-            <span className="mt-2 w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: projectColor(project) }} aria-hidden="true" />
+          <div className="flex items-start gap-3">
+            <span className="mt-2 sm:mt-2.5 w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: projectColor(project) }} aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 id="project-title" className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{project.name}</h1>
-                <ProjectStatusBadge status={project.status} />
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                  <h1 id="project-title" className="text-xl sm:text-2xl font-bold tracking-tight text-foreground break-words">{project.name}</h1>
+                  <ProjectStatusBadge status={project.status} />
+                </div>
+                {project.can_manage && (
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <button type="button" onClick={() => setStyling(true)} className="h-9 w-9 sm:w-auto sm:px-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-border text-sm font-semibold text-foreground hover:bg-accent" title="Đổi màu & ảnh bìa" aria-label="Đổi màu & ảnh bìa">
+                      <Palette size={15} /> <span className="hidden sm:inline">Màu & ảnh bìa</span>
+                    </button>
+                    <button type="button" onClick={() => setEditing(true)} className="h-9 w-9 sm:w-auto sm:px-3 inline-flex items-center justify-center gap-1.5 rounded-lg border border-border text-sm font-semibold text-foreground hover:bg-accent" title="Chỉnh sửa" aria-label="Chỉnh sửa">
+                      <Pencil size={15} /> <span className="hidden sm:inline">Chỉnh sửa</span>
+                    </button>
+                    <button type="button" onClick={remove} className="h-9 w-9 grid place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10" title="Xóa dự án" aria-label="Xóa dự án">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
               {project.description && <p className="mt-1.5 text-sm text-muted-foreground max-w-3xl whitespace-pre-line">{project.description}</p>}
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-                {(project.start_date || project.end_date) && (
-                  <span className="inline-flex items-center gap-1.5"><CalendarClock size={15} />
-                    {project.start_date ? formatDateVi(project.start_date) : '…'} → {project.end_date ? formatDateVi(project.end_date) : '…'}
-                  </span>
-                )}
-                {project.manager && (
-                  <span className="inline-flex items-center gap-1.5"><UserRound size={15} /> Quản lý: <b className="font-semibold text-foreground">{project.manager.name}</b></span>
-                )}
-              </div>
+              {(project.start_date || project.end_date || project.manager) && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] sm:text-sm text-muted-foreground">
+                  {(project.start_date || project.end_date) && (
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><CalendarClock size={14} className="shrink-0" />
+                      {project.start_date ? formatDateVi(project.start_date) : '…'} → {project.end_date ? formatDateVi(project.end_date) : '…'}
+                    </span>
+                  )}
+                  {(project.start_date || project.end_date) && project.manager && <span aria-hidden="true" className="text-border">•</span>}
+                  {project.manager && (
+                    <span className="inline-flex items-center gap-1.5 min-w-0 whitespace-nowrap" title={`Quản lý: ${project.manager.name}`}>
+                      <UserRound size={14} className="shrink-0" />
+                      <span className="hidden sm:inline">Quản lý:</span>
+                      <b className="font-semibold text-foreground truncate">{project.manager.name}</b>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            {project.can_manage && (
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setStyling(true)} className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border border-border text-sm font-semibold text-foreground hover:bg-accent" title="Đổi màu & ảnh bìa">
-                  <Palette size={15} /> <span className="hidden sm:inline">Màu & ảnh bìa</span>
-                </button>
-                <button type="button" onClick={() => setEditing(true)} className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border border-border text-sm font-semibold text-foreground hover:bg-accent">
-                  <Pencil size={15} /> Chỉnh sửa
-                </button>
-                <button type="button" onClick={remove} className="h-9 w-9 grid place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10" title="Xóa dự án" aria-label="Xóa dự án">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
