@@ -343,6 +343,7 @@ export function BoardView() {
                   onColumn={handleColumn}
                   onSave={handleSave}
                   disabled={false}
+                  onTasksDeleted={() => fetchBoard(boardId || '1', true)}
                 />
               );
             })()}

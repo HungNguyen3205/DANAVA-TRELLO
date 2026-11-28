@@ -15,7 +15,8 @@ import {
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { Plus, X, ArrowRightLeft } from "lucide-react";
+import { Plus } from "lucide-react";
+import api from "../../lib/axios";
 import { toast } from "sonner";
 import type { Board, Column, Task } from "../../types";
 import { moveColumn, moveTask } from "../../lib/board";
@@ -23,6 +24,7 @@ import { BoardColumn } from "./BoardColumn";
 import { CardContent } from "./TaskCard";
 import { WipConfirmModal } from "./WipConfirmModal";
 import { KanbanSelectionContext } from "./KanbanSelection";
+import { KanbanSelectionBar } from "./KanbanSelectionBar";
 
 export type BulkMove = { bulkMove: { taskIds: string[]; columnId: string; prevId?: string; nextId?: string } };
 export function KanbanBoard({
@@ -33,6 +35,7 @@ export function KanbanBoard({
   onColumn,
   onSave,
   disabled,
+  onTasksDeleted,
 }: {
   board: Board;
   visibleTasks: Task[];
@@ -41,6 +44,8 @@ export function KanbanBoard({
   onColumn: (c: Column | null) => void;
   onSave: (b: Board, text: string) => Promise<boolean>;
   disabled: boolean;
+  /** Reload the board after selected cards were moved to the trash. */
+  onTasksDeleted?: () => void;
 }) {
   const [active, setActive] = useState<Task | Column | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -73,6 +78,21 @@ export function KanbanBoard({
       return next.size === prev.size ? prev : next;
     });
   }, [board.tasks]);
+
+  const deleteSelected = async () => {
+    const ids = [...selectedIds];
+    try {
+      const { data } = await api.post("/tasks/bulk-delete", { ids: ids.map(Number) });
+      const deleted = Number(data?.deleted ?? 0);
+      const skipped = Number(data?.skipped ?? 0);
+      if (deleted > 0) toast.success(`Đã chuyển ${deleted} công việc vào thùng rác`);
+      if (skipped > 0) toast.warning(`${skipped} công việc không xóa được do không có quyền`);
+      clearSelection();
+      onTasksDeleted?.();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || "Lỗi khi xóa công việc");
+    }
+  };
 
   const selection = useMemo(() => ({ selectedIds, toggle, draggingIds }), [selectedIds, toggle, draggingIds]);
 
@@ -386,37 +406,14 @@ export function KanbanBoard({
       </KanbanSelectionContext.Provider>
 
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-150">
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-popover/95 backdrop-blur px-3 py-2.5 shadow-2xl">
-            <span className="text-[13px] font-semibold text-foreground whitespace-nowrap">
-              Đã chọn {selectedIds.size} việc
-            </span>
-            <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap">· kéo một thẻ để chuyển cả nhóm, hoặc</span>
-            <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
-              <ArrowRightLeft size={14} className="text-muted-foreground shrink-0" />
-              {board.columns.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  disabled={moving}
-                  onClick={() => moveGroup([...selectedIds], c.id)}
-                  className="h-7 px-2.5 rounded-lg border border-border bg-card hover:bg-primary hover:text-white hover:border-primary text-xs font-medium text-foreground transition-colors whitespace-nowrap disabled:opacity-50 max-w-[10rem] truncate"
-                  title={`Chuyển sang "${c.title}"`}
-                >
-                  {c.title}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={clearSelection}
-              className="h-7 px-2.5 inline-flex items-center gap-1 rounded-lg text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground whitespace-nowrap"
-              title="Bỏ chọn (Esc)"
-            >
-              <X size={13} /> Bỏ chọn
-            </button>
-          </div>
-        </div>
+        <KanbanSelectionBar
+          count={selectedIds.size}
+          columns={board.columns}
+          busy={moving}
+          onMove={(columnId) => moveGroup([...selectedIds], columnId)}
+          onDelete={deleteSelected}
+          onClear={clearSelection}
+        />
       )}
 
       {wipWarningPrompt && (
