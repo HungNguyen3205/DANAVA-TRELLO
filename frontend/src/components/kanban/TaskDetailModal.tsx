@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Trash2, Check, AlignLeft, CheckSquare, 
   MessageSquare, UserPlus, Tag, Paperclip, 
@@ -1208,9 +1209,9 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
         }}
       />
 
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F172A]/70 backdrop-blur-[2px] animate-in fade-in duration-200 p-4">
-          <div className="w-full max-w-sm bg-popover rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-border">
+      {confirmDelete && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0F172A]/70 backdrop-blur-[2px] animate-in fade-in duration-200 p-4" onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}>
+          <div className="w-full max-w-sm bg-popover rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-border" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-2 text-foreground">Xóa công việc?</h3>
             <p className="text-[13px] text-muted-foreground mb-6 leading-relaxed">Công việc này sẽ bị xóa vĩnh viễn khỏi bảng và không thể khôi phục.</p>
             <div className="flex gap-3 justify-end">
@@ -1218,7 +1219,8 @@ export function TaskDetailModal({ task, board, onClose }: TaskDetailModalProps) 
               <button onClick={remove} disabled={busy} className="px-4 py-2 bg-red-500 text-white font-medium rounded-lg text-sm hover:bg-red-600 transition-colors shadow-sm">Xóa vĩnh viễn</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {isContributionModalOpen && (
