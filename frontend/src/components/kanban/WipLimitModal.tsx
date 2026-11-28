@@ -126,7 +126,7 @@ export function WipLimitModal({
                   Bật giới hạn WIP cho cột này
                 </span>
               </label>
-              <p className="text-xs text-muted-foreground pl-6.5">
+              <p className="text-xs text-muted-foreground pl-[26px]">
                 Kiểm soát số lượng công việc tối đa được phép tồn tại trong cột tại một thời điểm.
               </p>
             </div>

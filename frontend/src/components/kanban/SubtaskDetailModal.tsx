@@ -12,6 +12,7 @@ import { PrioritySelect } from '../ui/PrioritySelect';
 import { AssigneeSelect } from './AssigneeSelect';
 import { SafeLinkifiedText } from '../common/SafeLinkifiedText';
 import { TaskMemberPicker } from './TaskMemberPicker';
+import { FloatingPanel } from '../ui/FloatingPanel';
 import { TaskContributionModal } from './TaskContributionModal';
 
 interface SubtaskDetailModalProps {
@@ -344,7 +345,7 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
                   </button>
 
                   {isPickerOpen && (
-                    <div className="absolute right-0 top-full mt-2 z-50">
+                    <FloatingPanel align="right">
                       <TaskMemberPicker
                         boardUsers={board.users || []}
                         initialSelectedUserIds={selectedUserIds}
@@ -356,7 +357,7 @@ export const SubtaskDetailModal: React.FC<SubtaskDetailModalProps> = ({
                         }}
                         onCancel={() => setIsPickerOpen(false)}
                       />
-                    </div>
+                    </FloatingPanel>
                   )}
                 </div>
               </div>

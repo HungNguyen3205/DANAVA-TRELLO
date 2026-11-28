@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { getAvatarUrl } from '../../lib/avatar';
 import { SubtaskDetailModal } from './SubtaskDetailModal';
 import { TaskMemberPicker } from './TaskMemberPicker';
+import { FloatingPanel } from '../ui/FloatingPanel';
 
 interface SubtaskListProps {
   parentTask: Task;
@@ -784,7 +785,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
                         </button>
 
                         {isCreationPickerOpen && (
-                          <div className="absolute left-0 top-full mt-1.5 z-40">
+                          <FloatingPanel align="left">
                             <TaskMemberPicker
                               boardUsers={board.users || []}
                               initialSelectedUserIds={creationCustomUserIds}
@@ -797,7 +798,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
                               }}
                               onCancel={() => setIsCreationPickerOpen(false)}
                             />
-                          </div>
+                          </FloatingPanel>
                         )}
                       </div>
                     </div>
@@ -1170,7 +1171,7 @@ const SortableSubtaskItem: React.FC<SortableSubtaskItemProps> = ({
           </div>
 
           {isPickerOpen && (
-            <div className="absolute right-0 top-full mt-2 z-50">
+            <FloatingPanel align="right">
               <TaskMemberPicker
                 boardUsers={board.users || []}
                 initialSelectedUserIds={assignees.map(u => String(u.id))}
@@ -1179,7 +1180,7 @@ const SortableSubtaskItem: React.FC<SortableSubtaskItemProps> = ({
                 onApply={onApplyMembers}
                 onCancel={onCloseMemberPicker}
               />
-            </div>
+            </FloatingPanel>
           )}
         </div>
 

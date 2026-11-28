@@ -122,14 +122,14 @@ export const TaskMemberPicker: React.FC<TaskMemberPickerProps> = ({
 
       {/* Search Bar */}
       <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input
           type="text"
           autoFocus
           placeholder="Tìm theo tên, email, phòng ban..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-8.5 pr-3 py-2 bg-background border border-input rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-all"
+          className="w-full pl-9 pr-3 py-2 bg-background border border-input rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-all"
         />
         {search && (
           <button
